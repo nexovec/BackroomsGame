@@ -1,21 +1,43 @@
 local oldreq = require
-require = function(s) return oldreq('libs.' .. s) end
-require("autobatch")
+require = function(s) return oldreq('src.' .. s) end
+require_lib = function(s) return oldreq('libs.' .. s) end
 
--- Load some default values for our rectangle.
+-- load libraries next to love api by convention
+require_lib("autobatch")
+love.profile = require_lib("profile")
+love.flux = require_lib("flux")
+
+local game = require('game')
+settings = {
+    targetFPS = 10,
+    performanceLoggingPeriodInSeconds = 1
+}
+ 
 function love.load()
-    x, y, w, h = 20, 20, 60, 20
+    love.flux.update(love.timer.getDelta())
+
+    love.profile.start()
+    game.init()
+    print(love.profile.report(10))
+    love.profile.reset()
 end
 
--- Increase the size of the rectangle every frame.
+local timeLastLogged = love.timer.getTime()
 function love.update(dt)
-    w = w + 1
-    h = h + 1
+    game.tick()
+    if (love.timer.getTime() - timeLastLogged)>settings.performanceLoggingPeriodInSeconds then
+        -- love.profile.stop()
+        love.profile.report(10)
+        love.profile.reset()
+        -- love.profile.start()
+        timeLastLogged = love.timer.getTime()
+    end
 end
 
--- Draw a coloured rectangle.
 function love.draw()
-    -- In versions prior to 11.0, color component values are (0, 102, 102)
-    love.graphics.setColor(0, 0.4, 0.4)
-    love.graphics.rectangle("fill", x, y, w, h)
+    game.draw()
+end
+
+function love.quit()
+    print("quitw")
 end

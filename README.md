@@ -4,3 +4,5 @@ This is the backrooms game private repository. I am a solo developer, so you sho
 ```batch
 <path-to-love-executable> <path-to-this-folder>
 ```
+## Changelog
+v.0.0.0 basic project setup
