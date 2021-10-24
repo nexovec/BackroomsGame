@@ -6,12 +6,11 @@ require_lib = function(s) return oldreq('libs.' .. s) end
 love.profile = require_lib("profile")
 love.flux = require_lib("flux")
 love.settings = {
-    targetFPS = 10,
-    performanceLoggingPeriodInSeconds = 1
+    targetFPS = 60,
+    performanceLoggingPeriodInSeconds = 5
 }
 
 local game = require('game')
-
 local canvas = love.graphics.newCanvas(1280, 720)
  
 function love.load()
@@ -22,18 +21,28 @@ function love.load()
     game.init()
     print(love.profile.report(10))
     love.profile.reset()
+    love.profile.stop()
 end
 
 local timeLastLogged = love.timer.getTime()
+local delta = 0
 function love.update(dt)
+    -- TODO: verify this is accurate
+    delta = delta + dt
+    if delta < 1 / love.settings.targetFPS then
+        return
+    end
+    delta = 0
+    love.profile.start()
     game.tick()
     if (love.timer.getTime() - timeLastLogged) > love.settings.performanceLoggingPeriodInSeconds then
         -- love.profile.stop()
-        love.profile.report(10)
+        print(love.profile.report(10))
         love.profile.reset()
         -- love.profile.start()
         timeLastLogged = love.timer.getTime()
     end
+    love.profile.stop()
 end
 
 function love.draw()

@@ -1,17 +1,22 @@
 local API = {}
 
+local TileSet = require("TileSet")
+
 local backgroundImage = nil
 local playerImage = nil
+local testTileSet = nil
 
 function API.init()
     love.window.setTitle("Backrooms v0.0.1 pre-dev")
-    -- TODO: make 1280x720 texture render to window
+    -- make fullscreen
     love.window.requestAttention()
-    -- TODO: enable fullscreen
     love.window.setFullscreen(true,"desktop")
-    -- TODO: load sample character image
+
+    -- load images
     backgroundImage = love.graphics.newImage("resources/images/background1.png")
     playerImage = love.graphics.newImage("resources/images/playersprite.png")
+    testTileSet = TileSet:fromCanvas(playerImage, 16, 16)
+    -- TODO: parse tileset
     -- TODO: draw floor, ceiling
     -- TODO: draw a chair in the scene
     -- TODO: make the player move
@@ -37,7 +42,7 @@ function API.init()
     -- TODO: add drinkable almond water
 end
 
-function API.tick()
+function API.tick(deltaTime)
     
 end
 
@@ -48,6 +53,7 @@ function API.draw()
     
     local playerSpriteQuad = love.graphics.newQuad(0, 0, 512, 512, 512, 512)
     love.graphics.draw(playerImage, playerSpriteQuad, 0, 0, 0, 1, 1, 0, 0)
+    testTileSet:draw(6,4,12,12)
 end
 
 return API
