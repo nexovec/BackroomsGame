@@ -41,25 +41,13 @@ function API.tick()
     
 end
 
-local canvas = love.graphics.newCanvas(1280, 720)
 function API.draw()
-    love.graphics.setCanvas(canvas)
-    love.graphics.clear(1.0, 0.0, 1.0, 1.0)
-    
     -- draw textures to buffer
     local smallQuad = love.graphics.newQuad(0, 0, 1280, 720, 1280, 720)
     love.graphics.draw(backgroundImage, smallQuad, 0, 0, 0, 1, 1, 0, 0)
     
     local playerSpriteQuad = love.graphics.newQuad(0, 0, 512, 512, 512, 512)
     love.graphics.draw(playerImage, playerSpriteQuad, 0, 0, 0, 1, 1, 0, 0)
-    
-    -- draw buffer to screen
-    love.graphics.setCanvas()
-    local _,_,width,height = love.window.getSafeArea()
-    -- RESEARCH: can we use Transform instead of quad?
-    local screenQuad = love.graphics.newQuad(0, 0, width, height, width, height)
-    -- TODO: use nearest neighbour texture filtering to avoid blur
-    love.graphics.draw(canvas, screenQuad, 0, 0, 0, 1, 1, 0, 0, 0, 0)
 end
 
 return API
