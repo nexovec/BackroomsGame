@@ -1,8 +1,8 @@
 local oldreq = require
-require = function(s) return oldreq('src.' .. s) end
-require_lib = function(s) return oldreq('libs.' .. s) end
+require = function(s) return oldreq("src." .. s) end
+require_lib = function(s) return oldreq("libs." .. s) end
 
--- load libraries next to love api by convention
+-- libraries
 love.profile = require_lib("profile")
 love.flux = require_lib("flux")
 love.settings = {
@@ -10,18 +10,34 @@ love.settings = {
     performanceLoggingPeriodInSeconds = 5
 }
 
-local game = require('game')
-local canvas = love.graphics.newCanvas(1280, 720)
- 
+-- modules
+local game = require("game")
+
+-- module scoped variables
+local sceneCanvas = love.graphics.newCanvas(1280, 720)
+local presentationCanvas = love.graphics.getCanvas()
+
+-- function signatures
+local resetCanvas = nil
+
 function love.load()
     love.flux.update(love.timer.getDelta())
-
+    
     love.profile.start()
     love.graphics.setDefaultFilter("nearest", "nearest", 16)
     game.init()
     print(love.profile.report(10))
     love.profile.reset()
     love.profile.stop()
+    local _old = love.graphics.setCanvas
+    function love.graphics.setCanvas(cvs, ...)
+        if cvs == nil then return _old(sceneCanvas) end 
+        return _old(cvs, ...)
+    end
+    resetCanvas = function()
+        return _old()
+    end
+
 end
 
 local timeLastLogged = love.timer.getTime()
@@ -46,18 +62,18 @@ function love.update(dt)
 end
 
 function love.draw()
-    love.graphics.setCanvas(canvas)
+    love.graphics.setCanvas(sceneCanvas)
     love.graphics.clear(1.0, 0.0, 1.0, 1.0)
-    canvas:setFilter("nearest", "nearest", 16)
+    sceneCanvas:setFilter("nearest", "nearest", 16)
     game.draw()
     
     -- draw buffer to screen
-    love.graphics.setCanvas()
+    resetCanvas()
     local _,_,width,height = love.window.getSafeArea()
     -- RESEARCH: can we use Transform instead of quad?
     local screenQuad = love.graphics.newQuad(0, 0, width, height, width, height)
     -- TODO: use nearest neighbour texture filtering to avoid blur
-    love.graphics.draw(canvas, screenQuad, 0, 0, 0, 1, 1, 0, 0, 0, 0)
+    love.graphics.draw(sceneCanvas, screenQuad, 0, 0, 0, 1, 1, 0, 0, 0, 0)
 end
 
 function love.quit()
