@@ -1,7 +1,48 @@
 local API = {}
 
+love.utils = {}
+function love.utils.printTable(a)
+    assert(type(a) == "table", "Parameter is not a table, but a " .. type(a))
+    local function inner(aa)
+        print("{")
+        local elemCount = 0
+        for k,v in pairs(aa) do
+            elemCount = elemCount + 1
+            if type(v) == "table" then
+                inner(v)
+            else
+                print(k..": "..v)
+            end
+        end
+        if elemCount == 0 then
+            print("This table is empty")
+        end
+        print("}")
+    end
+    inner(a)
+end
+printTable = love.utils.printTable
+
+function love.utils.shallowCopy(a)
+    assert(type(a) == "table", "This can only be used on tables")
+    local self = {}
+    for k,v in pairs(a) do
+        self[k] = v
+    end
+    return self
+end
+shallowCopy = love.utils.shallowCopy
+
+function love.utils.replaceIfNil(a, b)
+    if a == nil then
+        return b
+    else
+        return a
+    end
+end
+replaceIfNil = love.utils.replaceIfNil
+
 -- modules
-local TileSet = require("TileSet")
 local UI = require("immediateUi")
 
 -- variables
@@ -13,13 +54,13 @@ function API.init()
     love.window.setTitle("Backrooms v0.0.1 pre-dev")
     -- make fullscreen
     love.window.requestAttention()
-    love.window.setFullscreen(true,"desktop")
+    love.window.setFullscreen(true, "desktop")
 
     -- load images
     backgroundImage = love.graphics.newImage("resources/images/background1.png")
     playerImage = love.graphics.newImage("resources/images/playersprite.png")
-    -- parse tileset
-    testTileSet = TileSet.fromCanvas(playerImage, 16, 16)
+    -- TODO: parse tileset
+    
     -- TODO: draw floor, ceiling
     -- TODO: draw a chair in the scene
     -- TODO: make the player move
@@ -51,17 +92,9 @@ end
 
 function API.draw()
     
-    -- TODO: better API, something like:
-    UI.pushCanvas()
-    UI.setPreferredLayoutBorders(100,100)
-    UI.setPreferredLayoutPadding(50,50)
-    UI.setMinimumLayoutCellSize(200,200)
-    UI.startFlexLayout({--[[options]]})
-    
-    -- scene
-    UI.pushCanvas()
-    
-    -- draw textures
+    -- FIXME: magic numbers
+    -- local sceneCanvas = love.graphics.newCanvas(1280, 720)
+    -- love.graphics.setCanvas(sceneCanvas)
     local smallQuad = love.graphics.newQuad(0, 0, 1280, 720, 1280, 720)
     love.graphics.draw(backgroundImage, smallQuad, 0, 0, 0, 1, 1, 0, 0)
     
@@ -71,14 +104,17 @@ function API.draw()
     love.graphics.setCanvas(playfieldCanvas)
     love.graphics.clear(1.0, 1.0, 1.0)
     love.graphics.draw(playerImage, playerSpriteQuad, 0, 0, 0, 1, 1, 0, 0)
-    testTileSet:draw(6, 4, 12, 12, 3, 3)
-    
-    -- FIXME: this doesn't respect the UI framework
     love.graphics.setCanvas()
     love.graphics.draw(playfieldCanvas, love.graphics.newQuad(0, 0, 640, 480, playfieldCanvas), 100, 100, 0, 1, 1, 0, 0, 0, 0)
+    -- TODO: better API, something like:
+    UI.setPreferredLayoutBorders(100,100)
+    UI.setPreferredLayoutPadding(50,50)
+    UI.setMinimumLayoutCellSize(200,200)
+    UI.startFlexLayout()
+    -- rendering into a layout
     
-    UI.popCanvas()
-
+    -- game
+    -- love.graphics.draw(playfieldCanvas, love.graphics.newQuad(0, 0, 640, 480, playfieldCanvas), 100, 100, 0, 1, 1, 0, 0, 0, 0)
     -- log
     UI.nextCol()
 
@@ -87,7 +123,7 @@ function API.draw()
     
     -- inventory
     UI.nextCol()
-    UI.popCanvas()
+    UI.popLayout()
 end
 
 return API
