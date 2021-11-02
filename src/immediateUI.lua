@@ -16,7 +16,7 @@ local function ensureCellIsCached()
     -- cache.renderCache[cache.currentRow][cache.currentCol] = cache.renderCache[cache.currentRow][cache.currentCol] or {} 
 
     -- for one render item
-    cache.renderCache[cache.currentRow][cache.currentCol] = cache.renderCache[cache.currentRow][cache.currentCol] or nil
+    cache.renderCache[cache.currentRow][cache.currentCol] = cache.renderCache[cache.currentRow][cache.currentCol] or "None"
 end
 
 function UI.startFlexLayout()
@@ -97,20 +97,32 @@ function UI.setMaximumLayoutCellCount(x, y)
 end
 
 function UI.popLayout(renderTarget)
+    -- TODO: cleanup
+    -- TODO: padding
+    -- TODO: borders
+    -- TODO: stretch cells based on json
+    -- TODO: user configurable row width and height
     renderTarget = renderTarget or nil
     love.graphics.setCanvas(renderTarget)
+    local renderTargetDimensions = {love.graphics.getCanvas():getDimensions()}
     local renderCache = layoutCache[#layoutCache].renderCache
     local height = #renderCache
+    local cellHeight = renderTargetDimensions[2]/height
     for k, renderRowList in ipairs(renderCache) do
         local width = #renderRowList
+        local cellWidthOnCurrentRow = renderTargetDimensions[1] / width
         for index, renderItem in ipairs(renderRowList) do
-            -- assume renderItem is always a canvas
-            if renderItem ~= nil then
-                assert(type(renderItem) == "table", "renderItem has data type " .. type(renderItem) .. " instead of table")
+            -- NOTE: assumes renderItem is always a canvas or "None"
+            if renderItem ~= "None" then
+                assert(type(renderItem) == "userdata", "renderItem has data type " .. type(renderItem) .. " instead of userdata")
                 assert(renderItem:type() == "Canvas", "renderItem has data type " .. renderItem:type() .. " instead of Canvas")
                 -- TODO: align layout and compute padding
-                -- TODO: stretch cells based on json
-                love.graphics.draw(renderItem, love.graphics.newQuad(0, 0, 640, 480, playfieldCanvas:getDimensions()), 100, 100, 0, 1, 1, 0, 0, 0, 0)
+
+                -- NOTE: assumes the same aspect ratios for all canvases
+                -- FIXME: messes up aspect ratio on this next line
+                local relativeTextureDimensions = {x = cellWidthOnCurrentRow, y = cellHeight}
+                local quad = love.graphics.newQuad(0, 0, relativeTextureDimensions.x, relativeTextureDimensions.y, relativeTextureDimensions.x, relativeTextureDimensions.y)
+                love.graphics.draw(renderItem, quad, 0, 0, 0, 1, 1, 0, 0, 0, 0)
             end
         end
     end
