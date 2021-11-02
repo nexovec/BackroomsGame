@@ -33,15 +33,6 @@ function love.utils.shallowCopy(a)
 end
 shallowCopy = love.utils.shallowCopy
 
-function love.utils.replaceIfNil(a, b)
-    if a == nil then
-        return b
-    else
-        return a
-    end
-end
-replaceIfNil = love.utils.replaceIfNil
-
 -- modules
 local UI = require("immediateUi")
 
@@ -105,7 +96,7 @@ function API.draw()
     love.graphics.clear(1.0, 1.0, 1.0)
     love.graphics.draw(playerImage, playerSpriteQuad, 0, 0, 0, 1, 1, 0, 0)
     love.graphics.setCanvas()
-    love.graphics.draw(playfieldCanvas, love.graphics.newQuad(0, 0, 640, 480, playfieldCanvas), 100, 100, 0, 1, 1, 0, 0, 0, 0)
+    love.graphics.draw(playfieldCanvas, love.graphics.newQuad(0, 0, 640, 480, playfieldCanvas:getDimensions()), 100, 100, 0, 1, 1, 0, 0, 0, 0)
     -- TODO: better API, something like:
     UI.setPreferredLayoutBorders(100,100)
     UI.setPreferredLayoutPadding(50,50)
@@ -117,7 +108,7 @@ function API.draw()
     -- love.graphics.draw(playfieldCanvas, love.graphics.newQuad(0, 0, 640, 480, playfieldCanvas), 100, 100, 0, 1, 1, 0, 0, 0, 0)
     -- log
     UI.nextCol()
-
+    UI.renderCanvas(playfieldCanvas)
     -- actions
     UI.nextRow()
     

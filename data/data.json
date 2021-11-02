@@ -1,0 +1,8 @@
+{
+"uiDefaults":{
+    "minimumCellSize": {"x": 200, "y": 200},
+    "maximumCellCount":{"x": 3, "y": 3},
+    "preferredBorders":{"x": 50, "y": 50},
+    "preferredPadding":{"x": 50, "y": 50}
+}
+}

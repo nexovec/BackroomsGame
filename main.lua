@@ -11,6 +11,7 @@ love.settings = {
 }
 
 -- modules
+-- TODO: FIFO threading queue
 local game = require("game")
 
 -- module scoped variables
