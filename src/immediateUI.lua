@@ -97,20 +97,18 @@ function UI.setMaximumLayoutCellCount(x, y)
 end
 
 function UI.popLayout(renderTarget)
-    -- TODO: cleanup
     -- TODO: padding
     -- TODO: borders
     -- TODO: stretch cells based on json
     -- TODO: user configurable row width and height
-    renderTarget = renderTarget or nil
     love.graphics.setCanvas(renderTarget)
-    local renderTargetDimensions = {love.graphics.getCanvas():getDimensions()}
+
+    local renderTargetDimensions = {}
+    renderTargetDimensions.x, renderTargetDimensions.y = love.graphics.getCanvas():getDimensions()
+    
     local renderCache = layoutCache[#layoutCache].renderCache
-    local height = #renderCache
-    local cellHeight = renderTargetDimensions[2]/height
     for k, renderRowList in ipairs(renderCache) do
-        local width = #renderRowList
-        local cellWidthOnCurrentRow = renderTargetDimensions[1] / width
+        local dimensionsOfOneLayoutCell = {x = renderTargetDimensions.x / #renderRowList, y = renderTargetDimensions.y / #renderCache}
         for index, renderItem in ipairs(renderRowList) do
             -- NOTE: assumes renderItem is always a canvas or "None"
             if renderItem ~= "None" then
@@ -120,8 +118,7 @@ function UI.popLayout(renderTarget)
 
                 -- NOTE: assumes the same aspect ratios for all canvases
                 -- FIXME: messes up aspect ratio on this next line
-                local relativeTextureDimensions = {x = cellWidthOnCurrentRow, y = cellHeight}
-                local quad = love.graphics.newQuad(0, 0, relativeTextureDimensions.x, relativeTextureDimensions.y, relativeTextureDimensions.x, relativeTextureDimensions.y)
+                local quad = love.graphics.newQuad(0, 0, dimensionsOfOneLayoutCell.x, dimensionsOfOneLayoutCell.y, dimensionsOfOneLayoutCell.x, dimensionsOfOneLayoutCell.y)
                 love.graphics.draw(renderItem, quad, 0, 0, 0, 1, 1, 0, 0, 0, 0)
             end
         end
