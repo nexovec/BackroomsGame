@@ -1,1 +1,1 @@
-This is copyrighted and whatnot. I will edit this later.
+For license, refer to later commits.

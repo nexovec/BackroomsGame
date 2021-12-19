@@ -26,8 +26,8 @@ function UI.startFlexLayout()
         currentRow = 1,
         minimumCellSize  = minimumCellSize  or shallowCopy({x = 50, y = 50}),
         maximumCellCount = preferredBorders or shallowCopy({x = 3, y = 3}),
-        preferredBorders = preferredBorders or shallowCopy({x = 50, y = 50}),
-        preferredPadding = preferredPadding or shallowCopy({x = 50, y = 50}),
+        borders = preferredBorders or shallowCopy({x = 50, y = 50}),
+        padding = preferredPadding or shallowCopy({x = 50, y = 50}),
         renderCache = {}
     }
     ensureCellIsCached()
@@ -97,6 +97,11 @@ function UI.setMaximumLayoutCellCount(x, y)
 end
 
 function UI.popLayout(renderTarget)
+    -- aliases
+    local layout = layoutCache[#layoutCache]
+    local renderCache = layout.renderCache
+    
+    -- code
     -- TODO: padding
     -- TODO: borders
     -- TODO: stretch cells based on json
@@ -106,9 +111,11 @@ function UI.popLayout(renderTarget)
     local renderTargetDimensions = {}
     renderTargetDimensions.x, renderTargetDimensions.y = love.graphics.getCanvas():getDimensions()
     
-    local renderCache = layoutCache[#layoutCache].renderCache
+    local dimensionsOfOneLayoutCell = {}
+    dimensionsOfOneLayoutCell.y = renderTargetDimensions.y / #renderCache
+    
     for k, renderRowList in ipairs(renderCache) do
-        local dimensionsOfOneLayoutCell = {x = renderTargetDimensions.x / #renderRowList, y = renderTargetDimensions.y / #renderCache}
+        dimensionsOfOneLayoutCell.x = renderTargetDimensions.x / #renderRowList
         for index, renderItem in ipairs(renderRowList) do
             -- NOTE: assumes renderItem is always a canvas or "None"
             if renderItem ~= "None" then
@@ -119,7 +126,7 @@ function UI.popLayout(renderTarget)
                 -- NOTE: assumes the same aspect ratios for all canvases
                 -- FIXME: messes up aspect ratio on this next line
                 local quad = love.graphics.newQuad(0, 0, dimensionsOfOneLayoutCell.x, dimensionsOfOneLayoutCell.y, dimensionsOfOneLayoutCell.x, dimensionsOfOneLayoutCell.y)
-                love.graphics.draw(renderItem, quad, 0, 0, 0, 1, 1, 0, 0, 0, 0)
+                love.graphics.draw(renderItem, quad, layout.padding.x, layout.padding.y, 0, 1, 1, 0, 0, 0, 0)
             end
         end
     end

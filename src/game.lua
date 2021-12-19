@@ -34,7 +34,7 @@ end
 shallowCopy = love.utils.shallowCopy
 
 -- modules
-local UI = require("immediateUi")
+local UI = require("immediateUI")
 
 -- variables
 local backgroundImage = nil
