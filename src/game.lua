@@ -38,17 +38,31 @@ local backgroundImage = nil
 local playerImage = nil
 local testTileSet = nil
 
+
+function parseImageTilesetIntoArrayImage(image, tileWidth, tileHeight)
+    assert(image:type()=="Image")
+    assert(tileWidth > 0 and tileHeight > 0)
+    local frames = {}
+    local width, height = image:getDimensions()
+    local canvas = love.graphics.newCanvas(image:getDimensions())
+    for i = 0, width / tileWidth do
+        for ii = 0, height / tileHeight do
+            local quad = love.graphics.newQuad(i * tileWidth, ii * tileHeight, tileWidth, tileHeight, canvas:getDimensions())
+            canvas:renderTo(function() love.graphics.draw(image, quad, 0, 0, 0, 1, 1, 0, 0) end)
+            frames[#frames + 1] = canvas:newImageData()
+        end
+    end
+    return love.graphics.newArrayImage(frames)
+end
+
 function API.init()
     love.window.setTitle("Backrooms v0.0.1 pre-dev")
-    -- make fullscreen
-    love.window.requestAttention()
-    love.window.setFullscreen(true, "desktop")
-
     -- load images
     backgroundImage = love.graphics.newImage("resources/images/background1.png")
     -- TODO: load as ArrayImage
-    playerImage = love.graphics.newImage("resources/images/playersprite.png")
-    
+    playerImage = love.graphics.newImage("resources/images/adventurer_sprite.png")
+    playerImage = parseImageTilesetIntoArrayImage(playerImage, 32, 32)
+    tilesetImage = love.graphics.newImage("resources/images/tileset.png")
     -- TODO: draw floor, ceiling
     -- TODO: draw a chair in the scene
     -- TODO: make the player move
@@ -81,8 +95,6 @@ end
 function API.draw(target)
     
     -- FIXME: magic numbers
-    -- local sceneCanvas = love.graphics.newCanvas(1280, 720)
-    -- love.graphics.setCanvas(sceneCanvas)
     local smallQuad = love.graphics.newQuad(0, 0, 1280, 720, 1280, 720)
     love.graphics.draw(backgroundImage, smallQuad, 0, 0, 0, 1, 1, 0, 0)
     
@@ -93,19 +105,8 @@ function API.draw(target)
     love.graphics.clear(1.0, 1.0, 1.0)
     love.graphics.draw(playerImage, playerSpriteQuad, 0, 0, 0, 1, 1, 0, 0)
     love.graphics.setCanvas(target)
-    -- love.graphics.draw(playfieldCanvas, love.graphics.newQuad(0, 0, 640, 480, playfieldCanvas:getDimensions()), 100, 100, 0, 1, 1, 0, 0, 0, 0)
-    -- TODO: better API, something like:
-    -- UI.setPreferredLayoutBorders(100,100)
-    -- UI.setPreferredLayoutPadding(50,50)
-    -- UI.setMinimumLayoutCellSize(200,200)
-    -- UI.startFlexLayout()
-    -- rendering into a layout
-    
     -- game
     love.graphics.draw(playfieldCanvas, love.graphics.newQuad(0, 0, 640, 480, playfieldCanvas), 100, 100, 0, 1, 1, 0, 0, 0, 0)
-    -- log
-    -- UI.renderCanvas(playfieldCanvas)
-    
 end
 
 return API

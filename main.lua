@@ -22,6 +22,9 @@ function love.load()
     
     love.profile.start()
     love.graphics.setDefaultFilter("nearest", "nearest", 16)
+    -- make fullscreen
+    love.window.requestAttention()
+    love.window.setFullscreen(true, "desktop")
     game.init()
     print(love.profile.report(10))
     love.profile.reset()
