@@ -33,9 +33,6 @@ function love.utils.shallowCopy(a)
 end
 shallowCopy = love.utils.shallowCopy
 
--- modules
-local UI = require("immediateUI")
-
 -- variables
 local backgroundImage = nil
 local playerImage = nil
@@ -81,7 +78,7 @@ function API.tick(deltaTime)
     
 end
 
-function API.draw()
+function API.draw(target)
     
     -- FIXME: magic numbers
     -- local sceneCanvas = love.graphics.newCanvas(1280, 720)
@@ -90,31 +87,25 @@ function API.draw()
     love.graphics.draw(backgroundImage, smallQuad, 0, 0, 0, 1, 1, 0, 0)
     
     local playfieldCanvas = love.graphics.newCanvas(640, 480)
-    local playerSpriteQuad = love.graphics.newQuad(0, 0, 512, 512, 512, 512)
+    local playerSpriteQuad = love.graphics.newQuad(0, 0, 640, 480, 512, 512)
     
     love.graphics.setCanvas(playfieldCanvas)
     love.graphics.clear(1.0, 1.0, 1.0)
     love.graphics.draw(playerImage, playerSpriteQuad, 0, 0, 0, 1, 1, 0, 0)
-    love.graphics.setCanvas()
+    love.graphics.setCanvas(target)
     -- love.graphics.draw(playfieldCanvas, love.graphics.newQuad(0, 0, 640, 480, playfieldCanvas:getDimensions()), 100, 100, 0, 1, 1, 0, 0, 0, 0)
     -- TODO: better API, something like:
-    UI.setPreferredLayoutBorders(100,100)
-    UI.setPreferredLayoutPadding(50,50)
-    UI.setMinimumLayoutCellSize(200,200)
-    UI.startFlexLayout()
+    -- UI.setPreferredLayoutBorders(100,100)
+    -- UI.setPreferredLayoutPadding(50,50)
+    -- UI.setMinimumLayoutCellSize(200,200)
+    -- UI.startFlexLayout()
     -- rendering into a layout
     
     -- game
-    -- love.graphics.draw(playfieldCanvas, love.graphics.newQuad(0, 0, 640, 480, playfieldCanvas), 100, 100, 0, 1, 1, 0, 0, 0, 0)
+    love.graphics.draw(playfieldCanvas, love.graphics.newQuad(0, 0, 640, 480, playfieldCanvas), 100, 100, 0, 1, 1, 0, 0, 0, 0)
     -- log
-    UI.renderCanvas(playfieldCanvas)
-    UI.nextCol()
-    -- actions
-    UI.nextRow()
+    -- UI.renderCanvas(playfieldCanvas)
     
-    -- inventory
-    UI.nextCol()
-    UI.popLayout()
 end
 
 return API

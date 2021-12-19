@@ -25,8 +25,6 @@ instead.
 
 --]]
 JSON = {}
-i = 0
-maxIterationsPerTick = 5000
 function KindOf(obj)
     if type(obj) ~= 'table' then
         return type(obj)
@@ -39,11 +37,7 @@ function KindOf(obj)
             return 'table'
         end
     end
-    if i == 1 then
-        return 'table'
-    else
-        return 'array'
-    end
+    return 'array'
 end
 
 function EscapeStr(s)
@@ -65,10 +59,6 @@ function SkipDelim(str, pos, delim, err_if_missing)
     return pos + 1, true
 end
 function ParseStringValue(str, pos, val)
-    i = i + 1
-    if i % maxIterationsPerTick == 0 then
-        Task.Wait()
-    end
     val = val or ''
     local early_end_error = 'End of input found while parsing string.'
     if pos > #str then
@@ -98,6 +88,8 @@ function ParseNumberValue(str, pos)
     return val, pos + #num_str
 end
 function ConvertUserdataToTable(obj)
+    -- FIXME: Love has completely different types
+    -- obj = {type = obj:type()}
     if obj.type == 'Vector3' then
         return {type = obj.type, x = obj.x, y = obj.y, z = obj.z}
     elseif obj.type == 'Vector2' then
@@ -127,10 +119,10 @@ end
 -- Public values and functions.
 
 function JSON.Stringify(obj, as_key)
-    i = i + 1
-    if i % maxIterationsPerTick == 0 then
-        Task.Wait()
-    end
+    -- i = i + 1
+    -- if i % maxIterationsPerTick == 0 then
+    --     Task.Wait()
+    -- end
     local s = {}
     local kind = KindOf(obj)
     if kind == 'array' then
@@ -178,6 +170,7 @@ function JSON.Stringify(obj, as_key)
     return table.concat(s)
 end
 function ConstructUserdataFromTable(obj)
+    local kind = KindOf(obj)
     if obj.type == 'Vector3' then
         return Vector3.New(obj.x, obj.y, obj.z)
     elseif obj.type == 'Vector2' then
