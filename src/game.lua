@@ -1,68 +1,36 @@
-local API = {}
+local game = {}
 
-love.utils = {}
-function love.utils.printTable(a)
-    assert(type(a) == "table", "Parameter is not a table, but a " .. type(a))
-    local function inner(aa)
-        print("{")
-        local elemCount = 0
-        for k,v in pairs(aa) do
-            elemCount = elemCount + 1
-            if type(v) == "table" then
-                inner(v)
-            else
-                print(k..": "..v)
-            end
-        end
-        if elemCount == 0 then
-            print("This table is empty")
-        end
-        print("}")
-    end
-    inner(a)
-end
-printTable = love.utils.printTable
+-- local oldreq = require
+-- require = function(s) return oldreq("src." .. s) end
+-- requireLib = function(s) return oldreq("libs." .. s) end
 
-function love.utils.shallowCopy(a)
-    assert(type(a) == "table", "This can only be used on tables")
-    local self = {}
-    for k,v in pairs(a) do
-        self[k] = v
-    end
-    return self
-end
-shallowCopy = love.utils.shallowCopy
+-- requires
+local flux = require("libs.flux")
+local animation = require("src.animation")
 
 -- variables
 local backgroundImage = nil
 local playerImage = nil
 local testTileSet = nil
 
+-- function shortcuts
+local printTable = love.utils.printTable
+local shallowCopy = love.utils.shallowCopy
 
-function parseImageTilesetIntoArrayImage(image, tileWidth, tileHeight)
-    assert(image:type()=="Image")
-    assert(tileWidth > 0 and tileHeight > 0)
-    local frames = {}
-    local width, height = image:getDimensions()
-    local canvas = love.graphics.newCanvas(image:getDimensions())
-    for i = 0, width / tileWidth do
-        for ii = 0, height / tileHeight do
-            local quad = love.graphics.newQuad(i * tileWidth, ii * tileHeight, tileWidth, tileHeight, canvas:getDimensions())
-            canvas:renderTo(function() love.graphics.draw(image, quad, 0, 0, 0, 1, 1, 0, 0) end)
-            frames[#frames + 1] = canvas:newImageData()
-        end
-    end
-    return love.graphics.newArrayImage(frames)
-end
-
-function API.init()
+function game.init()
     love.window.setTitle("Backrooms v0.0.1 pre-dev")
-    -- load images
+    -- load assets
     backgroundImage = love.graphics.newImage("resources/images/background1.png")
-    -- TODO: load as ArrayImage
     playerImage = love.graphics.newImage("resources/images/adventurer_sprite.png")
-    playerImage = parseImageTilesetIntoArrayImage(playerImage, 32, 32)
     tilesetImage = love.graphics.newImage("resources/images/tileset.png")
+    -- love.utils.printTable(playerImage)
+    assert(playerImage)
+    -- parse assets
+    playerImage = animation(playerImage, 32)
+    flux.to(playerImage, 1, {progress = 12})
+    -- tilesetImage = parseImageTilesetIntoArrayImage(tilesetImage, 32)
+    tilesetImage = animation(tilesetImage, 32)
+
     -- TODO: draw floor, ceiling
     -- TODO: draw a chair in the scene
     -- TODO: make the player move
@@ -88,25 +56,28 @@ function API.init()
     -- TODO: add drinkable almond water
 end
 
-function API.tick(deltaTime)
-    
+
+function game.tick(deltaTime)
 end
 
-function API.draw(target)
+function game.draw()
     
+    -- draw background
     -- FIXME: magic numbers
-    local smallQuad = love.graphics.newQuad(0, 0, 1280, 720, 1280, 720)
-    love.graphics.draw(backgroundImage, smallQuad, 0, 0, 0, 1, 1, 0, 0)
+    local backgroundQuad = love.graphics.newQuad(0, 0, 3840, 2160, 3840, 2160)
+    love.graphics.draw(backgroundImage, backgroundQuad, 0, 0, 0, 1, 1, 0, 0)
     
-    local playfieldCanvas = love.graphics.newCanvas(640, 480)
-    local playerSpriteQuad = love.graphics.newQuad(0, 0, 640, 480, 512, 512)
-    
-    love.graphics.setCanvas(playfieldCanvas)
-    love.graphics.clear(1.0, 1.0, 1.0)
-    love.graphics.draw(playerImage, playerSpriteQuad, 0, 0, 0, 1, 1, 0, 0)
-    love.graphics.setCanvas(target)
-    -- game
-    love.graphics.draw(playfieldCanvas, love.graphics.newQuad(0, 0, 640, 480, playfieldCanvas), 100, 100, 0, 1, 1, 0, 0, 0, 0)
+    -- draw player animation
+    local playfieldCanvas = love.graphics.newCanvas(1600,720)
+    local playerSpriteQuad = love.graphics.newQuad(0, 0, 1600, 720, 3840, 2160)
+
+    playfieldCanvas:renderTo(function()
+        love.graphics.clear(1.0, 1.0, 1.0)
+        playerImage.draw(playerSpriteQuad, 0, 0, 0, 1,1, 0, 0)
+    end)
+    love.graphics.draw(playfieldCanvas, playerSpriteQuad, 100, 100, 0, 1, 1, 0, 0, 0, 0)
+
+    -- TODO: scene graph
 end
 
-return API
+return game
