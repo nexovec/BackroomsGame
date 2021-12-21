@@ -1,8 +1,9 @@
-require("src.luaOverrides")
+require("src.std.luaOverrides")
 
 -- requires
 local profile = require("profile")
 local flux = require("flux")
+
 require("std.types")
 require("std.tables")
 
@@ -20,6 +21,9 @@ function love.load()
     -- make fullscreen
     love.window.requestAttention()
     love.window.setFullscreen(true, "desktop")
+    local loveOverrides = require("loveOverrides")
+    assert(loveOverrides)
+    loveOverrides.init()
     game.init()
     print(profile.report(10))
     profile.reset()
@@ -30,14 +34,14 @@ local timeLastLogged = love.timer.getTime()
 local delta = 0
 function love.update(dt)
     delta = delta + dt
-    if delta < 1 / love.settings.targetFPS then
+    if delta < 1 / love.ddd.constants.targetFPS then
         return
     end
     delta = 0
     profile.start()
     flux.update(dt)
     game.tick(dt)
-    if (love.timer.getTime() - timeLastLogged) > love.settings.performanceLoggingPeriodInSeconds then
+    if (love.timer.getTime() - timeLastLogged) > love.ddd.settings.logging.performanceLogPeriodInSeconds then
         print(profile.report(10))
         profile.reset()
         timeLastLogged = love.timer.getTime()

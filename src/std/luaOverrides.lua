@@ -9,7 +9,9 @@ require = function(s)
     local function libsreq()
         res = oldreq("libs." .. s)
     end
-    xpcall(srcreq, function() xpcall(libsreq, function() error("Module " .. s .. "not found", 2) end) end)
+    xpcall(srcreq, function()
+        xpcall(libsreq, function()error("Module " .. s .. "not found", 2)end)
+    end)
     return res
 end
 local oldreq = nil
@@ -21,8 +23,3 @@ function assert(term, errMsg, errLevel, errHandle)
     if not term then error(errMsg, 1 + errLevel) end
 end
 oldassert = nil
-
-love.settings = {
-    targetFPS = 60,
-    performanceLoggingPeriodInSeconds = 5
-}

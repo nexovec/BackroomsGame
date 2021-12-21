@@ -26,7 +26,7 @@ local easing = {
 }
 
 local makefunc = function(str, expr)
-  local load = loadstring or load
+  local load = load
   return load("return function(p) " .. str:gsub("%$e", expr) .. " end")()
 end
 

@@ -1,9 +1,14 @@
 local animation = {}
 
 
+-- requires
+local flux = require("flux")
+
+-- helper functions
 local function parseImageTilesetIntoArrayImage(image, tileSize)
-    assert(image:type() == "Image")
-    assert(tileSize > 0)
+    assert(type(image) == "userdata", "expected image: Image, got image: " .. image:type(), 2)
+    assert(image:type() == "Image", "expected image: Image, got image: " .. image:type(), 2)
+    assert(tileSize > 0, "Tile size must be positive", 2)
     local frames = {}
     local width, height = image:getDimensions()
     local canvas = love.graphics.newCanvas(image:getDimensions())
@@ -19,6 +24,15 @@ local function parseImageTilesetIntoArrayImage(image, tileSize)
             frames[#frames + 1] = canvas:newImageData()
         end
     end
+    -- canvas:renderTo(function()
+    --     for i = 0, height / tileSize do
+    --         for ii = 0, width / tileSize do
+    --             quad = love.graphics.newQuad(ii * tileSize, i * tileSize, tileSize, tileSize, canvas:getDimensions())
+    --             proc()
+    --             frames[#frames + 1] = canvas:newImageData()
+    --         end
+    --     end
+    -- end)
     return love.graphics.newArrayImage(frames)
 end
 
@@ -26,23 +40,35 @@ end
 ---@param image userdata The Image object to parse
 ---@param tileSize number Size of one image in the tilemap in pixels
 ---@param frameCounts table A table with number of frames per animation
----@param animationNames table Assigns names to animations
----@param rowAlignedLoops boolean true if there is one animation per row, false if they are tightly packed
+---@param loopNames table Assigns names to individual loops of the animation
+---@param skipToNextRowAfterLoop boolean true if there is one animation per row, false if they are tightly packed
 ---@return table
-function animation.__call(_, image, tileSize, frameCounts, animationNames, rowAlignedLoops)
+function animation.__call(_, image, tileSize, frameCounts, loopNames, skipToNextRowAfterLoop)
     assert(image)
+    if type(image) == "string" then
+        -- load from file
+        -- TEMP:
+        -- love.ddd.animations = love.decodeJsonFile("data/animations.json")
+        assert(love.ddd.animations)
+        local properties = love.ddd.animations[image]
+        image = love.graphics.newImage(properties.filepath)
+        tileSize = properties.tileSize
+        frameCounts = properties.frameCounts
+        loopNames = properties.loopNames
+        skipToNextRowAfterLoop = properties.skipToNextRowAfterLoop
+    end
     assert(tileSize)
-    -- TODO:
-    assert(rowAlignedLoops == true, "Not yet implemented.", 2)
+    assert(skipToNextRowAfterLoop == true, "Not yet implemented.", 2)
     assert(frameCounts ~= nil and type(frameCounts) == "table")
-    assert(animationNames)
-    assert(rowAlignedLoops)
+    assert(loopNames)
+    assert(skipToNextRowAfterLoop)
 
     local width, height = image:getDimensions()
     local self = {
         imageData = parseImageTilesetIntoArrayImage(image, tileSize),
         frameCounts = frameCounts,
         offsets = {},
+        animationNames = loopNames,
         
         tilesPerRow = width / tileSize,
         tilesPerColumn = height / tileSize,
@@ -67,7 +93,17 @@ function animation.__call(_, image, tileSize, frameCounts, animationNames, rowAl
     -- API
     function self.setAnimation(name)
         assert(type(name) == "string", "number indexing is not implemented yet")
-        -- TODO:
+        self.progress = 0
+        self.activeLoop = table.invert(self.loopNames)[name]
+    end
+
+    function self.to(duration)
+        flux.to(self, duration, {progress = 1})
+    end
+    
+    function self.play(loopDuration, isLooping)
+        self.progress = 0
+        flux.to(self, loopDuration, {progress = 1})
     end
 
     --- Use this method to draw the current animation frame
@@ -78,7 +114,7 @@ function animation.__call(_, image, tileSize, frameCounts, animationNames, rowAl
     ---@param yScale number
     ---@return table
     function self.draw(quad, xPos, yPos, xScale, yScale)
-        local frame = math.floor(self.progress * self.frameCounts[self.activeLoop])
+        local frame = math.floor(self.progress * (self.frameCounts[self.activeLoop] - 1))
         return love.graphics.drawLayer(self.imageData, self.offsets[self.activeLoop] + frame, quad, xPos, yPos, xScale, yScale)
     end
     return self

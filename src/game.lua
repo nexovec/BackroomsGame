@@ -2,8 +2,6 @@ local game = {}
 
 
 -- requires
-local flux = require("flux")
-
 local animation = require("animation")
 
 
@@ -18,13 +16,15 @@ function game.init()
     love.window.setTitle("Backrooms v0.0.1 pre-dev")
     -- load assets
     backgroundImage = love.graphics.newImage("resources/images/background1.png")
-    playerImage = love.graphics.newImage("resources/images/adventurer_sprite.png")
     tilesetImage = love.graphics.newImage("resources/images/tileset.png")
     -- love.utils.printTable(playerImage)
-    assert(playerImage)
     -- parse assets
-    playerImage = animation(playerImage, 32, {13, 8, 10, 10, 6, 4, 7, 13, 8, 10, 10, 10, 6, 4, 7}, {"idle", "run", "attack1", "attack2", "attack3", "jump", "hurt", "die"}, true)
-    flux.to(playerImage, 1, {progress = 1})
+    -- playerImage = love.graphics.newImage("resources/images/character.png")
+    -- assert(playerImage)
+    -- playerImage = animation(playerImage, 32, {13, 8, 10, 10, 6, 4, 7, 13, 8, 10, 10, 10, 6, 4, 7}, {"idle", "run", "attack1", "attack2", "attack3", "jump", "hurt", "die"}, true)
+
+    playerImage = animation("character")
+    playerImage.to(1)
 
     -- FIXME:
     tilesetImage = animation(tilesetImage, 32, {3}, {"floor"}, true)

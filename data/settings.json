@@ -1,0 +1,6 @@
+{
+    "logging":{
+        "shouldPerformanceLog": true,
+        "performanceLogPeriodInSeconds": 5
+    }
+}
