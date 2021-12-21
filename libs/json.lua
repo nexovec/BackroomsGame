@@ -15,14 +15,6 @@ A table is classified as an array if and only if it only has multiple consecutiv
 ## JSON.Parse:
 Uses JSON.null instead of nil.
 
-## Bugs:
-Don't chain calls together in: JSON.Stringify(JSON.Parse(JSON.Stringify(table))).
-Use
-local text = JSON.Stringify(table)
-local parsed = JSON.Parse(text)
-local textAgain = JSON.Stringify(parsed)
-instead.
-
 --]]
 JSON = {}
 function KindOf(obj)

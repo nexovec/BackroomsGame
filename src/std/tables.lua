@@ -1,5 +1,4 @@
-love.utils = {}
-function love.utils.printTable(a)
+function printTable(a)
     assert(type(a) == "table", "Parameter is not a table, but a " .. type(a))
     local function inner(aa)
         print("{")
@@ -20,8 +19,7 @@ function love.utils.printTable(a)
     inner(a)
 end
 
-
-function love.utils.shallowCopy(a)
+function shallowCopyTable(a)
     assert(type(a) == "table", "This can only be used on tables")
     local self = {}
     for k,v in pairs(a) do

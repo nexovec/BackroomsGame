@@ -1,22 +1,19 @@
 local game = {}
 
--- local oldreq = require
--- require = function(s) return oldreq("src." .. s) end
--- requireLib = function(s) return oldreq("libs." .. s) end
 
 -- requires
-local flux = require("libs.flux")
-local animation = require("src.animation")
+local flux = require("flux")
+
+local animation = require("animation")
+
 
 -- variables
 local backgroundImage = nil
 local playerImage = nil
 local testTileSet = nil
 
--- function shortcuts
-local printTable = love.utils.printTable
-local shallowCopy = love.utils.shallowCopy
 
+-- API
 function game.init()
     love.window.setTitle("Backrooms v0.0.1 pre-dev")
     -- load assets
@@ -26,10 +23,11 @@ function game.init()
     -- love.utils.printTable(playerImage)
     assert(playerImage)
     -- parse assets
-    playerImage = animation(playerImage, 32)
-    flux.to(playerImage, 1, {progress = 12})
-    -- tilesetImage = parseImageTilesetIntoArrayImage(tilesetImage, 32)
-    tilesetImage = animation(tilesetImage, 32)
+    playerImage = animation(playerImage, 32, {13, 8, 10, 10, 6, 4, 7, 13, 8, 10, 10, 10, 6, 4, 7}, {"idle", "run", "attack1", "attack2", "attack3", "jump", "hurt", "die"}, true)
+    flux.to(playerImage, 1, {progress = 1})
+
+    -- FIXME:
+    tilesetImage = animation(tilesetImage, 32, {3}, {"floor"}, true)
 
     -- TODO: draw floor, ceiling
     -- TODO: draw a chair in the scene

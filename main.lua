@@ -1,28 +1,29 @@
--- libraries
-love.profile = require("libs.profile")
-local flux = require("libs.flux")
-love.settings = {
-    targetFPS = 60,
-    performanceLoggingPeriodInSeconds = 5
-}
+require("src.luaOverrides")
 
--- modules
-require("src.utils")
-local game = require("src.game") -- needs to be the last require
+-- requires
+local profile = require("profile")
+local flux = require("flux")
+require("std.types")
+require("std.tables")
 
--- module scoped variables
+local game = require("game") -- needs to be the last require
+
+
+-- variables
 local sceneCanvas = love.graphics.newCanvas(3840, 2160)
 
+
+-- callbacks
 function love.load()
-    love.profile.start()
+    profile.start()
     love.graphics.setDefaultFilter("nearest", "nearest", 16)
     -- make fullscreen
     love.window.requestAttention()
     love.window.setFullscreen(true, "desktop")
     game.init()
-    print(love.profile.report(10))
-    love.profile.reset()
-    love.profile.stop()
+    print(profile.report(10))
+    profile.reset()
+    profile.stop()
 end
 
 local timeLastLogged = love.timer.getTime()
@@ -33,27 +34,27 @@ function love.update(dt)
         return
     end
     delta = 0
-    love.profile.start()
+    profile.start()
     flux.update(dt)
     game.tick(dt)
     if (love.timer.getTime() - timeLastLogged) > love.settings.performanceLoggingPeriodInSeconds then
-        print(love.profile.report(10))
-        love.profile.reset()
+        print(profile.report(10))
+        profile.reset()
         timeLastLogged = love.timer.getTime()
     end
-    love.profile.stop()
+    profile.stop()
 end
 
 function love.draw()
-    love.profile.start()
+    profile.start()
     sceneCanvas:setFilter("nearest", "nearest", 16)
     sceneCanvas:renderTo(game.draw)
     local _,_,width,height = love.window.getSafeArea()
     local screenQuad = love.graphics.newQuad(0, 0, width, height, width, height)
     love.graphics.draw(sceneCanvas, screenQuad, 0, 0, 0, 1, 1, 0, 0, 0, 0)
-    love.profile.stop()
+    profile.stop()
 end
 
 function love.quit()
-    print("quitw")
+    print("Exiting the game...")
 end
