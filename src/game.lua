@@ -16,18 +16,12 @@ function game.init()
     love.window.setTitle("Backrooms v0.0.1 pre-dev")
     -- load assets
     backgroundImage = love.graphics.newImage("resources/images/background1.png")
-    tilesetImage = love.graphics.newImage("resources/images/tileset.png")
-    -- love.utils.printTable(playerImage)
-    -- parse assets
-    -- playerImage = love.graphics.newImage("resources/images/character.png")
-    -- assert(playerImage)
-    -- playerImage = animation(playerImage, 32, {13, 8, 10, 10, 6, 4, 7, 13, 8, 10, 10, 10, 6, 4, 7}, {"idle", "run", "attack1", "attack2", "attack3", "jump", "hurt", "die"}, true)
+    playerImage = animation.new("character")
+    tilesetImage = animation.new("tileset")
 
-    playerImage = animation("character")
+
+    -- init logic:
     playerImage.to(1)
-
-    -- FIXME:
-    tilesetImage = animation(tilesetImage, 32, {3}, {"floor"}, true)
 
     -- TODO: draw floor, ceiling
     -- TODO: draw a chair in the scene
@@ -74,8 +68,6 @@ function game.draw()
         playerImage.draw(playerSpriteQuad, 0, 0, 0, 1,1, 0, 0)
     end)
     love.graphics.draw(playfieldCanvas, playerSpriteQuad, 100, 100, 0, 1, 1, 0, 0, 0, 0)
-
-    -- TODO: scene graph
 end
 
 return game

@@ -13,6 +13,8 @@ local game = require("game") -- needs to be the last require
 -- variables
 local sceneCanvas = love.graphics.newCanvas(3840, 2160)
 
+local timeLastLogged = love.timer.getTime()
+local delta = 0
 
 -- callbacks
 function love.load()
@@ -30,8 +32,7 @@ function love.load()
     profile.stop()
 end
 
-local timeLastLogged = love.timer.getTime()
-local delta = 0
+
 function love.update(dt)
     delta = delta + dt
     if delta < 1 / love.ddd.constants.targetFPS then
@@ -41,7 +42,7 @@ function love.update(dt)
     profile.start()
     flux.update(dt)
     game.tick(dt)
-    if (love.timer.getTime() - timeLastLogged) > love.ddd.settings.logging.performanceLogPeriodInSeconds then
+    if (love.ddd.settings.logging.shouldPerformanceLog and love.timer.getTime() - timeLastLogged) > love.ddd.settings.logging.performanceLogPeriodInSeconds then
         print(profile.report(10))
         profile.reset()
         timeLastLogged = love.timer.getTime()

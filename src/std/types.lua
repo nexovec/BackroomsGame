@@ -1,6 +1,13 @@
+
 function isint(num)
     if type(num) ~= "number" then return false end
     if math.floor(num) ~= num then return false end
+    return true
+end
+
+function isureal(num)
+    if type(num) ~= "number" then return false end
+    if num<=0 then return false end
     return true
 end
 

@@ -24,44 +24,36 @@ local function parseImageTilesetIntoArrayImage(image, tileSize)
             frames[#frames + 1] = canvas:newImageData()
         end
     end
-    -- canvas:renderTo(function()
-    --     for i = 0, height / tileSize do
-    --         for ii = 0, width / tileSize do
-    --             quad = love.graphics.newQuad(ii * tileSize, i * tileSize, tileSize, tileSize, canvas:getDimensions())
-    --             proc()
-    --             frames[#frames + 1] = canvas:newImageData()
-    --         end
-    --     end
-    -- end)
     return love.graphics.newArrayImage(frames)
 end
 
---- Constructor; Parses a multilayered Image into an animation
+--- Parses an image into an animation (from )
 ---@param image userdata The Image object to parse
 ---@param tileSize number Size of one image in the tilemap in pixels
 ---@param frameCounts table A table with number of frames per animation
 ---@param loopNames table Assigns names to individual loops of the animation
 ---@param skipToNextRowAfterLoop boolean true if there is one animation per row, false if they are tightly packed
 ---@return table
-function animation.__call(_, image, tileSize, frameCounts, loopNames, skipToNextRowAfterLoop)
-    assert(image)
+function animation.new(image, tileSize, frameCounts, loopNames, skipToNextRowAfterLoop)
     if type(image) == "string" then
-        -- load from file
-        -- TEMP:
-        -- love.ddd.animations = love.decodeJsonFile("data/animations.json")
+
+        -- load spritesheet from file from file
         assert(love.ddd.animations)
         local properties = love.ddd.animations[image]
+        -- TODO: make the image shared and the ArrayImage as well
         image = love.graphics.newImage(properties.filepath)
         tileSize = properties.tileSize
         frameCounts = properties.frameCounts
         loopNames = properties.loopNames
         skipToNextRowAfterLoop = properties.skipToNextRowAfterLoop
     end
-    assert(tileSize)
+    assert(type(image) == "userdata" and image:type() == "Image", "Couldn't load image.", 2)
+    assert(type(tileSize) == "number", "You must specify .tileSize property as a number. (hint: animations.json)", 2)
+    assert(type(frameCounts) == "table", "You must specify .frameCounts property as an array. (hint: animations.json)", 2)
+    assert(type(loopNames) == "table", "You must specify .tileSize property as an array. (hint: animations.json)", 2)
+    assert(type(skipToNextRowAfterLoop) == "boolean", "You must specify .skipToNextRowAfterLoop property as a boolean. (hint: animations.json)")
+
     assert(skipToNextRowAfterLoop == true, "Not yet implemented.", 2)
-    assert(frameCounts ~= nil and type(frameCounts) == "table")
-    assert(loopNames)
-    assert(skipToNextRowAfterLoop)
 
     local width, height = image:getDimensions()
     local self = {
@@ -84,11 +76,7 @@ function animation.__call(_, image, tileSize, frameCounts, loopNames, skipToNext
         local rowCount = math.floor((self.frameCounts[i] - 1) / self.tilesPerRow) + 1
         self.offsets[i+1] = self.offsets[i] + self.tilesPerRow * rowCount
     end
-
-    -- TODO: clip self.progress in <0,1> range
-    -- TODO: compute frameCounts
-    -- TODO: discard unused tiles, search up current frame by adding progress * frameCount + offset
-    -- TODO: load from file
+    -- TODO: discard unused tiles
 
     -- API
     function self.setAnimation(name)
@@ -98,26 +86,20 @@ function animation.__call(_, image, tileSize, frameCounts, loopNames, skipToNext
     end
 
     function self.to(duration)
-        flux.to(self, duration, {progress = 1})
+        return flux.to(self, duration, {progress = 1})
     end
     
-    function self.play(loopDuration, isLooping)
+    function self.play(playbackDuration, loopName, isLooping)
+        assert(not isLooping, "Not yet implemented.", 2)
+        assert(playbackDuration > 0, nil, 2)
         self.progress = 0
-        flux.to(self, loopDuration, {progress = 1})
+        flux.to(self, playbackDuration, {progress = 1})
     end
 
-    --- Use this method to draw the current animation frame
-    ---@param quad userdata :Quad The quad passed to love.graphics.draw call
-    ---@param xPos number
-    ---@param yPos number
-    ---@param xScale number
-    ---@param yScale number
-    ---@return table
     function self.draw(quad, xPos, yPos, xScale, yScale)
         local frame = math.floor(self.progress * (self.frameCounts[self.activeLoop] - 1))
         return love.graphics.drawLayer(self.imageData, self.offsets[self.activeLoop] + frame, quad, xPos, yPos, xScale, yScale)
     end
     return self
 end
-setmetatable(animation, animation)
 return animation
