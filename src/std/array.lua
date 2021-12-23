@@ -1,3 +1,4 @@
+local array = {}
 function table.shallowCopy(a)
     assert(type(a) == "table", "This can only be used on tables")
     local self = {}
@@ -7,22 +8,23 @@ function table.shallowCopy(a)
     return self
 end
 
-function table.prettyPrint()
+function array.prettyPrint()
     -- TODO:
 end
 
-function table.invert(tbl)
+function array.invert(tbl)
     local res = {}
-    for k, v in pairs(tbl) do
+    for k, v in ipairs(tbl) do
         if not type(v) == "string" or type(v) == "number" then error("Table contains uninvertable type at index " .. k, 2) end
         res[v] = k
     end
     return res
 end
-function table.fastInvert(tbl)
+function array.fastInvert(tbl)
     local res = {}
     for k, v in ipairs(tbl) do
         res[v] = k
     end
     return res
 end
+return array

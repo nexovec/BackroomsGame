@@ -2,7 +2,7 @@ local game = {}
 
 
 -- requires
-local animation = require("animation")
+local animation = require "animation"
 
 
 -- variables
@@ -21,8 +21,8 @@ function game.init()
 
 
     -- init logic:
-    playerImage.to(1)
-
+    -- local animation = playerImage.to(1):delay(1)
+    local animation = playerImage.play(3, "idle", true, false)
     -- TODO: draw floor, ceiling
     -- TODO: draw a chair in the scene
     -- TODO: make the player move
@@ -56,9 +56,9 @@ function game.draw()
     
     -- draw background
     -- FIXME: magic numbers
-    local backgroundQuad = love.graphics.newQuad(0, 0, 3840, 2160, 3840, 2160)
+    local backgroundQuad = love.graphics.newQuad(0, 0, 2560, 1440, 2560, 1440)
     love.graphics.draw(backgroundImage, backgroundQuad, 0, 0, 0, 1, 1, 0, 0)
-    
+
     -- draw player animation
     local playfieldCanvas = love.graphics.newCanvas(1600,720)
     local playerSpriteQuad = love.graphics.newQuad(0, 0, 1600, 720, 3840, 2160)

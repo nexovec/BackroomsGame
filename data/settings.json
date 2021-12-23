@@ -1,6 +1,7 @@
 {
     "logging":{
-        "shouldPerformanceLog": true,
-        "performanceLogPeriodInSeconds": 5
+        "shouldPerformanceLog": false,
+        "performanceLogPeriodInSeconds": 5,
+        "shouldLogFPS": false
     }
 }

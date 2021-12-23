@@ -3,6 +3,7 @@ local animation = {}
 
 -- requires
 local flux = require("flux")
+local array = require("std.array")
 
 -- helper functions
 local function parseImageTilesetIntoArrayImage(image, tileSize)
@@ -27,6 +28,19 @@ local function parseImageTilesetIntoArrayImage(image, tileSize)
     return love.graphics.newArrayImage(frames)
 end
 
+local loopingAnimations = {}
+function animation.update()
+    for k, v in ipairs(loopingAnimations) do
+        if love.timer.getTime() > v.startTime + v.playbackDuration then
+            -- FIXME: if set to true, it doesn't work
+            assert(v.ref.progress == 1, v.ref.progress)
+            v.ref.play(v.playbackDuration, v.loopName, false, v.inReverse)
+            -- v.startTime = v.startTime + v.playbackDuration
+            v.startTime = love.timer.getTime()
+        end
+    end
+end
+
 --- Parses an image into an animation (from )
 ---@param image userdata The Image object to parse
 ---@param tileSize number Size of one image in the tilemap in pixels
@@ -38,8 +52,8 @@ function animation.new(image, tileSize, frameCounts, loopNames, skipToNextRowAft
     if type(image) == "string" then
 
         -- load spritesheet from file from file
-        assert(love.ddd.animations)
-        local properties = love.ddd.animations[image]
+        assert(media.animations)
+        local properties = media.animations[image]
         -- TODO: make the image shared and the ArrayImage as well
         image = love.graphics.newImage(properties.filepath)
         tileSize = properties.tileSize
@@ -66,8 +80,10 @@ function animation.new(image, tileSize, frameCounts, loopNames, skipToNextRowAft
         tilesPerColumn = height / tileSize,
         
         activeLoop = 1,
-        progress = 0
+        progress = 0,
+        loopingAnimationsIndex = nil
     }
+    self.loopNames = self.loopNames or {}
     assert(isint(self.tilesPerRow))
     assert(isint(self.tilesPerColumn))
 
@@ -80,23 +96,38 @@ function animation.new(image, tileSize, frameCounts, loopNames, skipToNextRowAft
 
     -- API
     function self.setAnimation(name)
-        assert(type(name) == "string", "number indexing is not implemented yet")
         self.progress = 0
-        self.activeLoop = table.invert(self.loopNames)[name]
+        if type(name) == "string" then
+            -- PERFORMANCE:
+            self.activeLoop = array.invert(self.loopNames)[name]
+        elseif type(name) == "number" then
+            self.activeLoop = name
+        else
+            error("Unexpected type " .. type(name) .. ", number | string expected", 2)
+        end
     end
 
     function self.to(duration)
         return flux.to(self, duration, {progress = 1})
     end
-    
-    function self.play(playbackDuration, loopName, isLooping)
-        assert(not isLooping, "Not yet implemented.", 2)
+    function self.play(playbackDuration, loopName, isLooping, inReverse)
+        loopName = loopName or self.activeLoop
+        -- FIXME:
+        -- self.setAnimation(loopName)
+        assert(not inReverse, "Not yet implemented.")
+        assert(type(playbackDuration) == "number", "Unexpected playbackDuration: " .. type(playbackDuration) .. ", number expected", 2)
         assert(playbackDuration > 0, nil, 2)
         self.progress = 0
-        flux.to(self, playbackDuration, {progress = 1})
+        -- FIXME: timings
+        flux.to(self, playbackDuration, {progress = 1}):ease("linear")
+        if not isLooping then return end
+        self.loopingAnimationsIndex = self.loopingAnimationsIndex or (#loopingAnimations + 1)
+        local argWrap = {ref = self, playbackDuration = playbackDuration, loopName = loopName, inReverse = inReverse, startTime = love.timer.getTime()}
+        loopingAnimations[#loopingAnimations + 1] = argWrap
     end
 
     function self.draw(quad, xPos, yPos, xScale, yScale)
+        assert(self.frameCounts[self.activeLoop], "type: " .. self.activeLoop)
         local frame = math.floor(self.progress * (self.frameCounts[self.activeLoop] - 1))
         return love.graphics.drawLayer(self.imageData, self.offsets[self.activeLoop] + frame, quad, xPos, yPos, xScale, yScale)
     end

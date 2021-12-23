@@ -3,7 +3,7 @@ local json = require("json")
 local loveOverrides = {}
 
 
-function loveOverrides.init()
+function loveOverrides.loadData()
     function love.decodeJsonFile(filepath)
         local dataJson = love.filesystem.newFileData(filepath):getString()
         assert(dataJson)
@@ -15,10 +15,10 @@ function loveOverrides.init()
     local settings = love.decodeJsonFile("data/settings.json")
     local animations = love.decodeJsonFile("data/animations.json")
 
-    assert(not love.ddd)
-    love.ddd = {}
-    love.ddd.constants = constants
-    love.ddd.settings = settings
-    love.ddd.animations = animations
+    assert(not media)
+    media = {}
+    media.constants = constants
+    media.settings = settings
+    media.animations = animations
 end
 return loveOverrides
