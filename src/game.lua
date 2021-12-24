@@ -2,13 +2,14 @@ local game = {}
 
 
 -- requires
-local animation = require "animation"
+local animation = require("animation")
 
 
 -- variables
-local backgroundImage = nil
-local playerImage = nil
-local testTileSet = nil
+local backgroundImage
+local playerImage
+local testTileSet
+local shader
 
 
 -- API
@@ -23,6 +24,8 @@ function game.init()
     -- init logic:
     -- local animation = playerImage.to(1):delay(1)
     local animation = playerImage.play(3, "idle", true, false)
+    -- shader = love.graphics.newShader("resources/shaders/basic.glsl")
+
     -- TODO: draw floor, ceiling
     -- TODO: draw a chair in the scene
     -- TODO: make the player move
@@ -46,6 +49,8 @@ function game.init()
     -- TODO: add outpost
     -- TODO: add inventory
     -- TODO: add drinkable almond water
+    
+    -- love.graphics.setShader(shader)
 end
 
 

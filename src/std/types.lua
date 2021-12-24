@@ -4,6 +4,13 @@ function isint(num)
     if math.floor(num) ~= num then return false end
     return true
 end
+function isuint(num)
+    if isint(num) == false then return false end
+    if num >= 0 then
+        return true
+    end
+    return false
+end
 
 function isureal(num)
     if type(num) ~= "number" then return false end

@@ -4,12 +4,43 @@ local animation = {}
 -- requires
 local flux = require("flux")
 local array = require("std.array")
+local assets = require("assets")
 
 -- helper functions
-local function parseImageTilesetIntoArrayImage(image, tileSize)
-    assert(type(image) == "userdata", "expected image: Image, got image: " .. image:type(), 2)
-    assert(image:type() == "Image", "expected image: Image, got image: " .. image:type(), 2)
+-- FIXME: much faster, but generates empty images right now
+local function parseImageTilesetIntoArrayImage(imagedata, tileSize)
+    assert(type(imagedata) == "userdata" and imagedata:type() == "ImageData", "expected: ImageData, got: " .. (imagedata.type and imagedata:type()) or type(imagedata), 2)
     assert(tileSize > 0, "Tile size must be positive", 2)
+    local frames = {}
+    local width, height = imagedata:getDimensions()
+    for i = 0, height / tileSize do
+        for j = 0, width / tileSize do
+            local frame = love.image.newImageData(tileSize, tileSize)
+            frame:paste(imagedata, 0, 0, j * tileSize, i * tileSize, tileSize, tileSize)
+            frames[#frames + 1] = frame
+        end
+    end
+    return love.graphics.newArrayImage(frames)
+end
+-- FIXME: generates empty images
+function parseImageTilesetIntoArrayImage(filename, tileSize)
+    local image = love.graphics.newImage(filename)
+    local cols, rows = math.floor(image:getWidth() / tileSize), math.floor(image:getHeight() / tileSize)
+    local canvas = love.graphics.newCanvas(cols * tileSize, rows * tileSize)
+    canvas:renderTo(function() love.graphics.draw(image) end)
+    local subimages = {}
+    for y = 0, rows - 1 do
+        for x = 0, cols - 1 do
+            local i = y * cols + x + 1
+            subimages[i] = canvas:newImageData(nil, 1, x * tileSize, y * tileSize, tileSize, tileSize)
+        end
+    end
+    return love.graphics.newArrayImage(subimages)
+end
+local function parseImageTilesetIntoArrayImage(imageData, tileSize)
+    assert(type(imageData) == "userdata" and imageData:type() == "ImageData", "expected: ImageData, got: " .. (imageData.type and imageData:type()) or type(imageData), 2)
+    assert(tileSize > 0, "Tile size must be positive", 2)
+    local image = love.graphics.newImage(imageData)
     local frames = {}
     local width, height = image:getDimensions()
     local canvas = love.graphics.newCanvas(image:getDimensions())
@@ -25,11 +56,13 @@ local function parseImageTilesetIntoArrayImage(image, tileSize)
             frames[#frames + 1] = canvas:newImageData()
         end
     end
+    canvas:release()
     return love.graphics.newArrayImage(frames)
 end
 
 local loopingAnimations = {}
-function animation.update()
+function animation.update(dt)
+    flux.update(dt)
     for k, v in ipairs(loopingAnimations) do
         if love.timer.getTime() > v.startTime + v.playbackDuration then
             -- FIXME: if set to true, it doesn't work
@@ -50,27 +83,26 @@ end
 ---@return table
 function animation.new(image, tileSize, frameCounts, loopNames, skipToNextRowAfterLoop)
     if type(image) == "string" then
-
         -- load spritesheet from file from file
-        assert(media.animations)
-        local properties = media.animations[image]
+        assert(assets.animations)
+        local properties = assets.animations[image]
         -- TODO: make the image shared and the ArrayImage as well
-        image = love.graphics.newImage(properties.filepath)
+        image = love.image.newImageData(properties.filepath)
         tileSize = properties.tileSize
         frameCounts = properties.frameCounts
         loopNames = properties.loopNames
         skipToNextRowAfterLoop = properties.skipToNextRowAfterLoop
     end
-    assert(type(image) == "userdata" and image:type() == "Image", "Couldn't load image.", 2)
-    assert(type(tileSize) == "number", "You must specify .tileSize property as a number. (hint: animations.json)", 2)
+    assert(type(image) == "userdata" and image:type() == "ImageData", "Couldn't load image.", 2)
+    assert(isuint(tileSize), "You must specify .tileSize property as a number. (hint: animations.json)", 2)
     assert(type(frameCounts) == "table", "You must specify .frameCounts property as an array. (hint: animations.json)", 2)
     assert(type(loopNames) == "table", "You must specify .tileSize property as an array. (hint: animations.json)", 2)
     assert(type(skipToNextRowAfterLoop) == "boolean", "You must specify .skipToNextRowAfterLoop property as a boolean. (hint: animations.json)")
-
     assert(skipToNextRowAfterLoop == true, "Not yet implemented.", 2)
-
+    
     local width, height = image:getDimensions()
     local self = {
+        -- image = love.graphics.newImage(image),
         imageData = parseImageTilesetIntoArrayImage(image, tileSize),
         frameCounts = frameCounts,
         offsets = {},
@@ -127,9 +159,9 @@ function animation.new(image, tileSize, frameCounts, loopNames, skipToNextRowAft
     end
 
     function self.draw(quad, xPos, yPos, xScale, yScale)
-        assert(self.frameCounts[self.activeLoop], "type: " .. self.activeLoop)
         local frame = math.floor(self.progress * (self.frameCounts[self.activeLoop] - 1))
         return love.graphics.drawLayer(self.imageData, self.offsets[self.activeLoop] + frame, quad, xPos, yPos, xScale, yScale)
+        -- return love.graphics.drawLayer(self.imageData, 1, quad, xPos, yPos, xScale, yScale)
     end
     return self
 end

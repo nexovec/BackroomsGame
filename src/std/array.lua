@@ -7,6 +7,9 @@ function table.shallowCopy(a)
     end
     return self
 end
+function table.prettyPrint()
+    -- TODO:
+end
 
 function array.prettyPrint()
     -- TODO:

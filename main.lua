@@ -1,14 +1,15 @@
-require("src.std.luaOverrides")
+love.filesystem.setRequirePath(love.filesystem.getRequirePath() .. ";?.lua;src/?.lua;libs/?.lua")
+require("std.luaOverrides")
 
 -- requires
 local profile = require("profile")
 local flux = require("flux")
 
 require("std.types")
-require("std.tables")
+require("std.array")
 
 local game = require("game") -- needs to be the last require
-local loveOverrides = require("loveOverrides")
+local assets = require("assets")
 local animation = require("animation")
 assert(animation)
 
@@ -25,15 +26,14 @@ local ticks = 0
 -- callbacks
 function love.load()
     profile.start()
-    love.graphics.setDefaultFilter("nearest", "nearest", 16)
-    sceneCanvas:setFilter("nearest", "nearest", 16)
+    love.graphics.setDefaultFilter("nearest", "nearest")
+    sceneCanvas:setFilter("nearest", "nearest")
     -- make fullscreen
     love.window.setVSync(0)
     love.window.requestAttention()
     love.window.setFullscreen(true, "desktop")
-    loveOverrides.loadData()
     game.init()
-    if media.settings.logging.shouldPerformanceLog then print(profile.report(10)) end
+    if assets.settings.logging.shouldPerformanceLog then print(profile.report(10)) end
     timeLastLoggedFPS = love.timer.getTime()
     profile.reset()
     profile.stop()
@@ -46,15 +46,16 @@ end
 function love.update(dt)
     profile.start()
     ticks = ticks + 1
+    -- FIXME: replace with tween
     flux.update(dt)
-    animation.update()
+    animation.update(dt)
     game.tick(dt)
-    if media.settings.logging.shouldLogFPS and love.timer.getTime() - timeLastLoggedFPS > 1 then
+    if assets.settings.logging.shouldLogFPS and love.timer.getTime() - timeLastLoggedFPS > 1 then
         print(ticks .. "\t:\t" .. collectgarbage("count"))
         ticks = 0
         timeLastLoggedFPS = timeLastLoggedFPS + 1.0
     end
-    if (media.settings.logging.shouldPerformanceLog and love.timer.getTime() - timeLastLogged > media.settings.logging.performanceLogPeriodInSeconds) then
+    if (assets.settings.logging.shouldPerformanceLog and love.timer.getTime() - timeLastLogged > assets.settings.logging.performanceLogPeriodInSeconds) then
         print(profile.report(10))
         profile.reset()
         timeLastLogged = love.timer.getTime()
