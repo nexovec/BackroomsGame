@@ -1,7 +1,11 @@
+// this is a comment
 {
-    "logging":{
+    "logging": // this is a comment as well
+    {
         "shouldPerformanceLog": true,
+        //
         "performanceLogPeriodInSeconds": 5,
-        "shouldLogFPS": false
-    }
+        "shouldLogFPS": false 
+    } // this too
 }
+// THIS IS ANOTHER COMMENT

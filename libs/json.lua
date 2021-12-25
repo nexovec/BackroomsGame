@@ -182,7 +182,7 @@ local function decode_error(str, idx, msg)
       col_count = 1
     end
   end
-  error( string.format("%s at line %d col %d", msg, line_count, col_count) )
+  error( string.format("%s at line %d col %d", msg, line_count, col_count), 2)
 end
 
 
@@ -303,6 +303,15 @@ local function parse_array(str, i)
   return res, i
 end
 
+local function parse_comment(str, i, shouldParseNext)
+  if i > #str then return {}, i end
+  if str:sub(i,i) ~= "/" then return {}, i end
+  if str:sub(i+1,i+1) ~= "/" then decode_error(str, i, "Expected token /") end
+  local nl = next_char(str, i+2, create_set("\n"))
+  if nl >= #str then return {}, #str + 1 end
+  if shouldParseNext then return parse(str, nl + 1) end
+  return {}, next_char(str, nl, space_chars, true)
+end
 
 local function parse_object(str, i)
   local res = {}
@@ -310,6 +319,8 @@ local function parse_object(str, i)
   while 1 do
     local key, val
     i = next_char(str, i, space_chars, true)
+    -- Comment?
+    _, i = parse_comment(str, i)
     -- Empty / end of object?
     if str:sub(i, i) == "}" then
       i = i + 1
@@ -320,18 +331,22 @@ local function parse_object(str, i)
       decode_error(str, i, "expected string for key")
     end
     key, i = parse(str, i)
+
     -- Read ':' delimiter
     i = next_char(str, i, space_chars, true)
     if str:sub(i, i) ~= ":" then
       decode_error(str, i, "expected ':' after key")
     end
     i = next_char(str, i + 1, space_chars, true)
+    _, i = parse_comment(str, i)
+
     -- Read value
     val, i = parse(str, i)
     -- Set
     res[key] = val
     -- Next token
     i = next_char(str, i, space_chars, true)
+    _, i = parse_comment(str, i)
     local chr = str:sub(i, i)
     i = i + 1
     if chr == "}" then break end
@@ -339,7 +354,6 @@ local function parse_object(str, i)
   end
   return res, i
 end
-
 
 local char_func_map = {
   [ '"' ] = parse_string,
@@ -359,6 +373,7 @@ local char_func_map = {
   [ "n" ] = parse_literal,
   [ "[" ] = parse_array,
   [ "{" ] = parse_object,
+  [ "/" ] = parse_comment
 }
 
 
@@ -366,18 +381,22 @@ parse = function(str, idx)
   local chr = str:sub(idx, idx)
   local f = char_func_map[chr]
   if f then
-    return f(str, idx)
+    return f(str, idx, true)
   end
   decode_error(str, idx, "unexpected character '" .. chr .. "'")
 end
 
 
 function json.decode(str)
+  -- FIXME: errors with comment after colon
   if type(str) ~= "string" then
     error("expected argument of type string, got " .. type(str))
   end
-  local res, idx = parse(str, next_char(str, 1, space_chars, true))
+  local res, idx
+  -- _, idx = parse_comment(str, 1, true)
+  res, idx = parse(str, next_char(str, 1, space_chars, true))
   idx = next_char(str, idx, space_chars, true)
+  _, idx = parse_comment(str, idx)
   if idx <= #str then
     decode_error(str, idx, "trailing garbage")
   end

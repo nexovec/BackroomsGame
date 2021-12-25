@@ -9,7 +9,7 @@ local animation = require("animation")
 local backgroundImage
 local playerImage
 local testTileSet
-local shader
+local basicShaderA
 
 
 -- API
@@ -22,9 +22,8 @@ function game.init()
 
 
     -- init logic:
-    -- local animation = playerImage.to(1):delay(1)
     local animation = playerImage.play(3, "idle", true, false)
-    -- shader = love.graphics.newShader("resources/shaders/basic.glsl")
+    basicShaderA = love.graphics.newShader("resources/shaders/basic.glsl")
 
     -- TODO: draw floor, ceiling
     -- TODO: draw a chair in the scene
@@ -49,8 +48,6 @@ function game.init()
     -- TODO: add outpost
     -- TODO: add inventory
     -- TODO: add drinkable almond water
-    
-    -- love.graphics.setShader(shader)
 end
 
 
@@ -71,7 +68,9 @@ function game.draw()
 
     playfieldCanvas:renderTo(function()
         love.graphics.clear(1.0, 1.0, 1.0)
-        playerImage.draw(playerSpriteQuad, 0, 0, 0, 1,1, 0, 0)
+        love.graphics.withShader(basicShaderA, function()
+            playerImage.draw(playerSpriteQuad, 0, 0, 0, 1,1, 0, 0)
+        end)
     end)
     love.graphics.draw(playfieldCanvas, playfieldQuad, 100, 100, 0, 1, 1, 0, 0, 0, 0)
 end

@@ -1,5 +1,6 @@
 love.filesystem.setRequirePath(love.filesystem.getRequirePath() .. ";?.lua;src/?.lua;libs/?.lua")
 require("std.luaOverrides")
+require("loveOverrides")
 
 -- requires
 local profile = require("profile")
