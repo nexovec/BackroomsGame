@@ -7,7 +7,11 @@ local array = require("std.array")
 local assets = require("assets")
 
 -- helper functions
--- FIXME: much faster, but generates empty images right now
+
+
+---@param imagedata love.ImageData
+---@param tileSize number
+---@return love.Image
 local function parseImageTilesetIntoArrayImage(imagedata, tileSize)
     assert(type(imagedata) == "userdata" and imagedata:type() == "ImageData", "expected: ImageData, got: " .. (imagedata.type and imagedata:type()) or type(imagedata), 2)
     assert(tileSize > 0, "Tile size must be positive", 2)
@@ -22,43 +26,29 @@ local function parseImageTilesetIntoArrayImage(imagedata, tileSize)
     end
     return love.graphics.newArrayImage(frames)
 end
--- FIXME: generates empty images
-function parseImageTilesetIntoArrayImage(filename, tileSize)
-    local image = love.graphics.newImage(filename)
-    local cols, rows = math.floor(image:getWidth() / tileSize), math.floor(image:getHeight() / tileSize)
-    local canvas = love.graphics.newCanvas(cols * tileSize, rows * tileSize)
-    canvas:renderTo(function() love.graphics.draw(image) end)
-    local subimages = {}
-    for y = 0, rows - 1 do
-        for x = 0, cols - 1 do
-            local i = y * cols + x + 1
-            subimages[i] = canvas:newImageData(nil, 1, x * tileSize, y * tileSize, tileSize, tileSize)
-        end
-    end
-    return love.graphics.newArrayImage(subimages)
-end
-local function parseImageTilesetIntoArrayImage(imageData, tileSize)
-    assert(type(imageData) == "userdata" and imageData:type() == "ImageData", "expected: ImageData, got: " .. (imageData.type and imageData:type()) or type(imageData), 2)
-    assert(tileSize > 0, "Tile size must be positive", 2)
-    local image = love.graphics.newImage(imageData)
-    local frames = {}
-    local width, height = image:getDimensions()
-    local canvas = love.graphics.newCanvas(image:getDimensions())
-    local quad = nil
-    local proc = function()
-        love.graphics.clear()
-        love.graphics.draw(image, quad, 0, 0, 0, 1, 1, 0, 0)
-    end
-    for i = 0, height / tileSize do
-        for ii = 0, width / tileSize do
-            quad = love.graphics.newQuad(ii * tileSize, i * tileSize, tileSize, tileSize, canvas:getDimensions())
-            canvas:renderTo(proc)
-            frames[#frames + 1] = canvas:newImageData()
-        end
-    end
-    canvas:release()
-    return love.graphics.newArrayImage(frames)
-end
+
+-- local function parseImageTilesetIntoArrayImage(filename, tileSize)
+--     local image = filename
+--     -- if type(image) == "string" or (image.type and image:type() == "ImageData") then
+--         image = love.graphics.newImage(filename)
+--     -- elseif image.type and image:type() == "Image" then
+--     --     image = filename
+--     -- else
+--     --     error("",2)
+--     -- end
+--     local cols, rows = math.floor(image:getWidth() / tileSize), math.floor(image:getHeight() / tileSize)
+--     local canvas = love.graphics.newCanvas(cols * tileSize, rows * tileSize)
+--     canvas:renderTo(function() love.graphics.draw(image) end)
+--     local subimages = {}
+--     for y = 0, rows - 1 do
+--         for x = 0, cols - 1 do
+--             local i = y * cols + x + 1
+--             subimages[i] = canvas:newImageData(nil, 1, x * tileSize, y * tileSize, tileSize, tileSize)
+--             -- subimages[i] = love.graphics.newImage(subimages[i])
+--         end
+--     end
+--     return love.graphics.newArrayImage(subimages)
+-- end
 
 local loopingAnimations = {}
 function animation.update(dt)
@@ -160,6 +150,9 @@ function animation.new(image, tileSize, frameCounts, loopNames, skipToNextRowAft
 
     function self.draw(quad, xPos, yPos, xScale, yScale)
         local frame = math.floor(self.progress * (self.frameCounts[self.activeLoop] - 1))
+        love.graphics.setColor(0,0,0,1)
+        love.graphics.rectangle("line", xPos, yPos, quad:getTextureDimensions( ))
+        love.graphics.setColor(1,1,1)
         return love.graphics.drawLayer(self.imageData, self.offsets[self.activeLoop] + frame, quad, xPos, yPos, xScale, yScale)
         -- return love.graphics.drawLayer(self.imageData, 1, quad, xPos, yPos, xScale, yScale)
     end

@@ -2,6 +2,7 @@
 mkdir ./build
 7z a ./build/files.zip BackroomsGame.love main.lua src libs resources data build/**.dll -mx=9
 pushd build
+mkdir BackroomsGame-build
 copy files.zip TempGame.love
 copy "C:\Program Files\LOVE\lovec.exe" love.exe
 copy "C:\Program Files\LOVE\lua51.dll" BackroomsGame-build/lua51.dll

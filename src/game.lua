@@ -66,13 +66,14 @@ function game.draw()
 
     -- draw player animation
     local playfieldCanvas = love.graphics.newCanvas(1600,720)
-    local playerSpriteQuad = love.graphics.newQuad(0, 0, 1600, 720, 3840, 2160)
+    local playfieldQuad = love.graphics.newQuad(0,0,1600,720,1600,720)
+    local playerSpriteQuad = love.graphics.newQuad(0, 0, 720, 720, 720, 720)
 
     playfieldCanvas:renderTo(function()
         love.graphics.clear(1.0, 1.0, 1.0)
         playerImage.draw(playerSpriteQuad, 0, 0, 0, 1,1, 0, 0)
     end)
-    love.graphics.draw(playfieldCanvas, playerSpriteQuad, 100, 100, 0, 1, 1, 0, 0, 0, 0)
+    love.graphics.draw(playfieldCanvas, playfieldQuad, 100, 100, 0, 1, 1, 0, 0, 0, 0)
 end
 
 return game
