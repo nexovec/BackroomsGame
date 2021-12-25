@@ -10,6 +10,8 @@ local backgroundImage
 local playerImage
 local testTileSet
 local basicShaderA
+local invertShaderA
+local testShaderA
 
 
 -- API
@@ -24,6 +26,8 @@ function game.init()
     -- init logic:
     local animation = playerImage.play(3, "idle", true, false)
     basicShaderA = love.graphics.newShader("resources/shaders/basic.glsl")
+    invertShaderA = love.graphics.newShader("resources/shaders/invert.glsl")
+    testShaderA = love.graphics.newShader("resources/shaders/test.glsl")
 
     -- TODO: draw floor, ceiling
     -- TODO: draw a chair in the scene
@@ -68,6 +72,12 @@ function game.draw()
 
     playfieldCanvas:renderTo(function()
         love.graphics.clear(1.0, 1.0, 1.0)
+        love.graphics.withShader(testShaderA, function()
+            testShaderA:sendColor("color1", {0.9, 0.7, 0.9, 1.0})
+            testShaderA:sendColor("color2", {0.7, 0.9, 0.9, 1.0})
+            testShaderA:send("rectSize",{32,32})
+            love.graphics.rectangle("fill", 0, 0, 720, 720)
+        end)
         love.graphics.withShader(basicShaderA, function()
             playerImage.draw(playerSpriteQuad, 0, 0, 0, 1,1, 0, 0)
         end)

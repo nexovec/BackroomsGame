@@ -1,5 +1,5 @@
 # The BackroomsGame
-This is the backrooms game private repository. I am a solo developer, so you shouldn't even be here. Go away.
+This is the backrooms game private repository. (This is public for now) I am a solo developer, so you shouldn't even be here. Go away.
 ## Conventions:
 - Return values of modules must have the same name as the file.
 - Don't use `'function obj:func() ... end'` notation. Instead, use ``'function obj.func() ... end'``.
