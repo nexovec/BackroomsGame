@@ -32,7 +32,6 @@ function love.load()
     -- make fullscreen
     love.window.setVSync(0)
     love.window.requestAttention()
-    love.window.setFullscreen(true, "desktop")
     game.init()
     if assets.settings.logging.shouldPerformanceLog then print(profile.report(10)) end
     timeLastLoggedFPS = love.timer.getTime()
