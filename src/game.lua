@@ -3,6 +3,7 @@ local game = {}
 
 -- requires
 local animation = require("animation")
+local talkies = require('talkies')
 
 
 -- variables
@@ -52,10 +53,12 @@ function game.init()
     -- TODO: add outpost
     -- TODO: add inventory
     -- TODO: add drinkable almond water
+    talkies.say("MessageBoxTitle", {"Hi, am a message!", "Sup, I'm a message too"})
 end
 
 
 function game.tick(deltaTime)
+    talkies.update(deltaTime)
 end
 
 function game.draw()
@@ -81,6 +84,7 @@ function game.draw()
         love.graphics.withShader(basicShaderA, function()
             playerImage.draw(playerSpriteQuad, 0, 0, 0, 1,1, 0, 0)
         end)
+        talkies.draw()
     end)
     love.graphics.draw(playfieldCanvas, playfieldQuad, 100, 100, 0, 1, 1, 0, 0, 0, 0)
 end

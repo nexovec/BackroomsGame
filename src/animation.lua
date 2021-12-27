@@ -4,7 +4,10 @@ local animation = {}
 -- requires
 local flux = require("flux")
 local array = require("std.array")
+local std = require("std.luaOverrides")
+local types = require("std.types")
 local assets = require("assets")
+assert = std.assert
 
 -- helper functions
 
@@ -53,9 +56,8 @@ end
 local loopingAnimations = {}
 function animation.update(dt)
     flux.update(dt)
-    for k, v in ipairs(loopingAnimations) do
+    for _, v in pairs(loopingAnimations) do
         if love.timer.getTime() > v.startTime + v.playbackDuration then
-            -- FIXME: if set to true, it doesn't work
             assert(v.ref.progress == 1, v.ref.progress)
             v.ref.play(v.playbackDuration, v.loopName, false, v.inReverse)
             -- v.startTime = v.startTime + v.playbackDuration
@@ -84,12 +86,12 @@ function animation.new(image, tileSize, frameCounts, loopNames, skipToNextRowAft
         skipToNextRowAfterLoop = properties.skipToNextRowAfterLoop
     end
     assert(type(image) == "userdata" and image:type() == "ImageData", "Couldn't load image.", 2)
-    assert(isuint(tileSize), "You must specify .tileSize property as a number. (hint: animations.json)", 2)
+    assert(types.isuint(tileSize), "You must specify .tileSize property as a number. (hint: animations.json)", 2)
     assert(type(frameCounts) == "table", "You must specify .frameCounts property as an array. (hint: animations.json)", 2)
     assert(type(loopNames) == "table", "You must specify .tileSize property as an array. (hint: animations.json)", 2)
     assert(type(skipToNextRowAfterLoop) == "boolean", "You must specify .skipToNextRowAfterLoop property as a boolean. (hint: animations.json)")
     assert(skipToNextRowAfterLoop == true, "Not yet implemented.", 2)
-    
+
     local width, height = image:getDimensions()
     local self = {
         -- image = love.graphics.newImage(image),
@@ -97,17 +99,17 @@ function animation.new(image, tileSize, frameCounts, loopNames, skipToNextRowAft
         frameCounts = frameCounts,
         offsets = {},
         animationNames = loopNames,
-        
+
         tilesPerRow = width / tileSize,
         tilesPerColumn = height / tileSize,
-        
+
         activeLoop = 1,
         progress = 0,
         loopingAnimationsIndex = nil
     }
     self.loopNames = self.loopNames or {}
-    assert(isint(self.tilesPerRow))
-    assert(isint(self.tilesPerColumn))
+    assert(types.isint(self.tilesPerRow))
+    assert(types.isint(self.tilesPerColumn))
 
     self.offsets[1] = 1
     for i = 1, #self.frameCounts do

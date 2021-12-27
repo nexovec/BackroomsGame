@@ -1,18 +1,14 @@
-love.filesystem.setRequirePath(love.filesystem.getRequirePath() .. ";?.lua;src/?.lua;libs/?.lua")
-require("std.luaOverrides")
 require("loveOverrides")
 
 -- requires
 local profile = require("profile")
 local flux = require("flux")
 
-require("std.types")
-require("std.array")
+local std = require("std")
 
 local game = require("game") -- needs to be the last require
 local assets = require("assets")
 local animation = require("animation")
-assert(animation)
 
 -- variables
 local sceneCanvas = love.graphics.newCanvas(2560, 1440)

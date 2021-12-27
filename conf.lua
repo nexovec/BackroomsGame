@@ -1,3 +1,5 @@
+love.filesystem.setRequirePath(love.filesystem.getRequirePath() .. ";?.lua;src/?.lua;libs/?.lua;libs/?/init.lua;src/?/init.lua;")
+require("std")
 jit.on()
 function love.conf(t)
     t.identity = nil                    -- The name of the save directory (string)

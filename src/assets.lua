@@ -1,4 +1,5 @@
 local json = require("json")
+local std = require("std")
 
 local assets = {}
 local function decodeJsonFile(filepath)
@@ -7,7 +8,6 @@ local function decodeJsonFile(filepath)
     return json.decode(dataJson)
 end
 local constants = decodeJsonFile("data/constants.json")
-assert(isureal(constants.targetFPS))
 
 local settings = decodeJsonFile("data/settings.json")
 local animations = decodeJsonFile("data/animations.json")
