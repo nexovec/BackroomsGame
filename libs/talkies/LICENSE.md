@@ -1,7 +1,3 @@
-This license file pertains to the following files and subdirectories of BackroomsGame/libs:
-profile.lua
-
-
 MIT License
 
 Copyright (c) 2021 2dengine

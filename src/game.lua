@@ -5,8 +5,6 @@ local game = {}
 local animation = require("animation")
 local talkies = require('talkies')
 local enet = require("enet")
-local mgl = require("MGL")
-print(mgl.mat4(1))
 
 
 -- variables
@@ -66,8 +64,10 @@ function ClientSend()
     end
 end
 local function handleNetworking()
-
-    talkies.say("Networking", "Who do you want to be?", {options = {{"Server", function()beginServer()end}, {"Client", function() beginClient() end}}})
+    talkies.say("Networking", "Who do you want to be?", {
+        rounding = 5,
+        font = love.graphics.newFont("resources/fonts/Pixel UniCode.ttf", 48),
+        options = {{"Server", function()beginServer()end}, {"Client", function() beginClient() end}}})
 end
 
 

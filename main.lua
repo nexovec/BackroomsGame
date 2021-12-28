@@ -4,6 +4,8 @@ require("loveOverrides")
 local profile = require("profile")
 local flux = require("flux")
 
+
+
 local std = require("std")
 
 local game = require("game") -- needs to be the last require
@@ -25,10 +27,12 @@ function love.load()
     profile.start()
     love.graphics.setDefaultFilter("nearest", "nearest")
     sceneCanvas:setFilter("nearest", "nearest")
+
     -- make fullscreen
     love.window.setVSync(0)
     love.window.requestAttention()
     game.init()
+
     if assets.settings.logging.shouldPerformanceLog then print(profile.report(10)) end
     timeLastLoggedFPS = love.timer.getTime()
     profile.reset()
@@ -42,10 +46,11 @@ end
 function love.update(dt)
     profile.start()
     ticks = ticks + 1
-    -- FIXME: replace with tween
+    -- TODO: replace flux with tween
     flux.update(dt)
     animation.update(dt)
     game.tick(dt)
+
     if assets.settings.logging.shouldLogFPS and love.timer.getTime() - timeLastLoggedFPS > 1 then
         print(ticks .. "\t:\t" .. collectgarbage("count"))
         ticks = 0
