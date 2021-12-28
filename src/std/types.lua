@@ -1,4 +1,82 @@
 local types = {}
+local set = require("std.set")
+
+typeNamesLua = set.createSet{
+    "string",
+    "nil",
+    "userdata",
+    "number",
+    "function",
+    "table",
+    "boolean",
+    "thread"
+}
+
+typeNamesLove = set.createSet{
+    -- TODO: exclude the ones excluded in config.lua
+    -- TODO: move into a json file
+    "Object",
+    "Data",
+    "CompressedData",
+    "CompressedImageData",
+    "FileData",
+    "FontData",
+    "GlyphData",
+    "ImageData",
+    "SoundData",
+    "BezierCurve",
+    "RandomGenerator",
+    "Body",
+    "Contact",
+    "Fixture",
+    "World",
+    "Shape",
+    "ChainShape",
+    "CircleShape",
+    "EdgeShape",
+    "PolygonShape",
+    "Joint",
+    "FrictionJoint",
+    "GearJoint",
+    "MotorJoint",
+    "MouseJoint",
+    "PrismaticJoint",
+    "PulleyJoint",
+    "RevoluteJoint",
+    "RopeJoint",
+    "WeldJoint",
+    "WheelJoint",
+    "Channel",
+    "Thread",
+    "Cursor",
+    "PixelEffect",
+    "Shader",
+    "Quad",
+    "Drawable",
+    "Texture",
+    "Canvas",
+    "Framebuffer",
+    "Image",
+    "Mesh",
+    "ParticleSystem",
+    "SpriteBatch",
+    "Text",
+    "Video",
+    "Decoder",
+    "Source",
+    "QueuableSource",
+    "File",
+    "Font",
+    "Rasterizer",
+    "Joystick",
+    "VideoStream",
+    "Variant"
+}
+
+local typeNamesStd = {
+    "class"
+}
+
 function types.isint(num)
     if type(num) ~= "number" then return false end
     if math.floor(num) ~= num then return false end

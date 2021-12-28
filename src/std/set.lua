@@ -3,13 +3,13 @@ local setInstanceParent = {}
 
 
 local function hasValue(tbl, val)
-    for i, v in ipairs(tbl) do
+    for i, v in pairs(tbl) do
         if v == val then return true end
     end
     return false
 end
 
-local function countItems(tbl)
+local function size(tbl)
     local i = 0
     for _ in pairs(tbl) do
         i = i + 1
@@ -18,7 +18,7 @@ local function countItems(tbl)
 end
 
 local function isContiguousArray(tbl)
-    local len = countItems(tbl)
+    local len = size(tbl)
     local counter = 0
     for i, v in ipairs(tbl) do
         if not (i > 0 and i <= len) then return false end
@@ -60,6 +60,19 @@ function setInstanceParent:insert(elem)
     self.members[#self.members + 1] = elem
 end
 
+function setInstanceParent.__newindex()
+    error("Error: Can't set a property, because set is an immutable data structure.", 2)
+end
+
+function setInstanceParent:__index(value)
+    -- TODO: test
+    for _,v in ipairs(self.members) do
+        if v == value then return true end
+    end
+    return false
+end
+setmetatable(setInstanceParent, setInstanceParent)
+
 function set.createSet(elems)
     if not (isContiguousArray(elems)) then error("Argument 1 must be an array (table with number-only indices indexed from 1).", 2) end
     return setmetatable({members = getUnique(elems)}, setInstanceParent)
@@ -68,6 +81,10 @@ set.type = "set"
 
 function set.__newindex()
     error("Error: You're trying to assign a property to a class.", 2)
+end
+
+function set.__index()
+    error("Indexing a class is not allowed")
 end
 setmetatable(set,set)
 return set

@@ -5,5 +5,6 @@ std.map = require("std.map")
 std.set = require("std.set")
 std.string = require("std.string")
 std.types = require("std.types")
+std.json = require("std.json")
 setmetatable(std, {__index = require("std.luaOverrides")})
 return std

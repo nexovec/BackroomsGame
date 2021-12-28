@@ -4,6 +4,9 @@ local game = {}
 -- requires
 local animation = require("animation")
 local talkies = require('talkies')
+local enet = require("enet")
+local mgl = require("MGL")
+print(mgl.mat4(1))
 
 
 -- variables
@@ -13,6 +16,59 @@ local testTileSet
 local basicShaderA
 local invertShaderA
 local testShaderA
+
+local enethost
+local enetclient
+local clientpeer
+local hostevent
+-- test networking
+local function beginServer()
+    print("Starting the Server...")
+
+    -- establish host for receiving msg
+	enethost = enet.host_create("192.168.0.234:6750")
+
+end
+local function beginClient()
+    print("Attempting to join the server...")
+
+    -- establish a connection to host on same PC
+    enetclient = enet.host_create()
+    clientpeer = enetclient:connect("192.168.0.234:6750")
+end
+local connectedPeer
+function ServerListen()
+    if not enethost then return end
+	hostevent = enethost:service(100)
+	if hostevent then
+		print("Server detected message type: " .. hostevent.type)
+		if hostevent.type == "connect" then
+			print(hostevent.peer, "connected.")
+		end
+		if hostevent.type == "receive" then
+			print("Received message: ", hostevent.data, hostevent.peer)
+            hostevent.peer:send("Hello from the server!")
+		end
+	end
+end
+
+function ClientSend()
+    if not enetclient then return end
+	hostevent = enetclient:service(100)
+    if not hostevent then return end
+	if hostevent.type == "connect" then
+        print("sending hi to server!")
+        clientpeer:send("Hi")
+    end
+    if hostevent.type == "receive" then
+        print("Client received message: ", hostevent.data, hostevent.peer)
+        clientpeer:send("communicating!")
+    end
+end
+local function handleNetworking()
+
+    talkies.say("Networking", "Who do you want to be?", {options = {{"Server", function()beginServer()end}, {"Client", function() beginClient() end}}})
+end
 
 
 -- API
@@ -29,6 +85,9 @@ function game.init()
     basicShaderA = love.graphics.newShader("resources/shaders/basic.glsl")
     invertShaderA = love.graphics.newShader("resources/shaders/invert.glsl")
     testShaderA = love.graphics.newShader("resources/shaders/test.glsl")
+
+
+    handleNetworking()
 
     -- TODO: draw floor, ceiling
     -- TODO: draw a chair in the scene
@@ -53,16 +112,17 @@ function game.init()
     -- TODO: add outpost
     -- TODO: add inventory
     -- TODO: add drinkable almond water
-    talkies.say("MessageBoxTitle", {"Hi, am a message!", "Sup, I'm a message too"})
 end
 
 
 function game.tick(deltaTime)
     talkies.update(deltaTime)
+    ClientSend()
+    ServerListen()
 end
 
 function game.draw()
-    
+
     -- draw background
     -- FIXME: magic numbers
     local backgroundQuad = love.graphics.newQuad(0, 0, 2560, 1440, 2560, 1440)
@@ -87,6 +147,13 @@ function game.draw()
         talkies.draw()
     end)
     love.graphics.draw(playfieldCanvas, playfieldQuad, 100, 100, 0, 1, 1, 0, 0, 0, 0)
+end
+
+function love.keypressed(key)
+    if key == "space" then talkies.onAction()
+    elseif key == "up" then talkies.prevOption()
+    elseif key == "down" then talkies.nextOption()
+    end
 end
 
 return game

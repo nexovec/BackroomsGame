@@ -1,5 +1,5 @@
-local json = require("json")
 local std = require("std")
+local json = std.json
 
 local assets = {}
 local function decodeJsonFile(filepath)

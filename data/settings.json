@@ -4,8 +4,8 @@
     {
         "shouldPerformanceLog": true,
         //
-        "performanceLogPeriodInSeconds": 5,
-        "shouldLogFPS": false 
+        "performanceLogPeriodInSeconds": 60,
+        "shouldLogFPS": false
     } // this too
 }
 // THIS IS ANOTHER COMMENT

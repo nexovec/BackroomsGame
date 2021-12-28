@@ -81,7 +81,8 @@ function requireDirectory(pathToDir, localRequires)
     assert(type(pathToDir) == "string" ,nil, nil, nil)
     local requirePaths = localRequires .. ";"
     if localRequires then requirePaths = requirePaths .. love.filesystem.getRequirePath() end
-    wrapRequirePath()
+    -- TODO: make sure .init.lua is in requirePath.
+    return wrapRequirePath(pathToDir, localRequires)
 end
 return {
     assert = assert,
