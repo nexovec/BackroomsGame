@@ -98,7 +98,7 @@ function animation.new(image, tileSize, frameCounts, loopNames, skipToNextRowAft
         imageData = parseImageTilesetIntoArrayImage(image, tileSize),
         frameCounts = frameCounts,
         offsets = {},
-        animationNames = loopNames,
+        loopNames = loopNames,
 
         tilesPerRow = width / tileSize,
         tilesPerColumn = height / tileSize,
@@ -114,7 +114,7 @@ function animation.new(image, tileSize, frameCounts, loopNames, skipToNextRowAft
     self.offsets[1] = 1
     for i = 1, #self.frameCounts do
         local rowCount = math.floor((self.frameCounts[i] - 1) / self.tilesPerRow) + 1
-        self.offsets[i+1] = self.offsets[i] + self.tilesPerRow * rowCount
+        self.offsets[i + 1] = self.offsets[i] + self.tilesPerRow * rowCount
     end
     -- TODO: discard unused tiles
 
@@ -136,26 +136,28 @@ function animation.new(image, tileSize, frameCounts, loopNames, skipToNextRowAft
     end
     function self.play(playbackDuration, loopName, isLooping, inReverse)
         loopName = loopName or self.activeLoop
-        -- FIXME:
-        -- self.setAnimation(loopName)
+        self.setAnimation(loopName)
         assert(not inReverse, "Not yet implemented.")
         assert(type(playbackDuration) == "number", "Unexpected playbackDuration: " .. type(playbackDuration) .. ", number expected", 2)
         assert(playbackDuration > 0, nil, 2)
         self.progress = 0
-        -- FIXME: timings
+        -- FIXME: blinking
         flux.to(self, playbackDuration, {progress = 1}):ease("linear")
         if not isLooping then return end
         self.loopingAnimationsIndex = self.loopingAnimationsIndex or (#loopingAnimations + 1)
         local argWrap = {ref = self, playbackDuration = playbackDuration, loopName = loopName, inReverse = inReverse, startTime = love.timer.getTime()}
-        loopingAnimations[#loopingAnimations + 1] = argWrap
+        loopingAnimations[self.loopingAnimationsIndex] = argWrap
     end
 
     function self.draw(quad, xPos, yPos, xScale, yScale)
-        local frame = math.floor(self.progress * (self.frameCounts[self.activeLoop] - 1))
+        local frame = math.floor(self.progress * math.floor(self.frameCounts[self.activeLoop]))
+
+        -- DEBUG:
         love.graphics.setColor(0,0,0,1)
         love.graphics.rectangle("line", xPos, yPos, quad:getTextureDimensions( ))
         love.graphics.setColor(1,1,1)
-        return love.graphics.drawLayer(self.imageData, self.offsets[self.activeLoop] + frame, quad, xPos, yPos, xScale, yScale)
+
+        return love.graphics.drawLayer(self.imageData, self.offsets[self.activeLoop] + frame + 1, quad, xPos, yPos, xScale, yScale)
         -- return love.graphics.drawLayer(self.imageData, 1, quad, xPos, yPos, xScale, yScale)
     end
     return self

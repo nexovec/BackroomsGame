@@ -51,9 +51,7 @@ function assertType(var, ...)
 end
 function isCallable(var)
     -- TODO: test
-    if type(var) == "function" then return true
-    elseif type(var) == "table" and getmetatable(var).__call then return true
-    else return false end
+    return type(var) == "function" or (type(var) == "table" and getmetatable(var).__call)
 end
 
 function wrapRequirePath(path, moduleNameOrFunc, passCurrentRequirePaths)
@@ -84,6 +82,7 @@ function requireDirectory(pathToDir, localRequires)
     -- TODO: make sure .init.lua is in requirePath.
     return wrapRequirePath(pathToDir, localRequires)
 end
+
 return {
     assert = assert,
     requireDirectory = requireDirectory,

@@ -5,6 +5,7 @@ local game = {}
 local animation = require("animation")
 local talkies = require('talkies')
 local enet = require("enet")
+local t = require("timing")
 
 
 -- variables
@@ -18,7 +19,6 @@ local testShaderA
 local enethost
 local enetclient
 local clientpeer
-local hostevent
 -- test networking
 local function beginServer()
     print("Starting the Server...")
@@ -35,24 +35,26 @@ local function beginClient()
     clientpeer = enetclient:connect("192.168.0.234:6750")
 end
 local connectedPeer
-function ServerListen()
+function ListenIfServer()
     if not enethost then return end
-	hostevent = enethost:service(100)
+	local hostevent = enethost:service()
 	if hostevent then
-		print("Server detected message type: " .. hostevent.type)
+		-- print("Server detected message type: " .. hostevent.type)
 		if hostevent.type == "connect" then
 			print(hostevent.peer, "connected.")
 		end
 		if hostevent.type == "receive" then
 			print("Received message: ", hostevent.data, hostevent.peer)
-            hostevent.peer:send("Hello from the server!")
+            t.delayCall(function()
+                hostevent.peer:send("Hello from the server!")
+            end, 2)
 		end
 	end
 end
 
-function ClientSend()
+function SendIfClient()
     if not enetclient then return end
-	hostevent = enetclient:service(100)
+	local hostevent = enetclient:service()
     if not hostevent then return end
 	if hostevent.type == "connect" then
         print("sending hi to server!")
@@ -60,7 +62,9 @@ function ClientSend()
     end
     if hostevent.type == "receive" then
         print("Client received message: ", hostevent.data, hostevent.peer)
-        clientpeer:send("communicating!")
+        t.delayCall(function()
+            clientpeer:send("communicating!")
+        end, 2)
     end
 end
 local function handleNetworking()
@@ -81,7 +85,7 @@ function game.init()
 
 
     -- init logic:
-    local animation = playerImage.play(3, "idle", true, false)
+    local animation = playerImage.play(3, "attack1", true, false)
     basicShaderA = love.graphics.newShader("resources/shaders/basic.glsl")
     invertShaderA = love.graphics.newShader("resources/shaders/invert.glsl")
     testShaderA = love.graphics.newShader("resources/shaders/test.glsl")
@@ -94,7 +98,6 @@ function game.init()
     -- TODO: make the player move
     -- TODO: basic interaction with chair transitions into level 0
     -- TODO: in-game log
-    -- TODO: narration dialogue boxes
     -- TODO: scripted entity encounter
     -- TODO: entity cards
     -- TODO: display entity on the field
@@ -117,8 +120,9 @@ end
 
 function game.tick(deltaTime)
     talkies.update(deltaTime)
-    ClientSend()
-    ServerListen()
+    t.update()
+    SendIfClient()
+    ListenIfServer()
 end
 
 function game.draw()
@@ -128,7 +132,7 @@ function game.draw()
     local backgroundQuad = love.graphics.newQuad(0, 0, 2560, 1440, 2560, 1440)
     love.graphics.draw(backgroundImage, backgroundQuad, 0, 0, 0, 1, 1, 0, 0)
 
-    -- draw player animation
+    -- draw scene
     local playfieldCanvas = love.graphics.newCanvas(1600,720)
     local playfieldQuad = love.graphics.newQuad(0,0,1600,720,1600,720)
     local playerSpriteQuad = love.graphics.newQuad(0, 0, 720, 720, 720, 720)
@@ -147,6 +151,8 @@ function game.draw()
         talkies.draw()
     end)
     love.graphics.draw(playfieldCanvas, playfieldQuad, 100, 100, 0, 1, 1, 0, 0, 0, 0)
+
+    -- draw chatbox
 end
 
 function love.keypressed(key)
