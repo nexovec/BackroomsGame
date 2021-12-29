@@ -1,12 +1,10 @@
 local game = {}
 
-
 -- requires
 local animation = require("animation")
 local talkies = require('talkies')
 local enet = require("enet")
 local t = require("timing")
-
 
 -- variables
 local backgroundImage
@@ -15,6 +13,7 @@ local testTileSet
 local basicShaderA
 local invertShaderA
 local testShaderA
+local blurShader
 local uiBtnRoundingMask
 
 local enethost
@@ -25,7 +24,7 @@ local function beginServer()
     print("Starting the Server...")
 
     -- establish host for receiving msg
-	enethost = enet.host_create("192.168.0.234:6750")
+    enethost = enet.host_create("192.168.0.234:6750")
 
 end
 local function beginClient()
@@ -37,27 +36,33 @@ local function beginClient()
 end
 local connectedPeer
 function ListenIfServer()
-    if not enethost then return end
-	local hostevent = enethost:service()
-	if hostevent then
-		-- print("Server detected message type: " .. hostevent.type)
-		if hostevent.type == "connect" then
-			print(hostevent.peer, "connected.")
-		end
-		if hostevent.type == "receive" then
-			print("Received message: ", hostevent.data, hostevent.peer)
+    if not enethost then
+        return
+    end
+    local hostevent = enethost:service()
+    if hostevent then
+        -- print("Server detected message type: " .. hostevent.type)
+        if hostevent.type == "connect" then
+            print(hostevent.peer, "connected.")
+        end
+        if hostevent.type == "receive" then
+            print("Received message: ", hostevent.data, hostevent.peer)
             t.delayCall(function()
                 hostevent.peer:send("Hello from the server!")
             end, 2)
-		end
-	end
+        end
+    end
 end
 
 function SendIfClient()
-    if not enetclient then return end
-	local hostevent = enetclient:service()
-    if not hostevent then return end
-	if hostevent.type == "connect" then
+    if not enetclient then
+        return
+    end
+    local hostevent = enetclient:service()
+    if not hostevent then
+        return
+    end
+    if hostevent.type == "connect" then
         print("sending hi to server!")
         clientpeer:send("Hi")
     end
@@ -72,9 +77,13 @@ local function handleNetworking()
     talkies.say("Networking", "Who do you want to be?", {
         rounding = 5,
         font = love.graphics.newFont("resources/fonts/Pixel UniCode.ttf", 48),
-        options = {{"Server", function()beginServer()end}, {"Client", function() beginClient() end}}})
+        options = {{"Server", function()
+            beginServer()
+        end}, {"Client", function()
+            beginClient()
+        end}}
+    })
 end
-
 
 -- API
 function game.init()
@@ -84,14 +93,14 @@ function game.init()
     playerImage = animation.new("character")
     tilesetImage = animation.new("tileset")
 
-
     -- init logic:
     local animation = playerImage.play(3, "attack1", true, false)
     basicShaderA = love.graphics.newShader("resources/shaders/basic.glsl")
     invertShaderA = love.graphics.newShader("resources/shaders/invert.glsl")
     testShaderA = love.graphics.newShader("resources/shaders/test.glsl")
-    uiBtnRoundingMask = love.graphics.newShader("resources/shaders/masks/uiBtnRoundingMask.glsl")
+    blurShader = love.graphics.newShader("resources/shaders/blur.glsl")
 
+    uiBtnRoundingMask = love.graphics.newShader("resources/shaders/masks/uiBtnRoundingMask.glsl")
 
     handleNetworking()
 
@@ -121,7 +130,6 @@ function game.init()
     -- TODO: add drinkable almond water
 end
 
-
 function game.tick(deltaTime)
     talkies.update(deltaTime)
     t.update()
@@ -137,24 +145,28 @@ function game.draw()
     love.graphics.draw(backgroundImage, backgroundQuad, 0, 0, 0, 1, 1, 0, 0)
 
     -- draw scene
-    local playfieldCanvas = love.graphics.newCanvas(1600,720)
+    local playfieldCanvas = love.graphics.newCanvas(1600, 720)
 
     playfieldCanvas:renderTo(function()
         love.graphics.clear(1.0, 1.0, 1.0)
         love.graphics.withShader(testShaderA, function()
             testShaderA:sendColor("color1", {0.9, 0.7, 0.9, 1.0})
             testShaderA:sendColor("color2", {0.7, 0.9, 0.9, 1.0})
-            testShaderA:send("rectSize",{64,64})
+            testShaderA:send("rectSize", {64, 64})
             love.graphics.rectangle("fill", 0, 0, 720, 720)
         end)
         love.graphics.withShader(basicShaderA, function()
-            local playerSpriteQuad = love.graphics.newQuad(0, 0, 720, 720, 720, 720)
-            playerImage.draw(playerSpriteQuad, 0, 0, 0, 1,1, 0, 0)
+            love.graphics.withShader(blurShader, function()
+                blurShader:send("blurSize", 1 / (2560 / 8))
+                blurShader:send("sigma", 3)
+                local playerSpriteQuad = love.graphics.newQuad(0, 0, 720, 720, 720, 720)
+                playerImage.draw(playerSpriteQuad, 0, 0, 0, 1, 1, 0, 0)
+            end)
         end)
         talkies.draw()
     end)
 
-    local playfieldScenePlacementQuad = love.graphics.newQuad(0,0,1600,720,1600,720)
+    local playfieldScenePlacementQuad = love.graphics.newQuad(0, 0, 1600, 720, 1600, 720)
     love.graphics.draw(playfieldCanvas, playfieldScenePlacementQuad, 100, 100, 0, 1, 1, 0, 0, 0, 0)
 
     -- draw chatbox
@@ -162,20 +174,24 @@ function game.draw()
     local chatboxCanvas = love.graphics.newCanvas(unpack(chatboxDims))
 
     chatboxCanvas:renderTo(function()
-    love.graphics.withShader(uiBtnRoundingMask, function()
-        uiBtnRoundingMask:send("rounding", 25)
-        love.graphics.rectangle("fill", 0, 0, unpack(chatboxDims))
-    end)
+        love.graphics.withShader(uiBtnRoundingMask, function()
+            uiBtnRoundingMask:send("rounding", 25)
+            love.graphics.rectangle("fill", 0, 0, unpack(chatboxDims))
+        end)
     end)
 
-    local chatboxScenePlacementQuad = love.graphics.newQuad(0, 0, chatboxDims[1], chatboxDims[2], chatboxDims[1], chatboxDims[2])
+    local chatboxScenePlacementQuad = love.graphics.newQuad(0, 0, chatboxDims[1], chatboxDims[2], chatboxDims[1],
+        chatboxDims[2])
     love.graphics.draw(chatboxCanvas, chatboxScenePlacementQuad, 1800, 100, 0, 1, 1, 0, 0, 0, 0)
 end
 
 function love.keypressed(key)
-    if key == "space" then talkies.onAction()
-    elseif key == "up" then talkies.prevOption()
-    elseif key == "down" then talkies.nextOption()
+    if key == "space" then
+        talkies.onAction()
+    elseif key == "up" then
+        talkies.prevOption()
+    elseif key == "down" then
+        talkies.nextOption()
     end
 end
 

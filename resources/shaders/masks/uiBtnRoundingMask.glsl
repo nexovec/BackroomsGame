@@ -23,11 +23,9 @@ void effect()
   vec2 distanceFromBottomRightCorner = vec2(screenPos.x - (screenSize.x - rounding),  screenPos.y - (screenSize.y - rounding));
   bool isInBottomRightCorner = screenPos.y > screenSize.y - rounding && screenPos.x > screenSize.x - rounding && rounding * rounding < componentSum(distanceFromBottomRightCorner * distanceFromBottomRightCorner);
 // bool isInBottomRightCorner = false;
-  if(isInUpperRightCorner ||  isInUpperLeftCorner || isInBottomRightCorner || isInBottomLeftCorner){
-      love_PixelColor = vec4(0,0,0,0);
-  }
-  else{
-      love_PixelColor = vec4(1,1,1,1);
-  }
+//   if(){
+//       love_PixelColor = vec4(0,0,0,0);
+//   }
+  love_PixelColor = 1 - int(isInUpperRightCorner ||  isInUpperLeftCorner || isInBottomRightCorner || isInBottomLeftCorner) * vec4(1, 1, 1, 1);
 }
 #endif
