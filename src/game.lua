@@ -15,6 +15,7 @@ local testTileSet
 local basicShaderA
 local invertShaderA
 local testShaderA
+local uiBtnRoundingMask
 
 local enethost
 local enetclient
@@ -89,13 +90,16 @@ function game.init()
     basicShaderA = love.graphics.newShader("resources/shaders/basic.glsl")
     invertShaderA = love.graphics.newShader("resources/shaders/invert.glsl")
     testShaderA = love.graphics.newShader("resources/shaders/test.glsl")
+    uiBtnRoundingMask = love.graphics.newShader("resources/shaders/masks/uiBtnRoundingMask.glsl")
 
 
     handleNetworking()
 
+    -- TODO: grayscale shader
+    -- TODO: color pallette conversion shader
+    -- TODO: luma shader
     -- TODO: draw floor, ceiling
     -- TODO: draw a chair in the scene
-    -- TODO: make the player move
     -- TODO: basic interaction with chair transitions into level 0
     -- TODO: in-game log
     -- TODO: scripted entity encounter
@@ -134,8 +138,6 @@ function game.draw()
 
     -- draw scene
     local playfieldCanvas = love.graphics.newCanvas(1600,720)
-    local playfieldQuad = love.graphics.newQuad(0,0,1600,720,1600,720)
-    local playerSpriteQuad = love.graphics.newQuad(0, 0, 720, 720, 720, 720)
 
     playfieldCanvas:renderTo(function()
         love.graphics.clear(1.0, 1.0, 1.0)
@@ -146,13 +148,28 @@ function game.draw()
             love.graphics.rectangle("fill", 0, 0, 720, 720)
         end)
         love.graphics.withShader(basicShaderA, function()
+            local playerSpriteQuad = love.graphics.newQuad(0, 0, 720, 720, 720, 720)
             playerImage.draw(playerSpriteQuad, 0, 0, 0, 1,1, 0, 0)
         end)
         talkies.draw()
     end)
-    love.graphics.draw(playfieldCanvas, playfieldQuad, 100, 100, 0, 1, 1, 0, 0, 0, 0)
+
+    local playfieldScenePlacementQuad = love.graphics.newQuad(0,0,1600,720,1600,720)
+    love.graphics.draw(playfieldCanvas, playfieldScenePlacementQuad, 100, 100, 0, 1, 1, 0, 0, 0, 0)
 
     -- draw chatbox
+    local chatboxDims = {640, 1280}
+    local chatboxCanvas = love.graphics.newCanvas(unpack(chatboxDims))
+
+    chatboxCanvas:renderTo(function()
+    love.graphics.withShader(uiBtnRoundingMask, function()
+        uiBtnRoundingMask:send("rounding", 25)
+        love.graphics.rectangle("fill", 0, 0, unpack(chatboxDims))
+    end)
+    end)
+
+    local chatboxScenePlacementQuad = love.graphics.newQuad(0, 0, chatboxDims[1], chatboxDims[2], chatboxDims[1], chatboxDims[2])
+    love.graphics.draw(chatboxCanvas, chatboxScenePlacementQuad, 1800, 100, 0, 1, 1, 0, 0, 0, 0)
 end
 
 function love.keypressed(key)

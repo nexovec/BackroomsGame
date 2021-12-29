@@ -140,7 +140,6 @@ function animation.new(image, tileSize, frameCounts, loopNames, skipToNextRowAft
         assert(not inReverse, "Not yet implemented.")
         assert(type(playbackDuration) == "number", "Unexpected playbackDuration: " .. type(playbackDuration) .. ", number expected", 2)
         assert(playbackDuration > 0, nil, 2)
-        self.progress = 0
         -- FIXME: blinking
         flux.to(self, playbackDuration, {progress = 1}):ease("linear")
         if not isLooping then return end
@@ -153,9 +152,10 @@ function animation.new(image, tileSize, frameCounts, loopNames, skipToNextRowAft
         local frame = math.floor(self.progress * math.floor(self.frameCounts[self.activeLoop]))
 
         -- DEBUG:
+        local oldColor = {love.graphics.getColor()}
         love.graphics.setColor(0,0,0,1)
         love.graphics.rectangle("line", xPos, yPos, quad:getTextureDimensions( ))
-        love.graphics.setColor(1,1,1)
+        love.graphics.setColor(unpack(oldColor))
 
         return love.graphics.drawLayer(self.imageData, self.offsets[self.activeLoop] + frame + 1, quad, xPos, yPos, xScale, yScale)
         -- return love.graphics.drawLayer(self.imageData, 1, quad, xPos, yPos, xScale, yScale)
