@@ -3,6 +3,7 @@
         "filepath":"resources/images/character.png",
         "tileSize":32,
         "frameCounts":[13, 8, 10, 10, 6, 4, 7, 13, 8, 10, 10, 10, 6, 4, 7],
+        // "frameCounts":[13, 8, 1, 10, 6, 4, 7, 13, 8, 10, 10, 10, 6, 4, 7],
         "loopNames":["idle", "run", "attack1", "attack2", "attack3", "jump", "hurt", "die"],
         "skipToNextRowAfterLoop":true
     },

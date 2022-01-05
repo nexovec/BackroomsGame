@@ -302,7 +302,7 @@ local function parse_array(str, i)
   end
   return res, i
 end
-
+-- FIXME: broken multi-line comments
 local function parse_comment(str, i, shouldParseNext)
   if i > #str then return {}, i end
   if str:sub(i,i) ~= "/" then return {}, i end
@@ -326,6 +326,9 @@ local function parse_object(str, i)
       i = i + 1
       break
     end
+
+    _, i = parse_comment(str, i)
+
     -- Read key
     if str:sub(i, i) ~= '"' then
       decode_error(str, i, "expected string for key")

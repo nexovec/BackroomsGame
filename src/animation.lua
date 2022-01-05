@@ -1,8 +1,8 @@
 local animation = {}
 
-
 -- requires
-local flux = require("flux")
+local tween = require("tween")
+
 local array = require("std.array")
 local std = require("std.luaOverrides")
 local types = require("std.types")
@@ -11,12 +11,12 @@ assert = std.assert
 
 -- helper functions
 
-
 ---@param imagedata love.ImageData
 ---@param tileSize number
 ---@return love.Image
 local function parseImageTilesetIntoArrayImage(imagedata, tileSize)
-    assert(type(imagedata) == "userdata" and imagedata:type() == "ImageData", "expected: ImageData, got: " .. (imagedata.type and imagedata:type()) or type(imagedata), 2)
+    assert(type(imagedata) == "userdata" and imagedata:type() == "ImageData",
+    "expected: ImageData, got: " .. (imagedata.type and imagedata:type()) or type(imagedata), 2)
     assert(tileSize > 0, "Tile size must be positive", 2)
     local frames = {}
     local width, height = imagedata:getDimensions()
@@ -24,7 +24,11 @@ local function parseImageTilesetIntoArrayImage(imagedata, tileSize)
         for j = 0, width / tileSize do
             local frame = love.image.newImageData(tileSize, tileSize)
             frame:paste(imagedata, 0, 0, j * tileSize, i * tileSize, tileSize, tileSize)
-            frames[#frames + 1] = frame
+            -- TODO: this other line causes emtpy frames to appear, investigate
+            -- frames[#frames + 1] = frame
+            -- NOTE: this one doesn't work at all:
+            -- frames[#frames + math.floor(imagedata:getDimensions() / tileSize)] = frame
+            frames[i * math.floor(imagedata:getDimensions() / tileSize) + j + 1] = frame
         end
     end
     return love.graphics.newArrayImage(frames)
@@ -53,16 +57,37 @@ end
 --     return love.graphics.newArrayImage(subimages)
 -- end
 
-local loopingAnimations = {}
-function animation.update(dt)
-    flux.update(dt)
-    for _, v in pairs(loopingAnimations) do
+local playingAnimations = {}
+function animation.updateAnimations(dt)
+    for _, v in pairs(playingAnimations) do
+        v.tween:update(dt)
+
+        -- looping
         if love.timer.getTime() > v.startTime + v.playbackDuration then
-            assert(v.ref.progress == 1, v.ref.progress)
+            -- TODO: reset previous tween
+            -- assert(v.ref.progress == 1, v.ref.progress)
             v.ref.play(v.playbackDuration, v.loopName, false, v.inReverse)
-            -- v.startTime = v.startTime + v.playbackDuration
-            v.startTime = love.timer.getTime()
+            v.startTime = v.startTime + v.playbackDuration
+            -- v.startTime = love.timer.getTime()
         end
+    end
+end
+
+function animation.new(image, tileSize, frameCounts, loopNames, skipToNextRowAfterLoop)
+    local self
+    if type(image) ~= "string" then
+        local properties = assets.animations[image]
+        self = {
+            image = love.image.newImageData(properties.filepath),
+            tileSize = properties.tileSize,
+            frameCounts = properties.frameCounts,
+            loopNames = properties.loopNames,
+            tween = nil
+        }
+    elseif type(image) == "userdata" and image:type() == "ImageData" then
+        error("Not yet implemented.")
+    else
+        error("arg #1 must be of type string or ImageData", 2)
     end
 end
 
@@ -74,7 +99,9 @@ end
 ---@param skipToNextRowAfterLoop boolean true if there is one animation per row, false if they are tightly packed
 ---@return table
 function animation.new(image, tileSize, frameCounts, loopNames, skipToNextRowAfterLoop)
+    local self
     if type(image) == "string" then
+
         -- load spritesheet from file from file
         assert(assets.animations)
         local properties = assets.animations[image]
@@ -85,42 +112,42 @@ function animation.new(image, tileSize, frameCounts, loopNames, skipToNextRowAft
         loopNames = properties.loopNames
         skipToNextRowAfterLoop = properties.skipToNextRowAfterLoop
     end
-    assert(type(image) == "userdata" and image:type() == "ImageData", "Couldn't load image.", 2)
-    assert(types.isuint(tileSize), "You must specify .tileSize property as a number. (hint: animations.json)", 2)
-    assert(type(frameCounts) == "table", "You must specify .frameCounts property as an array. (hint: animations.json)", 2)
-    assert(type(loopNames) == "table", "You must specify .tileSize property as an array. (hint: animations.json)", 2)
-    assert(type(skipToNextRowAfterLoop) == "boolean", "You must specify .skipToNextRowAfterLoop property as a boolean. (hint: animations.json)")
-    assert(skipToNextRowAfterLoop == true, "Not yet implemented.", 2)
 
     local width, height = image:getDimensions()
     local self = {
-        -- image = love.graphics.newImage(image),
         imageData = parseImageTilesetIntoArrayImage(image, tileSize),
         frameCounts = frameCounts,
         offsets = {},
-        loopNames = loopNames,
+        loopNames = loopNames or {},
 
-        tilesPerRow = width / tileSize,
-        tilesPerColumn = height / tileSize,
+        tilesPerRow = math.floor(width / tileSize),
+        tilesPerColumn = math.floor(height / tileSize),
 
         activeLoop = 1,
         progress = 0,
         loopingAnimationsIndex = nil
     }
-    self.loopNames = self.loopNames or {}
+    assert(type(image) == "userdata" and image:type() == "ImageData", "Couldn't load image.", 2)
+    assert(types.isuint(tileSize), "You must specify .tileSize property as a number. (hint: animations.json)", 2)
+    assert(type(frameCounts) == "table", "You must specify .frameCounts property as an array. (hint: animations.json)",
+        2)
+    assert(type(loopNames) == "table", "You must specify .tileSize property as an array. (hint: animations.json)", 2)
+    assert(type(skipToNextRowAfterLoop) == "boolean",
+        "You must specify .skipToNextRowAfterLoop property as a boolean. (hint: animations.json)")
+    assert(skipToNextRowAfterLoop == true, "Not yet implemented.", 2)
     assert(types.isint(self.tilesPerRow))
     assert(types.isint(self.tilesPerColumn))
 
     self.offsets[1] = 1
-    for i = 1, #self.frameCounts do
+    for i = 1, #self.frameCounts - 1 do
         local rowCount = math.floor((self.frameCounts[i] - 1) / self.tilesPerRow) + 1
-        self.offsets[i + 1] = self.offsets[i] + self.tilesPerRow * rowCount
+        -- self.offsets[i] = self.offsets[i - 1] + self.tilesPerRow * rowCount + 1
+        self.offsets[i + 1] = self.offsets[i] + rowCount * self.tilesPerRow
     end
     -- TODO: discard unused tiles
 
     -- API
     function self.setAnimation(name)
-        self.progress = 0
         if type(name) == "string" then
             -- PERFORMANCE:
             self.activeLoop = array.invert(self.loopNames)[name]
@@ -129,37 +156,51 @@ function animation.new(image, tileSize, frameCounts, loopNames, skipToNextRowAft
         else
             error("Unexpected type " .. type(name) .. ", number | string expected", 2)
         end
+        self.progress = 0
     end
 
     function self.to(duration)
-        return flux.to(self, duration, {progress = 1})
+        error("")
     end
     function self.play(playbackDuration, loopName, isLooping, inReverse)
-        loopName = loopName or self.activeLoop
+        local loopName = loopName or self.activeLoop
         self.setAnimation(loopName)
         assert(not inReverse, "Not yet implemented.")
-        assert(type(playbackDuration) == "number", "Unexpected playbackDuration: " .. type(playbackDuration) .. ", number expected", 2)
+        assert(type(playbackDuration) == "number",
+            "Unexpected playbackDuration: " .. type(playbackDuration) .. ", number expected", 2)
         assert(playbackDuration > 0, nil, 2)
         -- FIXME: blinking
-        flux.to(self, playbackDuration, {progress = 1}):ease("linear")
-        if not isLooping then return end
-        self.loopingAnimationsIndex = self.loopingAnimationsIndex or (#loopingAnimations + 1)
-        local argWrap = {ref = self, playbackDuration = playbackDuration, loopName = loopName, inReverse = inReverse, startTime = love.timer.getTime()}
-        loopingAnimations[self.loopingAnimationsIndex] = argWrap
+        -- TODO: stop old tween
+        local tweenRef = tween.new(playbackDuration, self, {
+            progress = 1 - 1 / self.frameCounts[self.activeLoop]
+        }, "linear")
+        self.loopingAnimationsIndex = self.loopingAnimationsIndex or (#playingAnimations + 1)
+        local argWrap = {
+            isLooping = isLooping,
+            tween = tweenRef,
+            ref = self,
+            playbackDuration = playbackDuration,
+            loopName = loopName,
+            inReverse = inReverse,
+            startTime = love.timer.getTime()
+        }
+        playingAnimations[self.loopingAnimationsIndex] = argWrap
     end
 
     function self.draw(quad, xPos, yPos, xScale, yScale)
-        local frame = math.floor(self.progress * math.floor(self.frameCounts[self.activeLoop]))
+        local frame = math.floor(self.progress * (self.frameCounts[self.activeLoop]))
 
         -- DEBUG:
         local oldColor = {love.graphics.getColor()}
-        love.graphics.setColor(0,0,0,1)
-        love.graphics.rectangle("line", xPos, yPos, quad:getTextureDimensions( ))
+        love.graphics.setColor(0, 0, 0, 1)
+        love.graphics.rectangle("line", xPos, yPos, quad:getTextureDimensions())
         love.graphics.setColor(unpack(oldColor))
 
-        return love.graphics.drawLayer(self.imageData, self.offsets[self.activeLoop] + frame + 1, quad, xPos, yPos, xScale, yScale)
-        -- return love.graphics.drawLayer(self.imageData, 1, quad, xPos, yPos, xScale, yScale)
+        return love.graphics.drawLayer(self.imageData, self.offsets[self.activeLoop] + frame, quad, xPos, yPos, xScale, yScale)
+        -- return love.graphics.drawLayer(self.imageData, frame, quad, xPos, yPos, xScale, yScale)
     end
     return self
 end
+-- animation.__index = animation
+setmetatable(animation, animation)
 return animation

@@ -2,8 +2,6 @@ require("loveOverrides")
 
 -- requires
 local profile = require("profile")
-local flux = require("flux")
-
 
 
 local std = require("std")
@@ -46,9 +44,7 @@ end
 function love.update(dt)
     profile.start()
     ticks = ticks + 1
-    -- TODO: replace flux with tween
-    flux.update(dt)
-    animation.update(dt)
+    animation.updateAnimations(dt)
     game.tick(dt)
 
     if assets.settings.logging.shouldLogFPS and love.timer.getTime() - timeLastLoggedFPS > 1 then
