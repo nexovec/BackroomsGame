@@ -11,7 +11,7 @@ local assets = require("assets")
 local animation = require("animation")
 
 -- variables
-local sceneCanvas = love.graphics.newCanvas(2560, 1440)
+local sceneCanvas
 
 local timeLastLogged = nil
 local delta = 0
@@ -24,7 +24,8 @@ local ticks = 0
 function love.load()
     profile.start()
     love.graphics.setDefaultFilter("nearest", "nearest")
-    sceneCanvas:setFilter("nearest", "nearest")
+    -- FIXME: magic numbers
+    sceneCanvas = love.graphics.newCanvas(2560, 1440)
 
     -- make fullscreen
     love.window.setVSync(0)

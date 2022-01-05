@@ -15,6 +15,8 @@ local invertShaderA
 local testShaderA
 local blurShader
 local uiBtnRoundingMask
+local gradientShaderA
+local applyAlphaA
 
 local enethost
 local enetclient
@@ -94,11 +96,13 @@ function game.init()
     tilesetImage = animation.new("tileset")
 
     -- init logic:
-    local animation = playerImage.play(3, "attack1", true, false)
+    playerImage.play(3, "attack1", true, false)
     basicShaderA = love.graphics.newShader("resources/shaders/basic.glsl")
     invertShaderA = love.graphics.newShader("resources/shaders/invert.glsl")
     testShaderA = love.graphics.newShader("resources/shaders/test.glsl")
     blurShader = love.graphics.newShader("resources/shaders/blur.glsl")
+    gradientShaderA = love.graphics.newShader("resources/shaders/gradient.glsl")
+    applyAlphaA = love.graphics.newShader("resources/shaders/applyAlpha.glsl")
 
     uiBtnRoundingMask = love.graphics.newShader("resources/shaders/masks/uiBtnRoundingMask.glsl")
 
@@ -171,12 +175,32 @@ function game.draw()
 
     -- draw chatbox
     local chatboxDims = {640, 1280}
+    local chatboxTexture = love.graphics.newCanvas(unpack(chatboxDims))
     local chatboxCanvas = love.graphics.newCanvas(unpack(chatboxDims))
+    local chatboxAlpha = love.graphics.newCanvas(unpack(chatboxDims))
+
+    chatboxAlpha:renderTo(function()
+        love.graphics.withShader(uiBtnRoundingMask, function()
+            uiBtnRoundingMask:send("rounding", 70)
+            love.graphics.rectangle("fill", 0, 0, unpack(chatboxDims))
+        end)
+    end)
+
+    chatboxTexture:renderTo(function()
+        love.graphics.withShader(gradientShaderA, function()
+            gradientShaderA:sendColor("top_left", {1,0,1,1})
+            gradientShaderA:sendColor("top_right", {1,0,0,1})
+            gradientShaderA:sendColor("top_right", {0,1,0,1})
+            gradientShaderA:sendColor("top_left", {0,0,1,1})
+            love.graphics.rectangle("fill", 0, 0, unpack(chatboxDims))
+        end)
+    end)
 
     chatboxCanvas:renderTo(function()
-        love.graphics.withShader(uiBtnRoundingMask, function()
-            uiBtnRoundingMask:send("rounding", 25)
-            love.graphics.rectangle("fill", 0, 0, unpack(chatboxDims))
+        -- TODO: use stencil shader instead
+        love.graphics.withShader(applyAlphaA, function()
+            applyAlphaA:send("alphaMask", chatboxAlpha)
+            love.graphics.draw(chatboxTexture, 0, 0)
         end)
     end)
 
