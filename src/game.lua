@@ -144,11 +144,11 @@ function game.tick(deltaTime)
 end
 
 function game.draw()
-
     -- draw background
     -- FIXME: magic numbers
     local backgroundQuad = love.graphics.newQuad(0, 0, 2560, 1440, 2560, 1440)
     love.graphics.draw(backgroundImage, backgroundQuad, 0, 0, 0, 1, 1, 0, 0)
+
 
     -- draw scene
     local playfieldCanvas = love.graphics.newCanvas(1600, 720)
@@ -175,19 +175,29 @@ function game.draw()
     local playfieldScenePlacementQuad = love.graphics.newQuad(0, 0, 1600, 720, 1600, 720)
     love.graphics.draw(playfieldCanvas, playfieldScenePlacementQuad, 100, 100, 0, 1, 1, 0, 0, 0, 0)
 
+
     -- draw chatbox
     local chatboxDims = {640, 1280}
     local chatboxTexture = love.graphics.newCanvas(unpack(chatboxDims))
     local chatboxCanvas = love.graphics.newCanvas(unpack(chatboxDims))
     local chatboxAlpha = love.graphics.newCanvas(unpack(chatboxDims))
 
-    chatboxAlpha:renderTo(function()
-        love.graphics.withShader(uiBtnRoundingMask, function()
-            uiBtnRoundingMask:send("rounding", 70)
-            love.graphics.rectangle("fill", 0, 0, unpack(chatboxDims))
-        end)
-    end)
 
+    -- create stencil buffer
+    -- the following is equivalent:
+
+    -- chatboxAlpha:renderTo(function()
+    --     love.graphics.withShader(uiBtnRoundingMask, function()
+    --         uiBtnRoundingMask:send("rounding", 70)
+    --         love.graphics.rectangle("fill", 0, 0, unpack(chatboxDims))
+    --     end)
+    -- end)
+
+    -- TODO: use love's shader API instead.
+    love.graphics.applyShader(chatboxAlpha, uiBtnRoundingMask,{rounding = 75})
+
+
+    -- create chatbox texture:
     -- the following is equivalent:
 
     -- chatboxTexture:renderTo(function()
@@ -208,13 +218,15 @@ function game.draw()
     })
     --
 
-    chatboxCanvas:renderTo(function()
-        -- TODO: use stencil shader instead
-        love.graphics.withShader(applyAlphaA, function()
-            applyAlphaA:send("alphaMask", chatboxAlpha)
-            love.graphics.draw(chatboxTexture, 0, 0)
-        end)
-    end)
+    -- chatboxCanvas:renderTo(function()
+    --     love.graphics.withShader(applyAlphaA, function()
+    --         applyAlphaA:send("alphaMask", chatboxAlpha)
+    --         love.graphics.draw(chatboxTexture, 0, 0)
+    --     end)
+    -- end)
+
+    -- apply stencil buffer
+    love.graphics.applyShader(chatboxCanvas, applyAlphaA, {alphaMask = chatboxAlpha}, {draw = chatboxTexture})
 
     local chatboxScenePlacementQuad = love.graphics.newQuad(0, 0, chatboxDims[1], chatboxDims[2], chatboxDims[1],
         chatboxDims[2])
