@@ -66,31 +66,67 @@ function animation.updateAnimations(dt)
         if love.timer.getTime() > v.startTime + v.playbackDuration then
             -- TODO: reset previous tween
             -- assert(v.ref.progress == 1, v.ref.progress)
-            v.ref.play(v.playbackDuration, v.loopName, false, v.inReverse)
+            v.ref:play(v.playbackDuration, v.loopName, false, v.inReverse)
             v.startTime = v.startTime + v.playbackDuration
             -- v.startTime = love.timer.getTime()
         end
     end
 end
 
-function animation.new(image, tileSize, frameCounts, loopNames, skipToNextRowAfterLoop)
-    local self
-    if type(image) ~= "string" then
-        local properties = assets.animations[image]
-        self = {
-            image = love.image.newImageData(properties.filepath),
-            tileSize = properties.tileSize,
-            frameCounts = properties.frameCounts,
-            loopNames = properties.loopNames,
-            tween = nil
-        }
-    elseif type(image) == "userdata" and image:type() == "ImageData" then
-        error("Not yet implemented.")
+
+-- API
+function animation:setAnimation(name)
+    if type(name) == "string" then
+        -- PERFORMANCE:
+        self.activeLoop = array.invert(self.loopNames)[name]
+    elseif type(name) == "number" then
+        self.activeLoop = name
     else
-        error("arg #1 must be of type string or ImageData", 2)
+        error("Unexpected type " .. type(name) .. ", number | string expected", 2)
     end
+    self.progress = 0
 end
 
+function animation:to(duration)
+    error("Not yet implemented.")
+end
+function animation:play(playbackDuration, loopName, isLooping, inReverse)
+    local loopName = loopName or self.activeLoop
+    self:setAnimation(loopName)
+    assert(not inReverse, "Not yet implemented.")
+    assert(type(playbackDuration) == "number",
+        "Unexpected playbackDuration: " .. type(playbackDuration) .. ", number expected", 2)
+    assert(playbackDuration > 0, nil, 2)
+    -- FIXME: blinking
+    -- TODO: stop old tween
+    local tweenRef = tween.new(playbackDuration, self, {
+        progress = 1 - 1 / self.frameCounts[self.activeLoop]
+    }, "linear")
+    self.loopingAnimationsIndex = self.loopingAnimationsIndex or (#playingAnimations + 1)
+    local argWrap = {
+        isLooping = isLooping,
+        tween = tweenRef,
+        ref = self,
+        playbackDuration = playbackDuration,
+        loopName = loopName,
+        inReverse = inReverse,
+        startTime = love.timer.getTime()
+    }
+    playingAnimations[self.loopingAnimationsIndex] = argWrap
+end
+
+function animation:draw(quad, xPos, yPos, xScale, yScale)
+    local frame = math.floor(self.progress * (self.frameCounts[self.activeLoop]))
+
+    -- DEBUG:
+    local oldColor = {love.graphics.getColor()}
+    love.graphics.setColor(0, 0, 0, 1)
+    love.graphics.rectangle("line", xPos, yPos, quad:getTextureDimensions())
+    love.graphics.setColor(unpack(oldColor))
+
+    return love.graphics.drawLayer(self.imageData, self.offsets[self.activeLoop] + frame, quad, xPos, yPos, xScale, yScale)
+    -- return love.graphics.drawLayer(self.imageData, frame, quad, xPos, yPos, xScale, yScale)
+end
 --- Parses an image into an animation (from )
 ---@param image userdata The Image object to parse
 ---@param tileSize number Size of one image in the tilemap in pixels
@@ -114,7 +150,7 @@ function animation.new(image, tileSize, frameCounts, loopNames, skipToNextRowAft
     end
 
     local width, height = image:getDimensions()
-    local self = {
+    self = {
         imageData = parseImageTilesetIntoArrayImage(image, tileSize),
         frameCounts = frameCounts,
         offsets = {},
@@ -146,61 +182,8 @@ function animation.new(image, tileSize, frameCounts, loopNames, skipToNextRowAft
     end
     -- TODO: discard unused tiles
 
-    -- API
-    function self.setAnimation(name)
-        if type(name) == "string" then
-            -- PERFORMANCE:
-            self.activeLoop = array.invert(self.loopNames)[name]
-        elseif type(name) == "number" then
-            self.activeLoop = name
-        else
-            error("Unexpected type " .. type(name) .. ", number | string expected", 2)
-        end
-        self.progress = 0
-    end
-
-    function self.to(duration)
-        error("")
-    end
-    function self.play(playbackDuration, loopName, isLooping, inReverse)
-        local loopName = loopName or self.activeLoop
-        self.setAnimation(loopName)
-        assert(not inReverse, "Not yet implemented.")
-        assert(type(playbackDuration) == "number",
-            "Unexpected playbackDuration: " .. type(playbackDuration) .. ", number expected", 2)
-        assert(playbackDuration > 0, nil, 2)
-        -- FIXME: blinking
-        -- TODO: stop old tween
-        local tweenRef = tween.new(playbackDuration, self, {
-            progress = 1 - 1 / self.frameCounts[self.activeLoop]
-        }, "linear")
-        self.loopingAnimationsIndex = self.loopingAnimationsIndex or (#playingAnimations + 1)
-        local argWrap = {
-            isLooping = isLooping,
-            tween = tweenRef,
-            ref = self,
-            playbackDuration = playbackDuration,
-            loopName = loopName,
-            inReverse = inReverse,
-            startTime = love.timer.getTime()
-        }
-        playingAnimations[self.loopingAnimationsIndex] = argWrap
-    end
-
-    function self.draw(quad, xPos, yPos, xScale, yScale)
-        local frame = math.floor(self.progress * (self.frameCounts[self.activeLoop]))
-
-        -- DEBUG:
-        local oldColor = {love.graphics.getColor()}
-        love.graphics.setColor(0, 0, 0, 1)
-        love.graphics.rectangle("line", xPos, yPos, quad:getTextureDimensions())
-        love.graphics.setColor(unpack(oldColor))
-
-        return love.graphics.drawLayer(self.imageData, self.offsets[self.activeLoop] + frame, quad, xPos, yPos, xScale, yScale)
-        -- return love.graphics.drawLayer(self.imageData, frame, quad, xPos, yPos, xScale, yScale)
-    end
-    return self
+    array.prettyPrint(self)
+    return setmetatable(self, {__index = animation})
 end
--- animation.__index = animation
-setmetatable(animation, animation)
+
 return animation

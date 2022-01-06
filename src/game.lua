@@ -10,6 +10,7 @@ local t = require("timing")
 local backgroundImage
 local playerImage
 local testTileSet
+
 local basicShaderA
 local invertShaderA
 local testShaderA
@@ -21,6 +22,7 @@ local applyAlphaA
 local enethost
 local enetclient
 local clientpeer
+
 -- test networking
 local function beginServer()
     print("Starting the Server...")
@@ -96,7 +98,7 @@ function game.init()
     tilesetImage = animation.new("tileset")
 
     -- init logic:
-    playerImage.play(3, "attack1", true, false)
+    playerImage:play(3, "attack1", true, false)
     basicShaderA = love.graphics.newShader("resources/shaders/basic.glsl")
     invertShaderA = love.graphics.newShader("resources/shaders/invert.glsl")
     testShaderA = love.graphics.newShader("resources/shaders/test.glsl")
@@ -164,7 +166,7 @@ function game.draw()
                 blurShader:send("blurSize", 1 / (2560 / 8))
                 blurShader:send("sigma", 3)
                 local playerSpriteQuad = love.graphics.newQuad(0, 0, 720, 720, 720, 720)
-                playerImage.draw(playerSpriteQuad, 0, 0, 0, 1, 1, 0, 0)
+                playerImage:draw(playerSpriteQuad, 0, 0, 0, 1, 1, 0, 0)
             end)
         end)
         talkies.draw()
@@ -186,15 +188,25 @@ function game.draw()
         end)
     end)
 
-    chatboxTexture:renderTo(function()
-        love.graphics.withShader(gradientShaderA, function()
-            gradientShaderA:sendColor("top_left", {1,0,1,1})
-            gradientShaderA:sendColor("top_right", {1,0,0,1})
-            gradientShaderA:sendColor("top_right", {0,1,0,1})
-            gradientShaderA:sendColor("top_left", {0,0,1,1})
-            love.graphics.rectangle("fill", 0, 0, unpack(chatboxDims))
-        end)
-    end)
+    -- the following is equivalent:
+
+    -- chatboxTexture:renderTo(function()
+    --     love.graphics.withShader(gradientShaderA, function()
+    --         gradientShaderA:sendColor("top_left", {1, 0, 1, 1})
+    --         gradientShaderA:sendColor("top_right", {1, 0, 0, 1})
+    --         gradientShaderA:sendColor("bottom_right", {0, 1, 0, 1})
+    --         gradientShaderA:sendColor("bottom_left", {0, 0, 1, 1})
+    --         love.graphics.rectangle("fill", 0, 0, unpack(chatboxDims))
+    --     end)
+    -- end)
+
+    love.graphics.applyShader(chatboxTexture, gradientShaderA, {
+        top_left = {1, 0, 1, 1},
+        top_right = {1, 0, 0, 1},
+        bottom_right = {0, 1, 0, 1},
+        bottom_left = {0, 0, 1, 1}
+    })
+    --
 
     chatboxCanvas:renderTo(function()
         -- TODO: use stencil shader instead
