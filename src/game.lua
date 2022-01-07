@@ -180,10 +180,9 @@ function game.draw()
     local chatboxDims = {640, 1280}
     local chatboxTexture = love.graphics.newCanvas(unpack(chatboxDims))
     local chatboxCanvas = love.graphics.newCanvas(unpack(chatboxDims))
-    local chatboxAlpha = love.graphics.newCanvas(unpack(chatboxDims))
+    local chatboxAlpha = love.graphics.newCanvas(chatboxDims.x, chatboxDims.y, {format = "stencil8"})
 
-
-    -- create stencil buffer
+    -- shader simulated stencil buffer:
     -- the following is equivalent:
 
     -- chatboxAlpha:renderTo(function()
@@ -193,9 +192,7 @@ function game.draw()
     --     end)
     -- end)
 
-    -- TODO: use love's shader API instead.
-    love.graphics.applyShader(chatboxAlpha, uiBtnRoundingMask,{rounding = 75})
-
+    -- love.graphics.applyShader(chatboxAlpha, uiBtnRoundingMask,{rounding = 75})
 
     -- create chatbox texture:
     -- the following is equivalent:
@@ -210,13 +207,12 @@ function game.draw()
     --     end)
     -- end)
 
-    love.graphics.applyShader(chatboxTexture, gradientShaderA, {
-        top_left = {1, 0, 1, 1},
-        top_right = {1, 0, 0, 1},
-        bottom_right = {0, 1, 0, 1},
-        bottom_left = {0, 0, 1, 1}
-    })
-    --
+    -- love.graphics.applyShader(chatboxTexture, gradientShaderA, {
+    --     top_left = {1, 0, 1, 1},
+    --     top_right = {1, 0, 0, 1},
+    --     bottom_right = {0, 1, 0, 1},
+    --     bottom_left = {0, 0, 1, 1}
+    -- })
 
     -- chatboxCanvas:renderTo(function()
     --     love.graphics.withShader(applyAlphaA, function()
@@ -226,7 +222,25 @@ function game.draw()
     -- end)
 
     -- apply stencil buffer
-    love.graphics.applyShader(chatboxCanvas, applyAlphaA, {alphaMask = chatboxAlpha}, {draw = chatboxTexture})
+    -- love.graphics.applyShader(chatboxCanvas, applyAlphaA, {alphaMask = chatboxAlpha}, {draw = chatboxTexture})
+
+    -- stencil buffer
+    love.graphics.push("all")
+    love.graphics.setCanvas({chatboxCanvas, depthstencil = true})
+    love.graphics.stencil(function()
+        love.graphics.setShader(uiBtnRoundingMask)
+        uiBtnRoundingMask:send("rounding", 75)
+        love.graphics.rectangle("fill",0,0,unpack(chatboxDims))
+    end, "replace", 1)
+    love.graphics.setStencilTest("greater", 0)
+    love.graphics.applyShader({chatboxCanvas, depthstencil = true, getDimensions = function() return chatboxCanvas:getDimensions() end}, gradientShaderA, {
+    top_left = {1, 0, 1, 1},
+    top_right = {1, 0, 0, 1},
+    bottom_right = {0, 1, 0, 1},
+    bottom_left = {0, 0, 1, 1}
+    })
+    love.graphics.rectangle("fill", 0, 0, unpack(chatboxDims))
+    love.graphics.pop()
 
     local chatboxScenePlacementQuad = love.graphics.newQuad(0, 0, chatboxDims[1], chatboxDims[2], chatboxDims[1],
         chatboxDims[2])

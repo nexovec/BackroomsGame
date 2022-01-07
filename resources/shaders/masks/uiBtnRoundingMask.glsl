@@ -12,7 +12,7 @@ void effect()
   vec2 screenSize = love_ScreenSize.xy;
 
   vec2 distanceFromUpperLeftCorner = vec2(rounding - screenPos.x, rounding - screenPos.y);
-  bool isInUpperLeftCorner = screenPos.x < rounding && screenPos.y < rounding && rounding*rounding < componentSum(distanceFromUpperLeftCorner * distanceFromUpperLeftCorner);
+  bool isInUpperLeftCorner = screenPos.x < rounding && screenPos.y < rounding && rounding * rounding < componentSum(distanceFromUpperLeftCorner * distanceFromUpperLeftCorner);
 
   vec2 distanceFromUpperRightCorner = vec2(screenPos.x - (screenSize.x - rounding), rounding - screenPos.y);
   bool isInUpperRightCorner = screenPos.y < rounding && screenPos.x > screenSize.x - rounding && rounding * rounding < componentSum(distanceFromUpperRightCorner * distanceFromUpperRightCorner);
@@ -22,10 +22,10 @@ void effect()
 
   vec2 distanceFromBottomRightCorner = vec2(screenPos.x - (screenSize.x - rounding),  screenPos.y - (screenSize.y - rounding));
   bool isInBottomRightCorner = screenPos.y > screenSize.y - rounding && screenPos.x > screenSize.x - rounding && rounding * rounding < componentSum(distanceFromBottomRightCorner * distanceFromBottomRightCorner);
-// bool isInBottomRightCorner = false;
-//   if(){
-//       love_PixelColor = vec4(0,0,0,0);
-//   }
+
+  if(isInUpperRightCorner ||  isInUpperLeftCorner || isInBottomRightCorner || isInBottomLeftCorner){
+    discard;
+  }
   love_PixelColor = 1 - int(isInUpperRightCorner ||  isInUpperLeftCorner || isInBottomRightCorner || isInBottomLeftCorner) * vec4(1, 1, 1, 1);
 }
 #endif

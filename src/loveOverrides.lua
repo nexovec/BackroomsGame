@@ -8,7 +8,8 @@ function love.graphics.withShader(shader, func)
 end
 function love.graphics.applyShader(canvas, textureShader, uniformsTable, options)
     -- TODO: test
-    canvas:renderTo(function()
+    local oldCanvas = love.graphics.getCanvas()
+    love.graphics.setCanvas(canvas)
         love.graphics.withShader(textureShader, function()
             for i, v in pairs(uniformsTable) do
                 textureShader:send(i, v)
@@ -23,5 +24,7 @@ function love.graphics.applyShader(canvas, textureShader, uniformsTable, options
                 love.graphics.rectangle("fill", 0, 0, canvas:getDimensions())
             end
         end)
-    end)
+    love.graphics.setCanvas()
+    -- FIXME: this breaks the code
+    -- love.graphics.setCanvas(oldCanvas)
 end
