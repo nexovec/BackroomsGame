@@ -30,6 +30,13 @@ function table.contains(tbl, elem)
     end
     return false
 end
+function table.indexOf(tbl, elem)
+    -- FIXME: uses ipairs
+    for i, v in ipairs(tbl) do
+        if v == elem then return i end
+    end
+    return nil
+end
 
 function array.prettyPrint(tbl)
     -- TODO: revise

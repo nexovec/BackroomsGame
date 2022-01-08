@@ -27,6 +27,8 @@ local clientpeer
 local chatMessages = {}
 local clientChatMessage = ""
 
+local nicknamePickerMessage = ""
+
 -- test networking
 local function beginServer()
     print("Starting the Server...")
@@ -43,6 +45,7 @@ local function beginClient()
     clientpeer = enetclient:connect("192.168.0.234:6750")
 end
 local connectedPeers = {}
+local peerNicknames = {}
 function handleEnetIfServer()
     if not enethost then
         return
@@ -56,21 +59,33 @@ function handleEnetIfServer()
         end
         -- TODO: log unregistered clients trying to send messages
         if not table.contains(connectedPeers, hostevent.peer) then
+            print("ERRORRRROOROROOROROROR")
             return
         end
         if hostevent.type == "receive" then
             local data = hostevent.data
             if data:sub(1, #"message:") == "message:" then
-                print(data)
                 -- TODO: send to everybody
-                hostevent.peer:send(data)
+                local authorName = peerNicknames[table.indexOf(connectedPeers, hostevent.peer)]
+                local msg = authorName .. ": " .. data:sub((#"message:" + 1), #data)
+                -- hostevent.peer:send("message:" .. msg)
+                enethost:broadcast("message:" .. msg)
             end
             if data:sub(1, #"status:") == "status:" then
-                print(hostevent.data, hostevent.peer)
-                local tempHost = hostevent
-                t.delayCall(function()
-                    tempHost.peer:send("status:pong!")
-                end, 2)
+                local shortened = data:sub(#"status:" + 1, #data)
+                if shortened:sub(1, #"addPlayer:") == "addPlayer:" then
+                    local peerIndex = table.indexOf(connectedPeers, hostevent.peer)
+                    -- TODO: Allow only alphabet, _ and numerics in player names, implement max player name size
+                    -- FIXME: this is wrong, always sets to nil
+                    peerNicknames[peerIndex] = shortened:sub((#"addPlayer:") + 1, #shortened)
+                    print(hostevent.peer, "Just registered as ", peerNicknames[peerIndex], "!")
+                else
+                    -- TODO: check for stray packets
+                    local tempHost = hostevent
+                    t.delayCall(function()
+                        tempHost.peer:send("status:pong!")
+                    end, 2)
+                end
             end
 
         end
@@ -93,14 +108,12 @@ function handleEnetIfClient()
     if hostevent.type == "receive" then
         local data = hostevent.data
         if data:sub(1, #"status:") == "status:" then
-            print(hostevent.data, hostevent.peer)
             t.delayCall(function()
                 clientpeer:send("status:ping!")
             end, 2)
         end
         if data:sub(1, #"message:") == "message:" then
-            print(data)
-            chatMessages[#chatMessages + 1] = data
+            chatMessages[#chatMessages + 1] = data:sub(#"message:" + 1, #data)
         end
     end
     hostevent = nil
@@ -180,6 +193,42 @@ function game.tick(deltaTime)
     handleEnetIfClient()
     handleEnetIfServer()
 end
+function renderUIBox(chatboxDims)
+    -- PERFORMANCE: don't create a new canvas each tick
+    -- draw chatbox
+    local chatboxTexture = love.graphics.newCanvas(unpack(chatboxDims))
+    local chatboxCanvas = love.graphics.newCanvas(unpack(chatboxDims))
+    local chatboxAlpha = love.graphics.newCanvas(chatboxDims.x, chatboxDims.y, {
+        format = "stencil8"
+    })
+    -- stencil buffer
+    love.graphics.push("all")
+    love.graphics.setCanvas({
+        chatboxCanvas,
+        depthstencil = true
+    })
+    love.graphics.stencil(function()
+        love.graphics.setShader(uiBtnRoundingMask)
+        uiBtnRoundingMask:send("rounding", 20)
+        love.graphics.rectangle("fill", 0, 0, unpack(chatboxDims))
+    end, "replace", 1)
+    love.graphics.setStencilTest("greater", 0)
+    love.graphics.applyShader({
+        chatboxCanvas,
+        depthstencil = true,
+        getDimensions = function()
+            return chatboxCanvas:getDimensions()
+        end
+    }, gradientShaderA, {
+        top_left = {0.1, 0.1, 0.1, 1},
+        top_right = {0.1, 0.1, 0.1, 1},
+        bottom_right = {0.2, 0.2, 0.2, 1},
+        bottom_left = {0.2, 0.2, 0.2, 1}
+    })
+    love.graphics.rectangle("fill", 0, 0, unpack(chatboxDims))
+    love.graphics.pop()
+    return chatboxCanvas
+end
 
 function game.draw()
     -- draw background
@@ -209,14 +258,6 @@ function game.draw()
 
     local playfieldScenePlacementQuad = love.graphics.newQuad(0, 0, 1600, 720, 1600, 720)
     love.graphics.draw(playfieldCanvas, playfieldScenePlacementQuad, 100, 100, 0, 1, 1, 0, 0, 0, 0)
-
-    -- draw chatbox
-    local chatboxDims = {640, 1280}
-    local chatboxTexture = love.graphics.newCanvas(unpack(chatboxDims))
-    local chatboxCanvas = love.graphics.newCanvas(unpack(chatboxDims))
-    local chatboxAlpha = love.graphics.newCanvas(chatboxDims.x, chatboxDims.y, {
-        format = "stencil8"
-    })
 
     -- shader simulated stencil buffer:
     -- the following is equivalent:
@@ -260,32 +301,8 @@ function game.draw()
     -- apply stencil buffer
     -- love.graphics.applyShader(chatboxCanvas, applyAlphaA, {alphaMask = chatboxAlpha}, {draw = chatboxTexture})
 
-    -- stencil buffer
-    love.graphics.push("all")
-    love.graphics.setCanvas({
-        chatboxCanvas,
-        depthstencil = true
-    })
-    love.graphics.stencil(function()
-        love.graphics.setShader(uiBtnRoundingMask)
-        uiBtnRoundingMask:send("rounding", 20)
-        love.graphics.rectangle("fill", 0, 0, unpack(chatboxDims))
-    end, "replace", 1)
-    love.graphics.setStencilTest("greater", 0)
-    love.graphics.applyShader({
-        chatboxCanvas,
-        depthstencil = true,
-        getDimensions = function()
-            return chatboxCanvas:getDimensions()
-        end
-    }, gradientShaderA, {
-        top_left = {0.1, 0.1, 0.1, 1},
-        top_right = {0.1, 0.1, 0.1, 1},
-        bottom_right = {0.2, 0.2, 0.2, 1},
-        bottom_left = {0.2, 0.2, 0.2, 1}
-    })
-    love.graphics.rectangle("fill", 0, 0, unpack(chatboxDims))
-    love.graphics.pop()
+    local chatboxDims = {640, 1280}
+    local chatboxCanvas = renderUIBox(chatboxDims)
 
     -- render messages
     love.graphics.push("all")
@@ -304,24 +321,38 @@ function game.draw()
     local chatboxScenePlacementQuad = love.graphics.newQuad(0, 0, chatboxDims[1], chatboxDims[2], chatboxDims[1],
         chatboxDims[2])
     love.graphics.draw(chatboxCanvas, chatboxScenePlacementQuad, 1800, 100, 0, 1, 1, 0, 0, 0, 0)
+
+    -- render log-in box
+    local nickPickBoxDims = {750, 300}
+    local nickPickerCanvas = renderUIBox(nickPickBoxDims)
+    love.graphics.push("all")
+    nickPickerCanvas:renderTo(function()
+        love.graphics.setColor(0.65, 0.15, 0.15, 1)
+        love.graphics.print("Enter your name:", 30, 10)
+        love.graphics.print(nicknamePickerMessage, 30, 200)
+    end)
+    love.graphics.pop()
+
+    local chatboxScenePlacementQuad = love.graphics.newQuad(0, 0, nickPickBoxDims[1], nickPickBoxDims[2],
+        nickPickBoxDims[1], nickPickBoxDims[2])
+    love.graphics.draw(nickPickerCanvas, chatboxScenePlacementQuad, 550, 550, 0, 1, 1, 0, 0, 0, 0)
 end
 
-function love.keypressed(key)
-    -- talkies
-    if key == "space" then
-        talkies.onAction()
-    elseif key == "up" then
-        talkies.prevOption()
-    elseif key == "down" then
-        talkies.nextOption()
-    end
+-- function handleTalkiesKp()
+--     -- talkies
+--     if key == "space" then
+--         talkies.onAction()
+--     elseif key == "up" then
+--         talkies.prevOption()
+--     elseif key == "down" then
+--         talkies.nextOption()
+--     end
+-- end
 
+local activeUIElemIndex = 1
+function handleChatKp(key)
     -- chat handling
     if key == "return" then
-        print("Pressed Enter!")
-        -- chatMessages[#chatMessages + 1] = clientChatMessage
-        -- clientpeer:send("message:" .. clientChatMessage)
-        -- clientChatMessage = ""
         if clientpeer then
             clientpeer:send("message:" .. clientChatMessage)
         end
@@ -331,8 +362,29 @@ function love.keypressed(key)
         clientChatMessage = clientChatMessage:sub(1, #clientChatMessage - 1)
     end
 end
+function handleNickPickerKp(key)
+    if key == "return" then
+        print("Pressed Enter!")
+        clientpeer:send("status:addPlayer:" .. nicknamePickerMessage)
+        activeUIElemIndex = activeUIElemIndex + 1
+    end
+end
+local UIElemHandlers = {{
+    keypressed = handleNickPickerKp,
+    textinput = function(t)
+        nicknamePickerMessage = nicknamePickerMessage .. t
+    end
+}, {
+    keypressed = handleChatKp,
+    textinput = function(t)
+        clientChatMessage = clientChatMessage .. t
+    end
+}}
+function love.keypressed(key)
+    UIElemHandlers[activeUIElemIndex].keypressed(key)
+end
 function love.textinput(t)
-    clientChatMessage = clientChatMessage .. t
+    UIElemHandlers[activeUIElemIndex].textinput(t)
 end
 
 return game
