@@ -3,7 +3,6 @@ require("loveOverrides")
 -- requires
 local profile = require("profile")
 
-
 local std = require("std")
 
 local game = require("game") -- needs to be the last require
@@ -19,9 +18,12 @@ local delta = 0
 local timeLastLoggedFPS = nil
 local ticks = 0
 
-
 -- callbacks
-function love.load()
+function love.load(options)
+    local options = {
+        isServer = options[1] == "--server"
+    }
+    print(options.isServer)
     profile.start()
     love.graphics.setDefaultFilter("nearest", "nearest")
     -- FIXME: magic numbers
@@ -30,9 +32,11 @@ function love.load()
     -- make fullscreen
     love.window.setVSync(0)
     love.window.requestAttention()
-    game.init()
+    game.init(options)
 
-    if assets.settings.logging.shouldPerformanceLog then print(profile.report(10)) end
+    if assets.settings.logging.shouldPerformanceLog then
+        print(profile.report(10))
+    end
     timeLastLoggedFPS = love.timer.getTime()
     profile.reset()
     profile.stop()
@@ -40,7 +44,6 @@ function love.load()
     collectgarbage("stop")
     timeLastLogged = love.timer.getTime()
 end
-
 
 function love.update(dt)
     profile.start()
@@ -53,7 +56,8 @@ function love.update(dt)
         ticks = 0
         timeLastLoggedFPS = timeLastLoggedFPS + 1.0
     end
-    if (assets.settings.logging.shouldPerformanceLog and love.timer.getTime() - timeLastLogged > assets.settings.logging.performanceLogPeriodInSeconds) then
+    if (assets.settings.logging.shouldPerformanceLog and love.timer.getTime() - timeLastLogged >
+        assets.settings.logging.performanceLogPeriodInSeconds) then
         print(profile.report(10))
         profile.reset()
         timeLastLogged = love.timer.getTime()
@@ -65,7 +69,7 @@ end
 function love.draw()
     profile.start()
     sceneCanvas:renderTo(game.draw)
-    local _,_,width,height = love.window.getSafeArea()
+    local _, _, width, height = love.window.getSafeArea()
     local screenQuad = love.graphics.newQuad(0, 0, width, height, width, height)
     love.graphics.draw(sceneCanvas, screenQuad, 0, 0, 0, 1, 1, 0, 0, 0, 0)
     collectgarbage("step")

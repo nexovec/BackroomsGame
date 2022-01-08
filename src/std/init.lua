@@ -1,10 +1,12 @@
 local std = {}
 std.array = require("std.array")
-std.class = require("std.class")
+-- std.class = require("std.class")
 std.map = require("std.map")
 std.set = require("std.set")
 std.string = require("std.string")
 std.types = require("std.types")
 std.json = require("std.json")
-setmetatable(std, {__index = require("std.luaOverrides")})
+setmetatable(std, {
+    __index = require("std.luaOverrides")
+})
 return std

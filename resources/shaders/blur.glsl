@@ -1,17 +1,17 @@
 #pragma language glsl3
 #ifdef PIXEL
-uniform float sigma;     // The sigma value for the gaussian function: higher value means more blur
-                         // A good value for 9x9 is around 3 to 5
-                         // A good value for 7x7 is around 2.5 to 4
-                         // A good value for 5x5 is around 2 to 3.5
-                         // ... play around with this based on what you need :)
+uniform float
+    sigma; // The sigma value for the gaussian function: higher value means more
+           // blur A good value for 9x9 is around 3 to 5 A good value for 7x7 is
+           // around 2.5 to 4 A good value for 5x5 is around 2 to 3.5
+           // ... play around with this based on what you need :)
 
-uniform float blurSize;  // This should usually be equal to
-                         // 1.0f / texture_pixel_width for a horizontal blur, and
-                         // 1.0f / texture_pixel_height for a vertical blur.
+uniform float blurSize; // This should usually be equal to
+                        // 1.0f / texture_pixel_width for a horizontal blur, and
+                        // 1.0f / texture_pixel_height for a vertical blur.
 
-//FIXME: broken with sampler2DArray
-uniform ArrayImage MainTex;  // Texture that will be blurred by this shader
+// FIXME: broken with sampler2DArray
+uniform ArrayImage MainTex; // Texture that will be blurred by this shader
 
 const float pi = 3.14159265f;
 
@@ -22,14 +22,14 @@ const float pi = 3.14159265f;
 // const float numBlurPixelsPerSide = 4.0f;
 // const vec2  blurMultiplyVec      = vec2(0.0f, 1.0f);
 // #elif defined(HORIZONTAL_BLUR_9)
-// const float numBlurPixelsPerSide = 4.0f;
-// const vec2  blurMultiplyVec      = vec2(1.0f, 0.0f);
+const float numBlurPixelsPerSide = 4.0f;
+const vec3 blurMultiplyVec = vec3(1.0f, 0.0f, 0.0f);
 // #elif defined(VERTICAL_BLUR_7)
 // const float numBlurPixelsPerSide = 3.0f;
 // const vec2  blurMultiplyVec      = vec2(0.0f, 1.0f);
 // #elif defined(HORIZONTAL_BLUR_7)
-const float numBlurPixelsPerSide = 3.0f;
-const vec3  blurMultiplyVec      = vec3(1.0f, 0.0f,0.0f);
+// const float numBlurPixelsPerSide = 3.0f;
+// const vec3  blurMultiplyVec      = vec3(1.0f, 0.0f,0.0f);
 // #elif defined(VERTICAL_BLUR_5)
 // const float numBlurPixelsPerSide = 2.0f;
 // const vec2  blurMultiplyVec      = vec2(0.0f, 1.0f);
@@ -43,7 +43,6 @@ const vec3  blurMultiplyVec      = vec3(1.0f, 0.0f,0.0f);
 // #endif
 
 void effect() {
-
   // Incremental Gaussian Coefficent Calculation (See GPU Gems 3 pp. 877 - 889)
   vec3 incrementalGaussian;
   incrementalGaussian.x = 1.0f / (sqrt(2.0f * pi) * sigma);
@@ -60,10 +59,12 @@ void effect() {
 
   // Go through the remaining 8 vertical samples (4 on each side of the center)
   for (float i = 1.0f; i <= numBlurPixelsPerSide; i++) {
-    avgValue += texture(MainTex, VaryingTexCoord.xyz - i * blurSize *
-                          blurMultiplyVec) * incrementalGaussian.x;
-    avgValue += texture(MainTex, VaryingTexCoord.xyz + i * blurSize *
-                          blurMultiplyVec) * incrementalGaussian.x;
+    avgValue +=
+        texture(MainTex, VaryingTexCoord.xyz - i * blurSize * blurMultiplyVec) *
+        incrementalGaussian.x;
+    avgValue +=
+        texture(MainTex, VaryingTexCoord.xyz + i * blurSize * blurMultiplyVec) *
+        incrementalGaussian.x;
     coefficientSum += 2 * incrementalGaussian.x;
     incrementalGaussian.xy *= incrementalGaussian.yz;
   }

@@ -16,7 +16,7 @@ assert = std.assert
 ---@return love.Image
 local function parseImageTilesetIntoArrayImage(imagedata, tileSize)
     assert(type(imagedata) == "userdata" and imagedata:type() == "ImageData",
-    "expected: ImageData, got: " .. (imagedata.type and imagedata:type()) or type(imagedata), 2)
+        "expected: ImageData, got: " .. (imagedata.type and imagedata:type()) or type(imagedata), 2)
     assert(tileSize > 0, "Tile size must be positive", 2)
     local frames = {}
     local width, height = imagedata:getDimensions()
@@ -73,7 +73,6 @@ function animation.updateAnimations(dt)
     end
 end
 
-
 -- API
 function animation:setAnimation(name)
     if type(name) == "string" then
@@ -124,7 +123,8 @@ function animation:draw(quad, xPos, yPos, xScale, yScale)
     love.graphics.rectangle("line", xPos, yPos, quad:getTextureDimensions())
     love.graphics.setColor(unpack(oldColor))
 
-    return love.graphics.drawLayer(self.imageData, self.offsets[self.activeLoop] + frame, quad, xPos, yPos, xScale, yScale)
+    return love.graphics.drawLayer(self.imageData, self.offsets[self.activeLoop] + frame, quad, xPos, yPos, xScale,
+        yScale)
     -- return love.graphics.drawLayer(self.imageData, frame, quad, xPos, yPos, xScale, yScale)
 end
 --- Parses an image into an animation (from )
@@ -181,9 +181,9 @@ function animation.new(image, tileSize, frameCounts, loopNames, skipToNextRowAft
         self.offsets[i + 1] = self.offsets[i] + rowCount * self.tilesPerRow
     end
     -- TODO: discard unused tiles
-
-    array.prettyPrint(self)
-    return setmetatable(self, {__index = animation})
+    return setmetatable(self, {
+        __index = animation
+    })
 end
 
 return animation

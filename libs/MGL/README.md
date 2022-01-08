@@ -1,4 +1,5 @@
 # MGL
+
 Mathematics for Graphics in pure Lua (or Mathematics for OpenGL, also an anagram of https://glm.g-truc.net/0.9.9/index.html[GLM]; </br> an inspiration for the library with https://en.wikipedia.org/wiki/OpenGL_Shading_Language[GLSL]) is a math library for graphics purposes.
 
 It depends on the dynamic https://github.com/ImagicTheCat/lua-xtype[xtype] system.
@@ -35,19 +36,19 @@ mgl.initmfs(...)
 # Types
 
 .MGL types may have predefined metamethods such as:
-| Metamethod   | Function  |
+| Metamethod | Function |
 |--------------|-----------|
-| __tostring   | tostring  |
-| __unm        | unm       |
-| __add        | xtype add |
-| __sub        | xtype sub |
-| __mul        | xtype mul |
-| __div        | xtype div |
-| __mod        | xtype mod |
-| __pow        | xtype pow |
-| __eq         | xtype eq  |
-| __lt         | xtype lt  |
-| __le         | xtype le  |
+| **tostring | tostring |
+| **unm | unm |
+| **add | xtype add |
+| **sub | xtype sub |
+| **mul | xtype mul |
+| **div | xtype div |
+| **mod | xtype mod |
+| **pow | xtype pow |
+| **eq | xtype eq |
+| **lt | xtype lt |
+| \_\_le | xtype le |
 
 Types can have specialized metamethods; for example, to implement accessors.
 
@@ -102,7 +103,7 @@ mat:v(idx, vec)
 
 # Operators
 
-Binary operators are implemented through *xtype* op multifunctions.
+Binary operators are implemented through _xtype_ op multifunctions.
 
 ## **`tostring`**
 
@@ -148,9 +149,9 @@ Unary minus.
 
 # Operations
 
-Operations are *xtype* mulztifunctions.
+Operations are _xtype_ mulztifunctions.
 
-## **`vec(D)`**
+### **`vec(D)`**
 
 Vector constructor.
 
@@ -159,7 +160,7 @@ Vector constructor.
 `(number or vec(D): ...): vec(D)` Composed constructor. Any combination of scalars and vectors matching the result vector size.
 `(vec(D+x): v): vec(D)` Truncate constructor.
 
-## **`mat(N)x(M) / mat(N)`**
+### **`mat(N)x(M) / mat(N)`**
 
 Matrix constructor.
 
@@ -168,73 +169,79 @@ Matrix constructor.
 `(vec(M): columns...): mat(N)x(M)` Column vectors constructor. `#columns... == N`</br>
 `(mat(Na, Ma): a): mat(N)x(M)` Generic matrix constructor. Copy/extend/truncate a same/smaller/bigger matrix (fill with identity when extending).</br>
 
-## **`copy`**
+### **`copy`**
 
 `(vec(D): dst, vec(D): src)`</br>
 `(mat(N)x(M): dst, mat(N)x(M): src)`</br>
 
-## **`length`**
+### **`length`**
 
 `(vec(D): a): number` Vector length (Euclidean).</br>
 
-## **`normalize`**
+### **`normalize`**
 
 `(vec(D): a): vec(D)` Vector normalization.</br>
 
-## **`dot`**
+### **`dot`**
 
 `(vec(D): a, vec(D): b): number` Dot product.</br>
 
-## **`cross`**
+### **`cross`**
 
 `(vec3: a, vec3: b): vec3` Cross product.</br>
 
-## **`transpose`**
+### **`transpose`**
 
 `(mat(N)x(M): a): mat(M)x(N)`</br>
 
-## **`determinant`**
+### **`determinant`**
 
 `(mat2: a): number`</br>
 `(mat3: a): number`</br>
 `(mat4: a): number`</br>
 
-## **`inverse`**
+### **`inverse`**
 
 `(mat2: a): mat2, number` Compute inverse matrix. Also returns determinant.</br>
 `(mat3: a): mat3, number` Compute inverse matrix. Also returns determinant.</br>
 `(mat4: a): mat4, number` Compute inverse matrix. Also returns determinant.</br>
 
-## **`translate`**
+### **`translate`**
 
 `(vec2: a): mat3` Translate identity (2D homogeneous).</br>
 `(vec3: a): mat4` Translate identity (3D homogeneous).</br>
 
-## **`rotate`**
+---
 
-`(number: theta): mat3` Rotate identity (2D homogeneous). `theta` is in radians.</br>
-`(vec3: axis, number: theta): mat4` Rotate identity (3D homogeneous). `axis` is a unit vector; `theta` is in radians.</br>
+### **`rotate(number: theta): mat3`**
 
-## **`scale`**
+### **`rotate(vec3: axis, number: theta): mat4`**
 
-`(vec2: a): mat3` Scale identity (2D homogeneous).</br>
-`(vec3: a): mat4` Scale identity (3D homogeneous).</br>
+Rotate in radians
 
-## **`orthographic`**
+---
 
-Orthographic projection.
+### **`scale(vec2: a): mat3`**
 
-`(number: left, number: right, number: bottom, number: top, number: near, number: far): mat4`:: Build GL compatible orthographic projection.</br>
+### **`scale(vec3: a): mat4`**
 
-## **`perspective`**
+---
 
-Perspective projection.
+### **`orthographic(number: left, number: right, number: bottom, number: top, number: near, number: far): mat4`**
 
-`(number: hfov, number: aspect, number: near, number: far): mat4`:: Build GL compatible perspective projection. `hfov` is in radians.</br>
+GL compatible orthographic projection.</br>
+
+---
+
+### **`perspective(number: hfov, number: aspect, number: near, number: far): mat4`**
+
+GL compatible perspective projection. `hfov` is in radians.</br>
+
+---
 
 # Performances
 
->TIP: An operator/operation definition can be retrieved and cached with `multifunction:resolve(...)` when optimizations are needed.</br>
+> TIP: An operator/operation definition can be retrieved and cached with `multifunction:resolve(...)` when optimizations are needed.</br>
 
 ## Comparisons
 

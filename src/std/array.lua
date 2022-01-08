@@ -2,7 +2,7 @@ local array = {}
 function table.shallowCopy(a)
     assert(type(a) == "table", "This can only be used on tables")
     local self = {}
-    for k,v in pairs(a) do
+    for k, v in pairs(a) do
         self[k] = v
     end
     return self
@@ -21,6 +21,14 @@ function table.prettyPrint(tbl)
         print(tostring(k) .. string.rep(' ', math.max(50 - #strv, 0)) .. ':\t' .. strv)
     end
     print('-----------')
+end
+function table.contains(tbl, elem)
+    for k, v in pairs(tbl) do
+        if v == elem then
+            return true
+        end
+    end
+    return false
 end
 
 function array.prettyPrint(tbl)
