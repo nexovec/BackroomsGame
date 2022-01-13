@@ -5,8 +5,10 @@ local animation = require("animation")
 local talkies = require('talkies')
 local enet = require("enet")
 local t = require("timing")
+local uiBox = require("uiBox")
 
 -- variables
+local options
 local font
 
 local backgroundImage
@@ -17,17 +19,22 @@ local basicShaderA
 local invertShaderA
 local testShaderA
 local blurShader
-local uiBtnRoundingMask
 local gradientShaderA
 local applyAlphaA
 
 local enethost
 local enetclient
 local clientpeer
-local chatMessages = {}
-local clientChatMessage = ""
 
+local chatboxMessageHistory = {}
+local clientChatboxMessage = ""
+local chatboxDims = {640, 1280}
+local chatboxUIBox
+
+local nicknamePickerEnabled
 local nicknamePickerMessage = ""
+local nicknamePickerBoxDims = {750, 300}
+local nicknamePickerUIBox
 
 -- test networking
 local function beginServer()
@@ -113,7 +120,7 @@ function handleEnetIfClient()
             end, 2)
         end
         if data:sub(1, #"message:") == "message:" then
-            chatMessages[#chatMessages + 1] = data:sub(#"message:" + 1, #data)
+            chatboxMessageHistory[#chatboxMessageHistory + 1] = data:sub(#"message:" + 1, #data)
         end
     end
     hostevent = nil
@@ -134,10 +141,9 @@ local function handleNetworking(isServer)
     --     end}}
     -- })
 end
-
 -- API
-function game.init(options)
-    options = options or {}
+function game.init(args)
+    options = args or {}
     love.window.setTitle("Backrooms v0.0.1 pre-dev")
     -- load assets
     font = love.graphics.newFont("resources/fonts/Pixel UniCode.ttf", 48)
@@ -155,11 +161,13 @@ function game.init(options)
     gradientShaderA = love.graphics.newShader("resources/shaders/gradient.glsl")
     applyAlphaA = love.graphics.newShader("resources/shaders/applyAlpha.glsl")
 
-    uiBtnRoundingMask = love.graphics.newShader("resources/shaders/masks/uiBtnRoundingMask.glsl")
+    chatboxUIBox = uiBox.makeBox(chatboxDims[1], chatboxDims[2], gradientShaderA, {}, 20)
+    nicknamePickerUIBox = uiBox.makeBox(nicknamePickerBoxDims[1], nicknamePickerBoxDims[2], gradientShaderA, {}, 20)
 
     love.keyboard.setKeyRepeat(false)
 
     handleNetworking(options.isServer)
+    nicknamePickerEnabled = true
 
     -- TODO: grayscale shader
     -- TODO: color pallette conversion shader
@@ -192,42 +200,6 @@ function game.tick(deltaTime)
     t.update()
     handleEnetIfClient()
     handleEnetIfServer()
-end
-function renderUIBox(chatboxDims)
-    -- PERFORMANCE: don't create a new canvas each tick
-    -- draw chatbox
-    local chatboxTexture = love.graphics.newCanvas(unpack(chatboxDims))
-    local chatboxCanvas = love.graphics.newCanvas(unpack(chatboxDims))
-    local chatboxAlpha = love.graphics.newCanvas(chatboxDims.x, chatboxDims.y, {
-        format = "stencil8"
-    })
-    -- stencil buffer
-    love.graphics.push("all")
-    love.graphics.setCanvas({
-        chatboxCanvas,
-        depthstencil = true
-    })
-    love.graphics.stencil(function()
-        love.graphics.setShader(uiBtnRoundingMask)
-        uiBtnRoundingMask:send("rounding", 20)
-        love.graphics.rectangle("fill", 0, 0, unpack(chatboxDims))
-    end, "replace", 1)
-    love.graphics.setStencilTest("greater", 0)
-    love.graphics.applyShader({
-        chatboxCanvas,
-        depthstencil = true,
-        getDimensions = function()
-            return chatboxCanvas:getDimensions()
-        end
-    }, gradientShaderA, {
-        top_left = {0.1, 0.1, 0.1, 1},
-        top_right = {0.1, 0.1, 0.1, 1},
-        bottom_right = {0.2, 0.2, 0.2, 1},
-        bottom_left = {0.2, 0.2, 0.2, 1}
-    })
-    love.graphics.rectangle("fill", 0, 0, unpack(chatboxDims))
-    love.graphics.pop()
-    return chatboxCanvas
 end
 
 function game.draw()
@@ -301,8 +273,7 @@ function game.draw()
     -- apply stencil buffer
     -- love.graphics.applyShader(chatboxCanvas, applyAlphaA, {alphaMask = chatboxAlpha}, {draw = chatboxTexture})
 
-    local chatboxDims = {640, 1280}
-    local chatboxCanvas = renderUIBox(chatboxDims)
+    local chatboxCanvas = chatboxUIBox.textureCvs
 
     -- render messages
     love.graphics.push("all")
@@ -310,11 +281,11 @@ function game.draw()
         love.graphics.setColor(0.65, 0.15, 0.15, 1)
         local yDiff = 40
 
-        for i, messageText in ipairs(chatMessages) do
+        for i, messageText in ipairs(chatboxMessageHistory) do
             love.graphics.print(messageText, 30, 10 - yDiff + yDiff * i)
         end
 
-        love.graphics.print(clientChatMessage, 30, 1210)
+        love.graphics.print(clientChatboxMessage, 30, 1210)
     end)
     love.graphics.pop()
 
@@ -323,19 +294,22 @@ function game.draw()
     love.graphics.draw(chatboxCanvas, chatboxScenePlacementQuad, 1800, 100, 0, 1, 1, 0, 0, 0, 0)
 
     -- render log-in box
-    local nickPickBoxDims = {750, 300}
-    local nickPickerCanvas = renderUIBox(nickPickBoxDims)
-    love.graphics.push("all")
-    nickPickerCanvas:renderTo(function()
-        love.graphics.setColor(0.65, 0.15, 0.15, 1)
-        love.graphics.print("Enter your name:", 30, 10)
-        love.graphics.print(nicknamePickerMessage, 30, 200)
-    end)
-    love.graphics.pop()
+    if nicknamePickerEnabled then
+        local nicknamePickerCanvas = nicknamePickerUIBox.textureCvs
+        love.graphics.push("all")
+        nicknamePickerCanvas:renderTo(function()
+            love.graphics.setColor(0.65, 0.15, 0.15, 1)
+            love.graphics.print("Enter your name:", 30, 10)
+            love.graphics.print(nicknamePickerMessage, 30, 200)
+        end)
+        love.graphics.pop()
+        local chatboxScenePlacementQuad = love.graphics.newQuad(0, 0, nicknamePickerBoxDims[1], nicknamePickerBoxDims[2],
+            nicknamePickerBoxDims[1], nicknamePickerBoxDims[2])
+        love.graphics.draw(nicknamePickerCanvas, chatboxScenePlacementQuad, 550, 550, 0, 1, 1, 0, 0, 0, 0)
+    end
 
-    local chatboxScenePlacementQuad = love.graphics.newQuad(0, 0, nickPickBoxDims[1], nickPickBoxDims[2],
-        nickPickBoxDims[1], nickPickBoxDims[2])
-    love.graphics.draw(nickPickerCanvas, chatboxScenePlacementQuad, 550, 550, 0, 1, 1, 0, 0, 0, 0)
+    if options.isServer then love.graphics.print("SERVER")end
+
 end
 
 -- function handleTalkiesKp()
@@ -354,19 +328,20 @@ function handleChatKp(key)
     -- chat handling
     if key == "return" then
         if clientpeer then
-            clientpeer:send("message:" .. clientChatMessage)
+            clientpeer:send("message:" .. clientChatboxMessage)
         end
         -- TODO: handle sends from the server
-        clientChatMessage = ""
+        clientChatboxMessage = ""
     elseif key == "backspace" then
-        clientChatMessage = clientChatMessage:sub(1, #clientChatMessage - 1)
+        clientChatboxMessage = clientChatboxMessage:sub(1, #clientChatboxMessage - 1)
     end
 end
 function handleNickPickerKp(key)
     if key == "return" then
-        print("Pressed Enter!")
         clientpeer:send("status:addPlayer:" .. nicknamePickerMessage)
         activeUIElemIndex = activeUIElemIndex + 1
+    elseif key == "backspace" then
+        nicknamePickerMessage = nicknamePickerMessage:sub(1, #nicknamePickerMessage - 1)
     end
 end
 local UIElemHandlers = {{
@@ -377,7 +352,7 @@ local UIElemHandlers = {{
 }, {
     keypressed = handleChatKp,
     textinput = function(t)
-        clientChatMessage = clientChatMessage .. t
+        clientChatboxMessage = clientChatboxMessage .. t
     end
 }}
 function love.keypressed(key)

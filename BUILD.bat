@@ -17,5 +17,5 @@ del TempGame.love files.zip
 7z a ./BackroomsGame.zip BackroomsGame-build
 @REM del love.exe
 popd
-ECHO ...STARTING THE GAME...
+@REM ECHO ...STARTING THE GAME...
 @REM call .\build\BackroomsGame-build\BackroomsGame.exe
