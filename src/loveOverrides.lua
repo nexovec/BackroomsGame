@@ -56,3 +56,8 @@ function love.requireDirectory(pathToDir, localRequires)
     -- TODO: make sure .init.lua is in requirePath.
     return wrapRequirePath(pathToDir, localRequires)
 end
+function love.graphics.temporaryState(func)
+    love.graphics.push("all")
+    func()
+    love.graphics.pop()
+end
