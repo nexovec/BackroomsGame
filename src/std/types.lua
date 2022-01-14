@@ -77,6 +77,10 @@ local typeNamesStd = {
     "class"
 }
 
+function types.makeType(obj)
+    obj.__index = obj
+    return setmetatable(obj, obj)
+end
 function types.isint(num)
     if type(num) ~= "number" then return false end
     if math.floor(num) ~= num then return false end

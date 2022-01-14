@@ -1,55 +1,78 @@
 local array = {}
-function table.shallowCopy(a)
-    assert(type(a) == "table", "This can only be used on tables")
-    local self = {}
-    for k, v in pairs(a) do
-        self[k] = v
+
+local error = require("std.error")
+local types = require("std.types")
+function array:shallowCopy()
+    -- assert(type(a) == "table", "This can only be used on tables")
+    local new = {}
+    for k, v in ipairs(self) do
+        new[k] = v
     end
-    return self
+    return new
 end
-function table.prettyPrint(tbl)
-    if not tbl then
+function array:prettyPrint()
+    if not self then
         return error('Table is nil!', 2)
     end
-    if type(tbl) ~= 'table' then
-        error('This is not a table. type: ' .. type(tbl) .. ((" " .. (tbl.type and tbl.type())) or ""), 2)
+    if type(self) ~= 'table' then
+        error('This is not a table. type: ' .. type(self) .. ((" " .. (self.type and self.type())) or ""), 2)
     end
     print('contents of a table:')
     print('-----------')
-    for k, v in pairs(tbl) do
+    for k, v in ipairs(self) do
         local strv = tostring(v)
         print(tostring(k) .. string.rep(' ', math.max(50 - #strv, 0)) .. ':\t' .. strv)
     end
     print('-----------')
 end
-function table.contains(tbl, elem)
-    for k, v in pairs(tbl) do
+function array:contains(elem)
+    for k, v in ipairs(self) do
         if v == elem then
             return true
         end
     end
     return false
 end
-function table.indexOf(tbl, elem)
-    -- FIXME: uses ipairs
-    for i, v in ipairs(tbl) do
-        if v == elem then return i end
+function array:indexOf(elem)
+    for k, v in ipairs(self) do
+        if v == elem then return k end
     end
     return nil
 end
-
-function array.prettyPrint(tbl)
-    -- TODO: revise
-    table.prettyPrint(tbl)
+--- Functional programming filter. Uses ipairs under the hood.
+---@param func Gets called for every element of the array with value, key, array as parameters. Must return a boolean
+function array:filter(func)
+    -- TODO: test
+    local new = {}
+    for k, v in ipairs(self) do
+        local res = func(v, k, self)
+        if res == true then new[#new + 1] = v
+        elseif res then else error("Filter function must return boolean", 2) end
+    end
+    return array.wrap(new)
+end
+--- Functional programming map. Uses ipairs under the hood.
+---@param elem Gets called for every element of the array with value, key, array as parameters.
+function array:map(elem)
+    -- TODO: test
+    local new = {}
+    for k, v in ipairs(self) do
+        new[k] = func(v, k, self)
+    end
+    return array.wrap(new)
 end
 
-function array.invert(tbl)
+function array:invert()
     local res = {}
-    for k, v in ipairs(tbl) do
+    for k, v in ipairs(self) do
         -- if not type(v) == "string" or type(v) == "number" then error("Table contains uninvertable type at index " .. k, 2) end
         res[v] = k
     end
-    return res
+    return array.wrap(res)
 end
-
-return array
+function array.wrap(obj)
+    setmetatable(obj, array)
+    return obj
+end
+array.type = "array"
+return types.makeType(array)

@@ -28,3 +28,31 @@ function love.graphics.applyShader(canvas, textureShader, uniformsTable, options
     -- FIXME: this breaks the code
     -- love.graphics.setCanvas(oldCanvas)
 end
+function love.wrapRequirePath(path, moduleNameOrFunc, passCurrentRequirePaths)
+    -- TODO: test
+    assert(type(path) == "string" and (type(moduleNameOrFunc) == "string" or type(moduleNameOrFunc) == "function"),
+        "Unexpected moduleNameOrFunc argument type", 2, nil)
+    local module
+    local oldPath = love.filesystem.getRequirePath()
+    if not passCurrentRequirePaths then
+        love.filesystem.setRequirePath(path)
+    else
+        love.filesystem.setRequirePath(oldPath .. path)
+    end
+    if type(moduleNameOrFunc) == "string" then
+        module = require(moduleNameOrFunc)
+    elseif isCallable(moduleNameOrFunc) then
+        moduleNameOrFunc(path, moduleNameOrFunc, passCurrentRequirePaths)
+    end
+    love.filesystem.setRequirePath(oldPath)
+    return module
+end
+
+function love.requireDirectory(pathToDir, localRequires)
+    -- TODO: test
+    assert(type(pathToDir) == "string" ,nil, nil, nil)
+    local requirePaths = localRequires .. ";"
+    if localRequires then requirePaths = requirePaths .. love.filesystem.getRequirePath() end
+    -- TODO: make sure .init.lua is in requirePath.
+    return wrapRequirePath(pathToDir, localRequires)
+end

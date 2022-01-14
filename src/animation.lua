@@ -4,7 +4,7 @@ local animation = {}
 local tween = require("tween")
 
 local array = require("std.array")
-local std = require("std.luaOverrides")
+local std = require("std")
 local types = require("std.types")
 local assets = require("assets")
 assert = std.assert
