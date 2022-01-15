@@ -11,6 +11,21 @@ function array:shallowCopy()
     end
     return new
 end
+function array:append(elem)
+    self[#self + 1] = elem
+    return self
+end
+function array:concat(tbl)
+    assert(type(tbl) == "table" and tbl.type == "array")
+    for k,v in ipairs(tbl) do
+        self:append(v)
+    end
+end
+function array:pop()
+    local res = self[#self]
+    self[#self] = nil
+    return res
+end
 function array:prettyPrint()
     if not self then
         return error('Table is nil!', 2)

@@ -26,7 +26,7 @@ local applyAlphaA
 local enetclient
 local clientpeer
 
-local chatboxMessageHistory = {}
+local chatboxMessageHistory = array.wrap()
 local clientChatboxMessage = ""
 local chatboxDims = {640, 1280}
 local chatboxUIBox
@@ -48,35 +48,50 @@ local function beginClient()
     clientpeer = enetclient:connect("192.168.0.234:6750")
 end
 
-function handleEnetIfClient()
+local function sendMessage(prefix, message)
+    clientpeer:send(prefix .. ":" .. message)
+end
+
+local function getNetworkMessagePrefix(data)
+    for k = 1, #data do
+        if string.sub(data, k, k) == ":" then return string.sub(data, 1, k-1), string.sub(data, k + 1, #data) end
+    end
+    -- TODO: don't crash, just log this and return
+    error("This message has no prefix: " .. data, 2)
+end
+
+local function receivedMessageHandle(hostevent)
+    local data = hostevent.data
+    local prefix, trimmedMessage  = getNetworkMessagePrefix(data)
+    if prefix == "status" then
+        t.delayCall(function()
+            sendMessage("status","ping!")
+        end, 2)
+    elseif prefix == "message" then
+        chatboxMessageHistory:append(trimmedMessage)
+    elseif prefix == "disconnection" then
+        -- server tells you to disconnect
+        -- TODO:
+    else
+        print(prefix,":",trimmedMessage)
+    end
+end
+local function handleEnetIfClient()
     -- TODO: reconnect if disconnected
-    if not enetclient then
-        return
-    end
+    if not enetclient then return end
     local hostevent = enetclient:service()
-    if not hostevent then
-        return
+    if not hostevent then return end
+    -- if hostevent.peer == clientpeer then return end
+
+    local type = hostevent.type
+    if type == "connect" then
+        sendMessage("status", "ping!")
+        chatboxMessageHistory:append("You've connected to the server!")
     end
-    if hostevent.type == "connect" then
-        clientpeer:send("status:ping!")
-    end
-    if hostevent.type == "receive" then
-        local data = hostevent.data
-        if data:sub(1, #"status:") == "status:" then
-            t.delayCall(function()
-                clientpeer:send("status:ping!")
-            end, 2)
-        end
-        if data:sub(1, #"message:") == "message:" then
-            chatboxMessageHistory[#chatboxMessageHistory + 1] = data:sub(#"message:" + 1, #data)
-        end
+    if type == "receive" then
+        receivedMessageHandle(hostevent)
     end
     hostevent = nil
-end
-local function handleNetworking(isServer)
-    if not isServer then
-        beginClient()
-    end
 end
 -- API
 function game.load(args)
@@ -105,7 +120,7 @@ function game.load(args)
 
     love.keyboard.setKeyRepeat(false)
 
-    handleNetworking(options.isServer)
+    beginClient()
     nicknamePickerEnabled = true
 end
 
@@ -203,7 +218,7 @@ function handleChatKp(key)
     -- chat handling
     if key == "return" then
         if clientpeer then
-            clientpeer:send("message:" .. clientChatboxMessage)
+            sendMessage("message", clientChatboxMessage)
         end
         -- TODO: handle sends from the server
         clientChatboxMessage = ""
@@ -213,7 +228,8 @@ function handleChatKp(key)
 end
 function handleNickPickerKp(key)
     if key == "return" then
-        clientpeer:send("status:addPlayer:" .. nicknamePickerMessage)
+        -- TODO: send password
+        sendMessage("status", "addPlayer:" .. nicknamePickerMessage)
         activeUIElemIndex = activeUIElemIndex + 1
         nicknamePickerEnabled = false
     elseif key == "backspace" then

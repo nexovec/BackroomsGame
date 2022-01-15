@@ -18,13 +18,14 @@ BUILD.bat
 ## Roadmap
 I have long term goals of reusing the tooling from this game for my other projects and I'm mainly
 interested in learning. That's why I will be focusing solely on the heavily technical aspect of game-dev for now.
-- [] shader preprocessor
-- [] fade-in/out shader
-- [] grayscale shader
-- [] settings menu
-- [] phone/gameboy shader
-- [] vignette, film-grain, possibly FXAA
-- [] loading screen
+- [ ] shader preprocessor
+- [ ] fade-in/out shader
+- [ ] grayscale shader
+- [ ] gamma correction shader
+- [ ] settings menu
+- [ ] phone/gameboy shader
+- [ ] loading screen
+- [ ] vignette, film-grain, possibly FXAA
 ## Changelog
 > ## v.0.0.0 basic project setup
 > - project build

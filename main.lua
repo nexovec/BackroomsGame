@@ -20,6 +20,7 @@ local options = {}
 
 
 function love.load(args)
+    -- TODO: untested platform warnings, compatibility checks
     options.isServer = args[1] == "--server"
     profile.start()
 
