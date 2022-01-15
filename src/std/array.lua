@@ -1,6 +1,7 @@
 local array = {}
 
 local error = require("std.error")
+local assert = require("std.assert")
 local types = require("std.types")
 function array:shallowCopy()
     -- assert(type(a) == "table", "This can only be used on tables")
@@ -71,8 +72,12 @@ function array:invert()
     return array.wrap(res)
 end
 function array.wrap(obj)
+    if type(obj) == "nil" then
+        local emptyTable = {}
+        return setmetatable(emptyTable, array)
+    end
+    assert(type(obj) == "table")
     setmetatable(obj, array)
     return obj
 end
-array.type = "array"
-return types.makeType(array)
+return types.makeType(array, "array")

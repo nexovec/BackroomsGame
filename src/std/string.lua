@@ -1,3 +1,4 @@
+-- FIXME: THIS IS RIDICULOUS
 local oldStringRef = string
 local string = {}
 function string.__call()

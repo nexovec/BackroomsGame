@@ -77,7 +77,7 @@ end
 function animation:setAnimation(name)
     if type(name) == "string" then
         -- PERFORMANCE:
-        self.activeLoop = array.invert(self.loopNames)[name]
+        self.activeLoop = array.wrap(self.loopNames):invert()[name]
     elseif type(name) == "number" then
         self.activeLoop = name
     else
@@ -180,7 +180,11 @@ function animation.new(image, tileSize, frameCounts, loopNames, skipToNextRowAft
         -- self.offsets[i] = self.offsets[i - 1] + self.tilesPerRow * rowCount + 1
         self.offsets[i + 1] = self.offsets[i] + rowCount * self.tilesPerRow
     end
+
+    -- discard resources
     -- TODO: discard unused tiles
+    image:release()
+
     return setmetatable(self, {
         __index = animation
     })

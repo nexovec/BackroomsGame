@@ -77,9 +77,11 @@ local typeNamesStd = {
     "class"
 }
 
-function types.makeType(obj)
-    obj.__index = obj
-    return setmetatable(obj, obj)
+function types.makeType(obj, typeName)
+    -- assert(type(typeName) == "string")
+    obj.type = typeName
+    obj.__index = obj.__index or obj
+    return obj
 end
 function types.isint(num)
     if type(num) ~= "number" then return false end

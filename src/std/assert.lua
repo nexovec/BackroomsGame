@@ -9,4 +9,5 @@ function assert.__call(term, errMsg, errLevel, errHandle)
         error(errMsg, 1 + errLevel)
     end
 end
+setmetatable(assert, assert)
 return types.makeType(assert)
