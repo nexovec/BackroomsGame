@@ -2,9 +2,7 @@ local uiBox = {}
 
 
 local types = require("std.types")
-
-
-local uiBtnRoundingMask = love.graphics.newShader("resources/shaders/masks/uiBtnRoundingMask.glsl")
+local assets = require("assets")
 
 
 function uiBox:clear()
@@ -15,8 +13,8 @@ function uiBox:clear()
         depthstencil = true
     })
     love.graphics.stencil(function()
-        love.graphics.setShader(uiBtnRoundingMask)
-        uiBtnRoundingMask:send("rounding", self.rounding)
+        love.graphics.setShader(assets.uiBtnRoundingMask)
+        assets.uiBtnRoundingMask:send("rounding", self.rounding)
         love.graphics.rectangle("fill", 0, 0, self.width, self.height)
     end, "replace", 1)
     love.graphics.setStencilTest("greater", 0)
@@ -37,21 +35,19 @@ function uiBox:clear()
 
     -- alternative with no stencil shader (if you need to resample the alpha texture to get jagged edges)
     -- love.graphics.push("all")
-    -- local gradientShaderA = love.graphics.newShader("resources/shaders/gradient.glsl")
-    -- local applyAlphaA = love.graphics.newShader("resources/shaders/applyAlpha.glsl")
     -- self.chatboxTexture = love.graphics.newCanvas(unpack(chatboxDims))
     -- local aspect = width / height
     -- self.textureCvs = love.graphics.newCanvas(width, height)
     -- local texture = love.graphics.newCanvas(width, height)
     -- local alphaTexture = love.graphics.newCanvas(aspect * 128, 128)
     -- alphaTexture:renderTo(function()
-        --     love.graphics.withShader(uiBtnRoundingMask, function()
-            --         uiBtnRoundingMask:send("rounding", 8)
+        --     love.graphics.withShader(assets.uiBtnRoundingMask, function()
+            --         assets.uiBtnRoundingMask:send("rounding", 8)
     --         love.graphics.rectangle("fill", 0, 0, width, height)
     --     end)
     -- end)
 
-    -- love.graphics.applyShader(texture, gradientShaderA, {
+    -- love.graphics.applyShader(texture, assets.gradientShaderA, {
     --     top_left = {0.1, 0.1, 0.1, 1},
     --     top_right = {0.1, 0.1, 0.1, 1},
     --     bottom_right = {0.2, 0.2, 0.2, 1},
@@ -59,7 +55,7 @@ function uiBox:clear()
     -- })
 
 
-    -- love.graphics.applyShader(self.textureCvs, applyAlphaA, {alphaMask = alphaTexture}, {draw = texture})
+    -- love.graphics.applyShader(self.textureCvs, assets.applyAlphaA, {alphaMask = alphaTexture}, {draw = texture})
     -- texture:release()
     -- alphaTexture:release()
 

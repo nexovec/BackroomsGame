@@ -8,23 +8,12 @@ local uiBox = require("uiBox")
 local array = require("std.array")
 local string = require("std.string")
 local network = require("network")
-
+local assets = require("src.assets")
 
 
 -- variables
 local options
-local font
-
-local backgroundImage
-local playerImage
 local testTileSet
-
-local basicShaderA
-local invertShaderA
-local testShaderA
-local blurShader
-local gradientShaderA
-local applyAlphaA
 
 local enetclient
 local clientpeer
@@ -97,25 +86,15 @@ function game.load(args)
     options = args
     love.window.setTitle("Backrooms v0.0.1 pre-dev")
     love.keyboard.setKeyRepeat(true)
-    -- load assets
-    font = love.graphics.newFont("resources/fonts/Pixel UniCode.ttf", 48)
-    love.graphics.setFont(font)
-    backgroundImage = love.graphics.newImage("resources/images/background1.png")
-    playerImage = animation.new("character")
-    tilesetImage = animation.new("tileset")
+    love.graphics.setFont(assets.font)
+    assets.playerImage = animation.new("character")
 
     -- init logic:
-    playerImage:play(3, "run", true, false)
-    basicShaderA = love.graphics.newShader("resources/shaders/basic.glsl")
-    invertShaderA = love.graphics.newShader("resources/shaders/invert.glsl")
-    testShaderA = love.graphics.newShader("resources/shaders/test.glsl")
-    blurShader = love.graphics.newShader("resources/shaders/blur.glsl")
-    gradientShaderA = love.graphics.newShader("resources/shaders/gradient.glsl")
-    applyAlphaA = love.graphics.newShader("resources/shaders/applyAlpha.glsl")
+    assets.playerImage:play(3, "run", true, false)
 
-    chatboxUIBox = uiBox.makeBox(chatboxDims[1], chatboxDims[2], gradientShaderA, {}, 20)
-    nicknamePickerUIBox = uiBox.makeBox(nicknamePickerBoxDims[1], nicknamePickerBoxDims[2], gradientShaderA, {}, 20)
-    logMessageBox = uiBox.makeBox(logMessageBoxDims[1], logMessageBoxDims[2], gradientShaderA, {}, 20)
+    chatboxUIBox = uiBox.makeBox(chatboxDims[1], chatboxDims[2], assets.gradientShaderA, {}, 20)
+    nicknamePickerUIBox = uiBox.makeBox(nicknamePickerBoxDims[1], nicknamePickerBoxDims[2], assets.gradientShaderA, {}, 20)
+    logMessageBox = uiBox.makeBox(logMessageBoxDims[1], logMessageBoxDims[2], assets.gradientShaderA, {}, 20)
 
     love.keyboard.setKeyRepeat(false)
 
@@ -125,24 +104,26 @@ end
 
 function game.tick(deltaTime)
     t.update()
+    assets.update(deltaTime)
     handleEnetIfClient()
 end
 
 function game.draw()
     -- draw background
     -- FIXME: magic numbers
+    -- TODO: tile-based UI
     local backgroundQuad = love.graphics.newQuad(0, 0, 2560, 1440, 2560, 1440)
-    love.graphics.draw(backgroundImage, backgroundQuad, 0, 0, 0, 1, 1, 0, 0)
+    love.graphics.draw(assets.backgroundImage, backgroundQuad, 0, 0, 0, 1, 1, 0, 0)
 
     -- draw scene
     local playfieldCanvas = love.graphics.newCanvas(1600, 720)
 
     playfieldCanvas:renderTo(function()
         love.graphics.clear(1.0, 1.0, 1.0)
-        love.graphics.withShader(testShaderA, function()
-            testShaderA:sendColor("color1", {0.9, 0.7, 0.9, 1.0})
-            testShaderA:sendColor("color2", {0.7, 0.9, 0.9, 1.0})
-            testShaderA:send("rectSize", {64, 64})
+        love.graphics.withShader(assets.testShaderA, function()
+            assets.testShaderA:sendColor("color1", {0.9, 0.7, 0.9, 1.0})
+            assets.testShaderA:sendColor("color2", {0.7, 0.9, 0.9, 1.0})
+            assets.testShaderA:send("rectSize", {64, 64})
             love.graphics.rectangle("fill", 0, 0, 720, 720)
         end)
 
@@ -150,11 +131,11 @@ function game.draw()
         --     blurShader:send("blurSize", 1 / (2560 / 16))
         --     blurShader:send("sigma", 5)
         --     local playerSpriteQuad = love.graphics.newQuad(0, 0, 720, 720, 720, 720)
-        --     playerImage:draw(playerSpriteQuad, 0, 0, 0, 1, 1, 0, 0)
+        --     assets.playerImage:draw(playerSpriteQuad, 0, 0, 0, 1, 1, 0, 0)
         -- end)
 
         local playerSpriteQuad = love.graphics.newQuad(0, 0, 720, 720, 720, 720)
-        playerImage:draw(playerSpriteQuad, 0, 0, 0, 1, 1, 0, 0)
+        assets.playerImage:draw(playerSpriteQuad, 0, 0, 0, 1, 1, 0, 0)
     end)
 
     local playfieldScenePlacementQuad = love.graphics.newQuad(0, 0, 1600, 720, 1600, 720)

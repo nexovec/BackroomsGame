@@ -89,9 +89,12 @@ function love.draw()
         love.graphics.draw(sceneCanvas, screenQuad, 0, 0, 0, 1, 1, 0, 0, 0, 0)
     end
     -- collectgarbage("step")
+    -- TODO:
+    -- game.draw()
     profile.stop()
 end
 
 function love.quit()
+    -- TODO: track unused requires(detect unused things in types.makeType)
     print("Exiting the game...")
 end
