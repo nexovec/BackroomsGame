@@ -18,6 +18,7 @@ BUILD.bat
 ## Roadmap
 I have long term goals of reusing the tooling from this game for my other projects and I'm mainly
 interested in learning. That's why I will be focusing solely on the heavily technical aspect of game-dev for now.
+- [ ] Hot-reload shaders and data
 - [ ] shader preprocessor
 - [ ] fade-in/out shader
 - [ ] grayscale shader

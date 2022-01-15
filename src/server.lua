@@ -3,6 +3,7 @@ local server = {}
 
 local array = require("std.array")
 local timing = require("timing")
+local network = require("network")
 
 
 local enethost
@@ -16,6 +17,37 @@ local function beginServer()
     -- establish host for receiving msg
     enethost = enet.host_create("192.168.0.234:6750")
 
+end
+
+local function receiveMessageHandle(hostevent)
+    -- TODO:
+    local data = hostevent.data
+    local prefix, trimmedMessage = network.getNetworkMessagePrefix(data)
+    if prefix == "message" then
+        -- TODO: send to everybody
+        local authorName = peerNicknames[connectedPeers:indexOf(hostevent.peer)]
+
+        local msg = authorName .. ": " .. data:sub((#"message:" + 1), #data)
+        -- hostevent.peer:send("message:" .. msg)
+        enethost:broadcast("message:" .. msg)
+    elseif prefix == "status" then
+        local shortened = data:sub(#"status:" + 1, #data)
+        if shortened:sub(1, #"addPlayer:") == "addPlayer:" then
+            local peerIndex = connectedPeers:indexOf(hostevent.peer)
+            -- TODO: Allow only alphabet, _ and numerics in player names, implement max player name size
+            -- FIXME: this is wrong, always sets to nil
+            peerNicknames[peerIndex] = shortened:sub((#"addPlayer:") + 1, #shortened)
+            enethost:broadcast("message: User " .. peerNicknames[peerIndex] .. " just logged in.")
+            print(hostevent.peer, "Just registered as ", peerNicknames[peerIndex], "!")
+        else
+            local tempHost = hostevent
+            timing.delayCall(function()
+                tempHost.peer:send("status:pong!")
+            end, 2)
+        end
+    else
+        -- TODO: handle unwanted messages
+    end
 end
 
 function handleEnetIfServer()
@@ -36,31 +68,7 @@ function handleEnetIfServer()
             return
         end
         if hostevent.type == "receive" then
-            local data = hostevent.data
-            if data:sub(1, #"message:") == "message:" then
-                -- TODO: send to everybody
-                local authorName = peerNicknames[connectedPeers:indexOf(hostevent.peer)]
-                local msg = authorName .. ": " .. data:sub((#"message:" + 1), #data)
-                -- hostevent.peer:send("message:" .. msg)
-                enethost:broadcast("message:" .. msg)
-            end
-            if data:sub(1, #"status:") == "status:" then
-                local shortened = data:sub(#"status:" + 1, #data)
-                if shortened:sub(1, #"addPlayer:") == "addPlayer:" then
-                    local peerIndex = connectedPeers:indexOf(hostevent.peer)
-                    -- TODO: Allow only alphabet, _ and numerics in player names, implement max player name size
-                    -- FIXME: this is wrong, always sets to nil
-                    peerNicknames[peerIndex] = shortened:sub((#"addPlayer:") + 1, #shortened)
-                    print(hostevent.peer, "Just registered as ", peerNicknames[peerIndex], "!")
-                else
-                    -- TODO: check for stray packets
-                    local tempHost = hostevent
-                    timing.delayCall(function()
-                        tempHost.peer:send("status:pong!")
-                    end, 2)
-                end
-            end
-
+            receiveMessageHandle(hostevent)
         end
     end
     hostevent = nil

@@ -6,6 +6,9 @@ local enet = require("enet")
 local t = require("timing")
 local uiBox = require("uiBox")
 local array = require("std.array")
+local string = require("std.string")
+local network = require("network")
+
 
 
 -- variables
@@ -33,6 +36,7 @@ local chatboxUIBox
 
 local nicknamePickerEnabled
 local nicknamePickerMessage = ""
+local nicknamePickerPassword = ""
 local nicknamePickerBoxDims = {750, 300}
 local nicknamePickerUIBox
 
@@ -52,17 +56,11 @@ local function sendMessage(prefix, message)
     clientpeer:send(prefix .. ":" .. message)
 end
 
-local function getNetworkMessagePrefix(data)
-    for k = 1, #data do
-        if string.sub(data, k, k) == ":" then return string.sub(data, 1, k-1), string.sub(data, k + 1, #data) end
-    end
-    -- TODO: don't crash, just log this and return
-    error("This message has no prefix: " .. data, 2)
-end
+
 
 local function receivedMessageHandle(hostevent)
     local data = hostevent.data
-    local prefix, trimmedMessage  = getNetworkMessagePrefix(data)
+    local prefix, trimmedMessage  = network.getNetworkMessagePrefix(data)
     if prefix == "status" then
         t.delayCall(function()
             sendMessage("status","ping!")
@@ -73,7 +71,7 @@ local function receivedMessageHandle(hostevent)
         -- server tells you to disconnect
         -- TODO:
     else
-        print(prefix,":",trimmedMessage)
+        print(prefix .. "X",":",trimmedMessage)
     end
 end
 local function handleEnetIfClient()
@@ -98,6 +96,7 @@ function game.load(args)
     assert(type(args) == "table")
     options = args
     love.window.setTitle("Backrooms v0.0.1 pre-dev")
+    love.keyboard.setKeyRepeat(true)
     -- load assets
     font = love.graphics.newFont("resources/fonts/Pixel UniCode.ttf", 48)
     love.graphics.setFont(font)
@@ -200,8 +199,11 @@ function game.draw()
         nicknamePickerUIBox:clear()
         nicknamePickerCanvas:renderTo(function()
             -- love.graphics.setColor(0.65, 0.15, 0.15, 1)
-            love.graphics.print("Enter your name:", 30, 10)
-            love.graphics.print(nicknamePickerMessage, 30, 200)
+            local descX, fieldX, row1y, row2y = 50, 250, 80, 150
+            love.graphics.print("name:", descX, row1y)
+            love.graphics.print(nicknamePickerMessage, fieldX, row1y)
+            love.graphics.print("password:", descX, row2y)
+            love.graphics.print( string.rep("*", #nicknamePickerPassword), fieldX, row2y)
         end)
         local chatboxScenePlacementQuad = love.graphics.newQuad(0, 0, nicknamePickerBoxDims[1], nicknamePickerBoxDims[2],
             nicknamePickerBoxDims[1], nicknamePickerBoxDims[2])
@@ -223,23 +225,34 @@ function handleChatKp(key)
         -- TODO: handle sends from the server
         clientChatboxMessage = ""
     elseif key == "backspace" then
-        clientChatboxMessage = clientChatboxMessage:sub(1, #clientChatboxMessage - 1)
+        clientChatboxMessage = string.popped(clientChatboxMessage)
     end
 end
+local activeNicknamePickerField = "nickname"
 function handleNickPickerKp(key)
     if key == "return" then
-        -- TODO: send password
-        sendMessage("status", "addPlayer:" .. nicknamePickerMessage)
+        if activeNicknamePickerField == "nickname" then activeNicknamePickerField = "password" return end
+        -- TODO: verify nickname
+        -- TODO: log IPs and how many accounts logged in with them
+        sendMessage("status", "addPlayer:" .. nicknamePickerMessage .. ":" .. nicknamePickerPassword)
         activeUIElemIndex = activeUIElemIndex + 1
         nicknamePickerEnabled = false
     elseif key == "backspace" then
-        nicknamePickerMessage = nicknamePickerMessage:sub(1, #nicknamePickerMessage - 1)
+        if activeNicknamePickerField == "nickname" then
+            nicknamePickerMessage = string.popped(nicknamePickerMessage)
+        else
+            nicknamePickerPassword = string.popped(nicknamePickerPassword)
+        end
     end
 end
 local UIElemHandlers = {{
     keypressed = handleNickPickerKp,
     textinput = function(t)
-        nicknamePickerMessage = nicknamePickerMessage .. t
+        if activeNicknamePickerField == "password" then
+            nicknamePickerPassword = nicknamePickerPassword .. t
+        else
+            nicknamePickerMessage = nicknamePickerMessage .. t
+        end
     end
 }, {
     keypressed = handleChatKp,
