@@ -8,7 +8,7 @@ local uiBox = require("uiBox")
 local array = require("std.array")
 local string = require("std.string")
 local network = require("network")
-local assets = require("src.assets")
+local assets
 
 
 -- variables
@@ -84,6 +84,7 @@ end
 function game.load(args)
     assert(type(args) == "table")
     options = args
+    assets = require("assets")
     love.window.setTitle("Backrooms v0.0.1 pre-dev")
     love.keyboard.setKeyRepeat(true)
     love.graphics.setFont(assets.font)
@@ -96,7 +97,7 @@ function game.load(args)
     nicknamePickerUIBox = uiBox.makeBox(nicknamePickerBoxDims[1], nicknamePickerBoxDims[2], assets.gradientShaderA, {}, 20)
     logMessageBox = uiBox.makeBox(logMessageBoxDims[1], logMessageBoxDims[2], assets.gradientShaderA, {}, 20)
 
-    love.keyboard.setKeyRepeat(false)
+    love.keyboard.setKeyRepeat(true)
 
     beginClient()
     nicknamePickerEnabled = true

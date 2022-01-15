@@ -44,6 +44,11 @@ function map:invert()
     return res
 end
 function map.wrap(obj)
+    if type(obj) == "nil" then
+        local emptyTable = {}
+        return setmetatable(emptyTable, array)
+    end
+    assert(type(obj) == "table")
     return setmetatable(obj, map)
 end
 function map.new()
