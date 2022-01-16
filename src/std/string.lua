@@ -32,7 +32,7 @@ function string.split(str, sep)
             -- lastSep = utf8.offset(str, charIndex + 1)
         end
     end
-    res:append(string.sub(str, lastSep, #str))
+    res:append(string.sub(str, lastSep + 1, #str))
     return res
 end
 

@@ -1,0 +1,9 @@
+{
+    "basicShaderA" : {"path" : "resources/shaders/basic.glsl"},
+    "invertShaderA" : {"path" : "resources/shaders/invert.glsl"},
+    "testShaderA" : {"path" : "resources/shaders/test.glsl"},
+    "blurShader" : {"path" : "resources/shaders/blur.glsl"},
+    "gradientShaderA" : {"path" : "resources/shaders/gradient.glsl"},
+    "applyAlphaA" : {"path" : "resources/shaders/applyAlpha.glsl"},
+    "uiBtnRoundingMask" : {"path" : "resources/shaders/masks/uiBtnRoundingMask.glsl"}
+}

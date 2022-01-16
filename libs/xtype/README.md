@@ -1,0 +1,1 @@
+see https://github.com/ImagicTheCat/lua-xtype/blob/master/README.adoc

@@ -4,6 +4,7 @@ local error = require("std.error")
 local assert = require("std.assert")
 local types = require("std.types")
 function array:shallowCopy()
+    assert(self, "Call with : instead of .", 2)
     -- assert(type(a) == "table", "This can only be used on tables")
     local new = {}
     for k, v in ipairs(self) do
@@ -12,16 +13,19 @@ function array:shallowCopy()
     return new
 end
 function array:append(elem)
+    assert(self, "Call with : instead of .", 2)
     self[#self + 1] = elem
     return self
 end
 function array:concat(tbl)
+    assert(self, "Call with : instead of .", 2)
     assert(type(tbl) == "table" and tbl.type == "array")
     for k,v in ipairs(tbl) do
         self:append(v)
     end
 end
 function array:pop()
+    assert(self, "Call with : instead of .", 2)
     local res = self[#self]
     self[#self] = nil
     return res
@@ -42,6 +46,7 @@ function array:prettyPrint()
     print('-----------')
 end
 function array:contains(elem)
+    assert(self, "Call with : instead of .", 2)
     for k, v in ipairs(self) do
         if v == elem then
             return true
@@ -50,6 +55,7 @@ function array:contains(elem)
     return false
 end
 function array:indexOf(elem)
+    assert(self, "Call with : instead of .", 2)
     for k, v in ipairs(self) do
         if v == elem then return k end
     end
@@ -58,6 +64,7 @@ end
 --- Functional programming filter. Uses ipairs under the hood.
 ---@param func Gets called for every element of the array with value, key, array as parameters. Must return a boolean
 function array:filter(func)
+    assert(self, "Call with : instead of .", 2)
     -- TODO: test
     local new = {}
     for k, v in ipairs(self) do
@@ -70,6 +77,7 @@ end
 --- Functional programming map. Uses ipairs under the hood.
 ---@param elem Gets called for every element of the array with value, key, array as parameters.
 function array:map(elem)
+    assert(self, "Call with : instead of .", 2)
     -- TODO: test
     local new = {}
     for k, v in ipairs(self) do
@@ -79,6 +87,7 @@ function array:map(elem)
 end
 
 function array:invert()
+    assert(self, "Call with : instead of .", 2)
     local res = {}
     for k, v in ipairs(self) do
         -- if not type(v) == "string" or type(v) == "number" then error("Table contains uninvertable type at index " .. k, 2) end

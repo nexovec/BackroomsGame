@@ -2,7 +2,8 @@
 local profile = require("profile")
 
 local std = require("std")
-local assets
+local json = require("std.json")
+local settings = json.decode(love.filesystem.newFileData("data/settings.json"):getString())
 local animation
 local game
 local server
@@ -26,13 +27,10 @@ function love.load(args)
 
     if options.isServer then
         -- TODO: read the real value
-        assets = {settings = {logging = {shouldPerformanceLog = false, performanceLogPeriodInSeconds = 60}}}
         server = require("server")
         if server == nil then print("You can't launch as a server because I yeeted the server files, precisely so you can't do this.") end
         server.load()
     else
-        assets = require("assets")
-        animation = require("animation")
         require("loveOverrides")
         game = require("game")
         love.graphics.setDefaultFilter("nearest", "nearest")
@@ -45,7 +43,7 @@ function love.load(args)
         game.load(options)
     end
 
-    if assets.settings.logging.shouldPerformanceLog then
+    if settings.logging.shouldPerformanceLog then
         print(profile.report(10))
     end
 
@@ -64,17 +62,16 @@ function love.update(dt)
     if options.isServer then
         server.update(dt)
     else
-        animation.updateAnimations(dt)
         game.tick(dt)
     end
 
-    if assets.settings.logging.shouldLogFPS and love.timer.getTime() - timeLastLoggedFPS > 1 then
+    if settings.logging.shouldLogFPS and love.timer.getTime() - timeLastLoggedFPS > 1 then
         print(ticks .. "\t:\t" .. collectgarbage("count"))
         ticks = 0
         timeLastLoggedFPS = timeLastLoggedFPS + 1.0
     end
-    if (assets.settings.logging.shouldPerformanceLog and love.timer.getTime() - timeLastLogged >
-    assets.settings.logging.performanceLogPeriodInSeconds) then
+    if (settings.logging.shouldPerformanceLog and love.timer.getTime() - timeLastLogged >
+    settings.logging.performanceLogPeriodInSeconds) then
         print(profile.report(10))
         profile.reset()
         timeLastLogged = love.timer.getTime()

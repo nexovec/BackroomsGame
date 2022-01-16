@@ -134,13 +134,14 @@ end
 ---@param loopNames table Assigns names to individual loops of the animation
 ---@param skipToNextRowAfterLoop boolean true if there is one animation per row, false if they are tightly packed
 ---@return table
-function animation.new(image, tileSize, frameCounts, loopNames, skipToNextRowAfterLoop)
+function animation.newCharacterAnimation(image, tileSize, frameCounts, loopNames, skipToNextRowAfterLoop)
     local self
+    -- TODO: use a tileatlas object instead of loading it directly
     if type(image) == "string" then
 
         -- load spritesheet from file from file
-        assert(assets.animations)
-        local properties = assets.animations[image]
+        assert(assets.get("animations"))
+        local properties = assets.get("animations")[image]
         -- TODO: make the image shared and the ArrayImage as well
         image = love.image.newImageData(properties.filepath)
         tileSize = properties.tileSize
@@ -148,6 +149,7 @@ function animation.new(image, tileSize, frameCounts, loopNames, skipToNextRowAft
         loopNames = properties.loopNames
         skipToNextRowAfterLoop = properties.skipToNextRowAfterLoop
     end
+    -- TODO: test when type(image) == "userdata"
 
     local width, height = image:getDimensions()
     self = {

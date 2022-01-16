@@ -36,8 +36,11 @@ local function receiveEnetHandle(hostevent)
     if prefix == "message" then
         -- broadcast message to everybody
         local authorName = getPeerUsername(hostevent.peer)
-        -- local msg = authorName .. ": " .. data:sub((#"message:" + 1), #data)
+        if not authorName then
+            --TODO: Who are you again?
+        end
         local msg = authorName .. ": " .. trimmedData
+        print(msg)
         enethost:broadcast("message:" .. msg)
     elseif prefix == "status" then
         prefix, trimmedData = network.getNetworkMessagePrefix(trimmedData)
@@ -63,7 +66,7 @@ local function receiveEnetHandle(hostevent)
     end
 end
 
-function handleEnetIfServer()
+function handleEnetServer()
     if not enethost then
         error("Well this could be a problem")
         return
@@ -95,7 +98,7 @@ end
 
 function server.update(dt)
     -- TODO:
-    handleEnetIfServer()
+    handleEnetServer()
 end
 
 function server.draw()
