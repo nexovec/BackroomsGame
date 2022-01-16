@@ -6,6 +6,8 @@
         //
         "performanceLogPeriodInSeconds": 60,
         "shouldLogFPS": false
-    } // this too
+    }, // this too
+    "width":1920,
+    "height":1080
 }
 // THIS IS ANOTHER COMMENT

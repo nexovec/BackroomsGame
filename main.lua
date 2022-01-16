@@ -4,14 +4,11 @@ local profile = require("profile")
 local std = require("std")
 local json = require("std.json")
 local settings = json.decode(love.filesystem.newFileData("data/settings.json"):getString())
-local animation
 local game
 local server
 
 
 -- variables
-local sceneCanvas
-
 local timeLastLogged = nil
 local delta = 0
 
@@ -35,7 +32,6 @@ function love.load(args)
         game = require("game")
         love.graphics.setDefaultFilter("nearest", "nearest")
         -- FIXME: magic numbers
-        sceneCanvas = love.graphics.newCanvas(2560, 1440)
 
         -- make fullscreen
         love.window.setVSync(0)
@@ -82,16 +78,16 @@ end
 
 function love.draw()
     profile.start()
-    if options.isServer then server.draw() else
-        -- TODO: don't double buffer like this, render in the actual resolution instead
-        sceneCanvas:renderTo(game.draw)
-        local _, _, width, height = love.window.getSafeArea()
-        local screenQuad = love.graphics.newQuad(0, 0, width, height, width, height)
-        love.graphics.draw(sceneCanvas, screenQuad, 0, 0, 0, 1, 1, 0, 0, 0, 0)
-    end
+    -- if options.isServer then server.draw() else
+    --     -- TODO: don't double buffer like this, render in the actual resolution instead
+    --     sceneCanvas:renderTo(game.draw)
+    --     local _, _, width, height = love.window.getSafeArea()
+    --     local screenQuad = love.graphics.newQuad(0, 0, width, height, width, height)
+    --     love.graphics.draw(sceneCanvas, screenQuad, 0, 0, 0, 1, 1, 0, 0, 0, 0)
+    -- end
     -- collectgarbage("step")
     -- TODO:
-    -- game.draw()
+    game.draw()
     profile.stop()
 end
 

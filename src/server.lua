@@ -48,8 +48,6 @@ local function receiveEnetHandle(hostevent)
             username, password  = network.getNetworkMessagePrefix(trimmedData)
 
             -- TODO: Allow only alphabet, _ and numerics in player names, implement max and min player name size
-            -- FIXME: this is wrong, always sets to nil
-
             setPeerUsername(hostevent.peer, username)
             enethost:broadcast("message: User " .. getPeerUsername(hostevent.peer) .. " just logged in.")
             print(hostevent.peer, "Just registered as ", getPeerUsername(hostevent.peer), "!")

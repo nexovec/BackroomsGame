@@ -18,6 +18,8 @@ local testTileSet
 local enetclient
 local clientpeer
 
+local mockResolution = {2560, 1440}
+
 local chatboxMessageHistory = array.wrap()
 local clientChatboxMessage = ""
 local chatboxDims = {640, 1280}
@@ -91,16 +93,16 @@ function game.load(args)
     love.keyboard.setKeyRepeat(true)
     love.graphics.setFont(assets.get("font"))
     assets.playerImage = animation.newCharacterAnimation("character")
-
+    
     -- init logic:
     assets.playerImage:play(3, "run", true, false)
-
+    
     chatboxUIBox = uiBox.makeBox(chatboxDims[1], chatboxDims[2], assets.get("gradientShaderA"), {}, 20)
     nicknamePickerUIBox = uiBox.makeBox(nicknamePickerBoxDims[1], nicknamePickerBoxDims[2], assets.get("gradientShaderA"), {}, 20)
     logMessageBox = uiBox.makeBox(logMessageBoxDims[1], logMessageBoxDims[2], assets.get("gradientShaderA"), {}, 20)
-
+    
     love.keyboard.setKeyRepeat(true)
-
+    
     beginClient()
     nicknamePickerEnabled = true
 end
@@ -110,6 +112,23 @@ function game.tick(deltaTime)
     animation.updateAnimations(deltaTime)
     assets.update(deltaTime)
     handleEnetClient()
+end
+
+--- Corrects position for resolutionChanges
+---@param pos table Of the form {width, height}
+local function resolutionScaledPos(pos)
+    return {(assets.get("settings").width / mockResolution[1]) * pos[1],(assets.get("settings").height / mockResolution[2]) * pos[2]}
+end
+local function resolutionScaledDraw(image, quad, x, y)
+    local correctX, correctY = unpack(resolutionScaledPos{x, y})
+    --TODO:
+    local viewX, viewY, width, height = quad:getViewport()
+    local scaleX, scaleY = quad:getTextureDimensions()
+    local cviewX, cviewY = unpack(resolutionScaledPos{viewX,viewY})
+    local cwidth, cheight = unpack(resolutionScaledPos{width, height})
+    local cscaleX, cscaleY = unpack(resolutionScaledPos{scaleX, scaleY})
+    local correctQuad = love.graphics.newQuad(cviewX, cviewY, cwidth, cheight, cscaleX, cscaleY)
+    love.graphics.draw(image, correctQuad, correctX, correctY)
 end
 
 local function renderOldUI()
@@ -122,7 +141,8 @@ local function renderOldUI()
     end)
     local logMessageBoxScenePlacementQuad = love.graphics.newQuad(0, 0, logMessageBoxDims[1], logMessageBoxDims[2], logMessageBoxDims[1],
         logMessageBoxDims[2])
-    love.graphics.draw(logMessageBoxCanvas, logMessageBoxScenePlacementQuad, 100, 950, 0, 1, 1, 0, 0, 0, 0)
+    -- love.graphics.draw(logMessageBoxCanvas, logMessageBoxScenePlacementQuad, 100, 950, 0, 1, 1, 0, 0, 0, 0)
+    resolutionScaledDraw(logMessageBoxCanvas, logMessageBoxScenePlacementQuad, 100, 950)
 
 
     -- render messages
@@ -132,17 +152,17 @@ local function renderOldUI()
         -- FIXME:
         -- love.graphics.setColor(0.65, 0.15, 0.15, 1)
         local yDiff = 40
-
+        
         for i, messageText in ipairs(chatboxMessageHistory) do
             love.graphics.print(messageText, 30, 10 - yDiff + yDiff * i)
         end
-
+        
         love.graphics.print(clientChatboxMessage, 30, 1210)
     end)
-
+    
     local chatboxScenePlacementQuad = love.graphics.newQuad(0, 0, chatboxDims[1], chatboxDims[2], chatboxDims[1],
-        chatboxDims[2])
-    love.graphics.draw(chatboxCanvas, chatboxScenePlacementQuad, 1800, 100, 0, 1, 1, 0, 0, 0, 0)
+    chatboxDims[2])
+    resolutionScaledDraw(chatboxCanvas, chatboxScenePlacementQuad, 1800, 100)
 
 
     -- render log-in box
@@ -159,14 +179,14 @@ local function renderOldUI()
         end)
         local chatboxScenePlacementQuad = love.graphics.newQuad(0, 0, nicknamePickerBoxDims[1], nicknamePickerBoxDims[2],
             nicknamePickerBoxDims[1], nicknamePickerBoxDims[2])
-        love.graphics.draw(nicknamePickerCanvas, chatboxScenePlacementQuad, 550, 550, 0, 1, 1, 0, 0, 0, 0)
+        resolutionScaledDraw(nicknamePickerCanvas, chatboxScenePlacementQuad, 550, 550)
     end
     love.graphics.pop()
 end
 
 function renderNewUI()
     -- TODO: render tiled UI
-    love.graphics.draw(assets.get("uiPaperImage"))
+    -- love.graphics.draw(assets.get("uiPaperImage"), 0, 0, 0, 3, 3, 0, 0)
 end
 
 function game.draw()
@@ -176,6 +196,7 @@ function game.draw()
     love.graphics.draw(assets.get("backgroundImage"), backgroundQuad, 0, 0, 0, 1, 1, 0, 0)
 
     -- draw scene
+    -- TODO: cache
     local playfieldCanvas = love.graphics.newCanvas(1600, 720)
 
     playfieldCanvas:renderTo(function()
@@ -199,7 +220,7 @@ function game.draw()
     end)
 
     local playfieldScenePlacementQuad = love.graphics.newQuad(0, 0, 1600, 720, 1600, 720)
-    love.graphics.draw(playfieldCanvas, playfieldScenePlacementQuad, 100, 100, 0, 1, 1, 0, 0, 0, 0)
+    resolutionScaledDraw(playfieldCanvas, playfieldScenePlacementQuad, 100, 100)
     renderOldUI()
     renderNewUI()
 end
