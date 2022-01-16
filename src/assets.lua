@@ -11,9 +11,6 @@ local function decodeJsonFile(filepath)
     assert(dataJson)
     return json.decode(dataJson)
 end
--- TODO: hot-reload json data
--- TODO: hot-reload shaders
--- TODO: hot-reload images
 local resources = map.wrap()
 resources.constants = {path = "data/constants.json", func = decodeJsonFile}
 resources.settings = {path = "data/settings.json", func = decodeJsonFile}
@@ -38,6 +35,7 @@ local function hotReloadAssets()
         local fileInfo = love.filesystem.getInfo(v.path)
         if v.cachedFileLastModified < fileInfo.modtime then
             -- reload assset
+            -- TODO:
             -- if assets[k] and assets[k].release then assets[k]:release() end
             v.cachedFileLastModified = fileInfo.modtime
             print("Hot reloaded " .. v.path)

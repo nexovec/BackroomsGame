@@ -41,8 +41,10 @@ local function beginClient()
     clientpeer = enetclient:connect("192.168.0.234:6750")
 end
 
-local function sendMessage(prefix, message)
-    clientpeer:send(prefix .. ":" .. message)
+local function sendMessage(...)
+    local params = {...}
+    local message = table.concat(params, ":")
+    clientpeer:send(message)
 end
 
 
@@ -60,7 +62,7 @@ local function receivedMessageHandle(hostevent)
         -- server tells you to disconnect
         -- TODO:
     else
-        print(prefix .. "X",":",trimmedMessage)
+        error(prefix .. "X" .. ":" ..trimmedMessage)
     end
 end
 local function handleEnetIfClient()
@@ -109,40 +111,7 @@ function game.tick(deltaTime)
     handleEnetIfClient()
 end
 
-function game.draw()
-    -- draw background
-    -- FIXME: magic numbers
-    -- TODO: tile-based UI
-    local backgroundQuad = love.graphics.newQuad(0, 0, 2560, 1440, 2560, 1440)
-    love.graphics.draw(assets.backgroundImage, backgroundQuad, 0, 0, 0, 1, 1, 0, 0)
-
-    -- draw scene
-    local playfieldCanvas = love.graphics.newCanvas(1600, 720)
-
-    playfieldCanvas:renderTo(function()
-        love.graphics.clear(1.0, 1.0, 1.0)
-        love.graphics.withShader(assets.testShaderA, function()
-            assets.testShaderA:sendColor("color1", {0.9, 0.7, 0.9, 1.0})
-            assets.testShaderA:sendColor("color2", {0.7, 0.9, 0.9, 1.0})
-            assets.testShaderA:send("rectSize", {64, 64})
-            love.graphics.rectangle("fill", 0, 0, 720, 720)
-        end)
-
-        -- love.graphics.withShader(blurShader, function()
-        --     blurShader:send("blurSize", 1 / (2560 / 16))
-        --     blurShader:send("sigma", 5)
-        --     local playerSpriteQuad = love.graphics.newQuad(0, 0, 720, 720, 720, 720)
-        --     assets.playerImage:draw(playerSpriteQuad, 0, 0, 0, 1, 1, 0, 0)
-        -- end)
-
-        local playerSpriteQuad = love.graphics.newQuad(0, 0, 720, 720, 720, 720)
-        assets.playerImage:draw(playerSpriteQuad, 0, 0, 0, 1, 1, 0, 0)
-    end)
-
-    local playfieldScenePlacementQuad = love.graphics.newQuad(0, 0, 1600, 720, 1600, 720)
-    love.graphics.draw(playfieldCanvas, playfieldScenePlacementQuad, 100, 100, 0, 1, 1, 0, 0, 0, 0)
-
-    -- TODO: create buttons
+local function renderOldUI()
     -- render log message box
     love.graphics.push("all")
     local logMessageBoxCanvas = logMessageBox.textureCvs
@@ -192,9 +161,45 @@ function game.draw()
         love.graphics.draw(nicknamePickerCanvas, chatboxScenePlacementQuad, 550, 550, 0, 1, 1, 0, 0, 0, 0)
     end
     love.graphics.pop()
+end
 
-    if options.isServer then love.graphics.print("SERVER")end
+function renderNewUI()
+    -- TODO: render tiled UI
+end
 
+function game.draw()
+    -- draw background
+    -- FIXME: magic numbers
+    local backgroundQuad = love.graphics.newQuad(0, 0, 2560, 1440, 2560, 1440)
+    love.graphics.draw(assets.backgroundImage, backgroundQuad, 0, 0, 0, 1, 1, 0, 0)
+
+    -- draw scene
+    local playfieldCanvas = love.graphics.newCanvas(1600, 720)
+
+    playfieldCanvas:renderTo(function()
+        love.graphics.clear(1.0, 1.0, 1.0)
+        love.graphics.withShader(assets.testShaderA, function()
+            assets.testShaderA:sendColor("color1", {0.9, 0.7, 0.9, 1.0})
+            assets.testShaderA:sendColor("color2", {0.7, 0.9, 0.9, 1.0})
+            assets.testShaderA:send("rectSize", {64, 64})
+            love.graphics.rectangle("fill", 0, 0, 720, 720)
+        end)
+
+        -- love.graphics.withShader(blurShader, function()
+        --     blurShader:send("blurSize", 1 / (2560 / 16))
+        --     blurShader:send("sigma", 5)
+        --     local playerSpriteQuad = love.graphics.newQuad(0, 0, 720, 720, 720, 720)
+        --     assets.playerImage:draw(playerSpriteQuad, 0, 0, 0, 1, 1, 0, 0)
+        -- end)
+
+        local playerSpriteQuad = love.graphics.newQuad(0, 0, 720, 720, 720, 720)
+        assets.playerImage:draw(playerSpriteQuad, 0, 0, 0, 1, 1, 0, 0)
+    end)
+
+    local playfieldScenePlacementQuad = love.graphics.newQuad(0, 0, 1600, 720, 1600, 720)
+    love.graphics.draw(playfieldCanvas, playfieldScenePlacementQuad, 100, 100, 0, 1, 1, 0, 0, 0, 0)
+    renderOldUI()
+    renderNewUI()
 end
 
 local activeUIElemIndex = 1
@@ -216,7 +221,7 @@ function handleNickPickerKp(key)
         if activeNicknamePickerField == "nickname" then activeNicknamePickerField = "password" return end
         -- TODO: verify nickname
         -- TODO: log IPs and how many accounts logged in with them
-        sendMessage("status", "addPlayer:" .. nicknamePickerMessage .. ":" .. nicknamePickerPassword)
+        sendMessage("status", "logIn", nicknamePickerMessage .. ":" .. nicknamePickerPassword)
         activeUIElemIndex = activeUIElemIndex + 1
         nicknamePickerEnabled = false
     elseif key == "backspace" then

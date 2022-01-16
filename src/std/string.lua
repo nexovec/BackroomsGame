@@ -19,7 +19,7 @@ function string.join(tableOfStrings, separator)
     return table.concat(tableOfStrings, separator)
 end
 function string.split(str, sep)
-    assert(utf8.len(sep) ~= 1, "Multi-character separators are not implemented yet")
+    assert(utf8.len(sep) == 1, "Multi-character separators are not implemented yet", 2)
     local sepCode = utf8.codepoint(sep)
     local res = array.wrap()
     local lastSep = 0

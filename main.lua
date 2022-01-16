@@ -2,8 +2,8 @@
 local profile = require("profile")
 
 local std = require("std")
-local assets = require("assets")
-local animation = require("animation")
+local assets
+local animation
 local game
 local server
 
@@ -25,10 +25,14 @@ function love.load(args)
     profile.start()
 
     if options.isServer then
+        -- TODO: read the real value
+        assets = {settings = {logging = {shouldPerformanceLog = false, performanceLogPeriodInSeconds = 60}}}
         server = require("server")
         if server == nil then print("You can't launch as a server because I yeeted the server files, precisely so you can't do this.") end
         server.load()
     else
+        assets = require("assets")
+        animation = require("animation")
         require("loveOverrides")
         game = require("game")
         love.graphics.setDefaultFilter("nearest", "nearest")
