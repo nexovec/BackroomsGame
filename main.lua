@@ -4,6 +4,7 @@ local profile = require("profile")
 local std = require("std")
 local json = require("std.json")
 local settings = json.decode(love.filesystem.newFileData("data/settings.json"):getString())
+local assets
 local game
 local server
 
@@ -30,6 +31,9 @@ function love.load(args)
     else
         require("loveOverrides")
         game = require("game")
+        -- TODO: solve
+        assets = require("assets")
+        assets.init()
         love.graphics.setDefaultFilter("nearest", "nearest")
         -- FIXME: magic numbers
 

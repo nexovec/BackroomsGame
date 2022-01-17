@@ -93,16 +93,16 @@ function game.load(args)
     love.keyboard.setKeyRepeat(true)
     love.graphics.setFont(assets.get("font"))
     assets.playerImage = animation.newCharacterAnimation("character")
-    
+
     -- init logic:
-    assets.playerImage:play(3, "run", true, false)
-    
-    chatboxUIBox = uiBox.makeBox(chatboxDims[1], chatboxDims[2], assets.get("gradientShaderA"), {}, 20)
-    nicknamePickerUIBox = uiBox.makeBox(nicknamePickerBoxDims[1], nicknamePickerBoxDims[2], assets.get("gradientShaderA"), {}, 20)
-    logMessageBox = uiBox.makeBox(logMessageBoxDims[1], logMessageBoxDims[2], assets.get("gradientShaderA"), {}, 20)
-    
+    assets.playerImage:play(0.6, "run", true, false)
+
+    chatboxUIBox = uiBox.makeBox(chatboxDims[1], chatboxDims[2], "gradientShaderA", {}, 20)
+    nicknamePickerUIBox = uiBox.makeBox(nicknamePickerBoxDims[1], nicknamePickerBoxDims[2], "gradientShaderA", {}, 20)
+    logMessageBox = uiBox.makeBox(logMessageBoxDims[1], logMessageBoxDims[2], "gradientShaderA", {}, 20)
+
     love.keyboard.setKeyRepeat(true)
-    
+
     beginClient()
     nicknamePickerEnabled = true
 end
@@ -152,14 +152,14 @@ local function renderOldUI()
         -- FIXME:
         -- love.graphics.setColor(0.65, 0.15, 0.15, 1)
         local yDiff = 40
-        
+
         for i, messageText in ipairs(chatboxMessageHistory) do
             love.graphics.print(messageText, 30, 10 - yDiff + yDiff * i)
         end
-        
+
         love.graphics.print(clientChatboxMessage, 30, 1210)
     end)
-    
+
     local chatboxScenePlacementQuad = love.graphics.newQuad(0, 0, chatboxDims[1], chatboxDims[2], chatboxDims[1],
     chatboxDims[2])
     resolutionScaledDraw(chatboxCanvas, chatboxScenePlacementQuad, 1800, 100)
@@ -184,9 +184,34 @@ local function renderOldUI()
     love.graphics.pop()
 end
 
+local function drawGrid(tileSize)
+    for i = 1, math.floor(mockResolution[2] / tileSize) do
+        local pos1 = {0, i * tileSize}
+        local pos2 =  {mockResolution[1], i * tileSize}
+        local cPos1 = resolutionScaledPos(pos1)
+        local cPos2 = resolutionScaledPos(pos2)
+        love.graphics.line(cPos1[1], cPos1[2], cPos2[1], cPos2[2])
+    end
+    for i = 1, math.floor(mockResolution[1] / tileSize) do
+        local pos1 = {i* tileSize, 0}
+        local pos2 =  {i * tileSize, mockResolution[2]}
+        local cPos1 = resolutionScaledPos(pos1)
+        local cPos2 = resolutionScaledPos(pos2)
+        love.graphics.line(cPos1[1], cPos1[2], cPos2[1], cPos2[2])
+    end
+end
+
 function renderNewUI()
     -- TODO: render tiled UI
-    -- love.graphics.draw(assets.get("uiPaperImage"), 0, 0, 0, 3, 3, 0, 0)
+    -- local width, height = assets.get("uiPaperImage"):getDimensions()
+    -- local tileSize = 16
+    -- local x, y = 0, 0
+    -- local scale = 3
+    -- local quad = love.graphics.newQuad(scale * tileSize * x, scale * tileSize * y, scale * tileSize, scale * tileSize, scale * width, scale * height)
+    -- love.graphics.draw(assets.get("uiPaperImage"), quad)
+    love.graphics.draw(assets.get("uiPaperImage"), 0, 0, 0, 3, 3)
+    -- -- TODO: DEBUG... why is it 4 here and 3 above this??
+    -- drawGrid(tileSize * 4)
 end
 
 function game.draw()
@@ -197,9 +222,9 @@ function game.draw()
 
     -- draw scene
     -- TODO: cache
-    local playfieldCanvas = love.graphics.newCanvas(1600, 720)
+    local playerAreaCanvas = love.graphics.newCanvas(1600, 720)
 
-    playfieldCanvas:renderTo(function()
+    playerAreaCanvas:renderTo(function()
         love.graphics.clear(1.0, 1.0, 1.0)
         love.graphics.withShader(assets.get("testShaderA"), function()
             assets.get("testShaderA"):sendColor("color1", {0.9, 0.7, 0.9, 1.0})
@@ -220,7 +245,7 @@ function game.draw()
     end)
 
     local playfieldScenePlacementQuad = love.graphics.newQuad(0, 0, 1600, 720, 1600, 720)
-    resolutionScaledDraw(playfieldCanvas, playfieldScenePlacementQuad, 100, 100)
+    resolutionScaledDraw(playerAreaCanvas, playfieldScenePlacementQuad, 100, 100)
     renderOldUI()
     renderNewUI()
 end

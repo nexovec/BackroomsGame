@@ -54,6 +54,17 @@ function array:contains(elem)
     end
     return false
 end
+
+function array:reverse()
+    -- TODO: test
+    local len = #self
+    local res = array.wrap()
+    for i = len, 1, -1 do
+        res:append(self[i])
+    end
+    return res
+end
+
 function array:indexOf(elem)
     assert(self, "Call with : instead of .", 2)
     for k, v in ipairs(self) do
@@ -86,7 +97,7 @@ function array:map(elem)
     return array.wrap(new)
 end
 
-function array:invert()
+function array:inverse()
     assert(self, "Call with : instead of .", 2)
     local res = {}
     for k, v in ipairs(self) do

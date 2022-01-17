@@ -57,18 +57,23 @@ end
 --     return love.graphics.newArrayImage(subimages)
 -- end
 
-local playingAnimations = {}
+local playingAnimations = array.wrap()
+local animationObjects = array.wrap()
+-- TODO: asset:release()
 function animation.updateAnimations(dt)
     for _, v in pairs(playingAnimations) do
         v.tween:update(dt)
-
         -- looping
         if love.timer.getTime() > v.startTime + v.playbackDuration then
             -- TODO: reset previous tween
             -- assert(v.ref.progress == 1, v.ref.progress)
             v.ref:play(v.playbackDuration, v.loopName, false, v.inReverse)
             v.startTime = v.startTime + v.playbackDuration
-            -- v.startTime = love.timer.getTime()
+        end
+    end
+    for k, v in pairs(animationObjects) do
+        if v.assetLastModified ~= assets.getModTime(v.assetFilePath) then
+            -- TODO: reload asset and restitch animation
         end
     end
 end
@@ -77,7 +82,7 @@ end
 function animation:setAnimation(name)
     if type(name) == "string" then
         -- PERFORMANCE:
-        self.activeLoop = array.wrap(self.loopNames):invert()[name]
+        self.activeLoop = array.wrap(self.loopNames):inverse()[name]
     elseif type(name) == "number" then
         self.activeLoop = name
     else
@@ -116,16 +121,8 @@ end
 
 function animation:draw(quad, xPos, yPos, xScale, yScale)
     local frame = math.floor(self.progress * (self.frameCounts[self.activeLoop]))
-
-    -- DEBUG:
-    local oldColor = {love.graphics.getColor()}
-    love.graphics.setColor(0, 0, 0, 1)
-    love.graphics.rectangle("line", xPos, yPos, quad:getTextureDimensions())
-    love.graphics.setColor(unpack(oldColor))
-
     return love.graphics.drawLayer(self.imageData, self.offsets[self.activeLoop] + frame, quad, xPos, yPos, xScale,
         yScale)
-    -- return love.graphics.drawLayer(self.imageData, frame, quad, xPos, yPos, xScale, yScale)
 end
 --- Parses an image into an animation (from )
 ---@param image userdata The Image object to parse
@@ -136,14 +133,15 @@ end
 ---@return table
 function animation.newCharacterAnimation(image, tileSize, frameCounts, loopNames, skipToNextRowAfterLoop)
     local self
-    -- TODO: use a tileatlas object instead of loading it directly
+    local assetFilePath
+    -- TODO: use a tileatlas object instead of ArrayImage
     if type(image) == "string" then
 
         -- load spritesheet from file from file
         assert(assets.get("animations"))
         local properties = assets.get("animations")[image]
-        -- TODO: make the image shared and the ArrayImage as well
         image = love.image.newImageData(properties.filepath)
+        assetFilePath = properties.filepath
         tileSize = properties.tileSize
         frameCounts = properties.frameCounts
         loopNames = properties.loopNames
@@ -157,6 +155,9 @@ function animation.newCharacterAnimation(image, tileSize, frameCounts, loopNames
         frameCounts = frameCounts,
         offsets = {},
         loopNames = loopNames or {},
+
+        assetFilePath = assetFilePath,
+        assetLastModified = love.filesystem.getInfo(assetFilePath).modtime,
 
         tilesPerRow = math.floor(width / tileSize),
         tilesPerColumn = math.floor(height / tileSize),
@@ -185,8 +186,8 @@ function animation.newCharacterAnimation(image, tileSize, frameCounts, loopNames
 
     -- discard resources
     -- TODO: discard unused tiles
+    animationObjects:append(self)
     image:release()
-
     return setmetatable(self, {
         __index = animation
     })

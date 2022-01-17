@@ -13,7 +13,6 @@ function uiBox:clear()
         depthstencil = true
     })
     love.graphics.stencil(function()
-        -- love.graphics.setShader(assets.get("uiBtnRoundingMask"))
         local sh = assets.get("resources/shaders/masks/uiBtnRoundingMask.glsl")
         love.graphics.setShader(sh)
         sh:send("rounding", self.rounding)
@@ -26,7 +25,7 @@ function uiBox:clear()
         getDimensions = function()
             return self.textureCvs:getDimensions()
         end
-    }, self.shader, {
+    }, assets.get(self.shader), {
         top_left = {0.1, 0.1, 0.1, 1},
         top_right = {0.1, 0.1, 0.1, 1},
         bottom_right = {0.2, 0.2, 0.2, 1},
@@ -65,6 +64,7 @@ function uiBox:clear()
 end
 
 function uiBox.makeBox(width, height, shader, uniformsTable, rounding)
+    assert(type(shader) == "string", "Shader must be an asset name of a shader or a filepath to it", 2)
     -- TODO: use uniformsTable
     local self = {}
     -- draw ui box
