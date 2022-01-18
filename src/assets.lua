@@ -8,70 +8,59 @@ local string = require("std.string")
 local array = require("std.array")
 
 
+local resources = map.wrap()
+local funcsToCallBasedOnFileExtension
+local deltaTime = 0
+
+
+-- helper functions
 local function decodeJsonFile(filepath)
     local dataJson = love.filesystem.newFileData(filepath):getString()
     assert(dataJson)
     return json.decode(dataJson)
 end
-local resources = map.wrap()
 
-local funcsToCallBasedOnFileExtension
+local function stubResourceHandle(path)
+    local fileExtension = array.wrap(string.split(v.path, ".")):pop()
+    print("Extension " .. fileExtension .. " cannot currently be loaded")
+end
+
+-- TODO: report unused assets
+-- TODO: scan whole folder recursively
+local function reloadResource(k, path)
+    -- reload assset
+    local v = resources[k]
+    if v.asset and v.asset.release then v.asset:release() end
+    -- TODO: check if it is the same kind of file
+    v.cachedFileLastModified = love.filesystem.getInfo(v.path).modtime
+    print("Hot reloaded " .. v.path)
+    resources[k].asset = v.func(v.path)
+end
+
 local function registerResourcesFromJson(file)
     local resTable = decodeJsonFile(file)
     for k, v in pairs(resTable) do
         if resources[k] == nil or resources[k].path ~= v.path then
-            -- if resources[k].asset and resources[k].asset.release then
-                --     resources[k].asset:release()
-                -- end
             resources[k] = v
             local fileExtension = array.wrap(string.split(v.path, ".")):pop()
-            resources[k].func = funcsToCallBasedOnFileExtension[fileExtension]
+            if funcsToCallBasedOnFileExtension[fileExtension] then
+                -- TODO: handle nil resources(can't load, doesn't exist etc.)
+                resources[k].func = funcsToCallBasedOnFileExtension[fileExtension]
+            else
+                resources[k].func = stubResourceHandle
+            end
         end
     end
 end
 
 -- TODO: load based on assets.json
--- TODO: don't load if appropriate module is diabled
-function assets.init()
-    funcsToCallBasedOnFileExtension = {
-        ["png"] = love.graphics.newArrayImage,
-        ["glsl"] = love.graphics.newShader,
-        ["json"] = decodeJsonFile,
-        ["ttf"] = function(font) return love.graphics.newFont(font, 48) end
-    }
+local function init(funcsToCallBasedOnFileExtensionArg)
+    funcsToCallBasedOnFileExtension = funcsToCallBasedOnFileExtensionArg
     setmetatable(funcsToCallBasedOnFileExtension, {__index = function(tbl, key)
     assert(type(key) == "string", "You must index by a file extension", 2)
-    error("Unsupported file extension " .. key .. "!")
     end})
     registerResourcesFromJson("data/assets.json")
 end
--- resources.constants = {path = "data/constants.json", func = decodeJsonFile}
--- resources.settings = {path = "data/settings.json", func = decodeJsonFile}
--- resources.animations = {path = "data/animations.json", func = decodeJsonFile}
-
-
--- resources.backgroundImage = {path = "resources/images/background1.png", func = love.graphics.newArrayImage}
--- resources.uiPaperImage = {path = "resources/images/ui/uiPaperFlat.png", func = love.graphics.newArrayImage}
-
-
--- resources.font = {path = "resources/fonts/Pixel UniCode.ttf", func = function(d) return love.graphics.newFont(d, 48) end}
-
--- TODO: report unused assets
--- resources.basicShaderA = {path = "resources/shaders/basic.glsl", func = love.graphics.newShader}
--- resources.invertShaderA = {path = "resources/shaders/invert.glsl", func = love.graphics.newShader}
--- resources.testShaderA = {path = "resources/shaders/test.glsl", func = love.graphics.newShader}
--- resources.blurShader = {path = "resources/shaders/blur.glsl", func = love.graphics.newShader}
--- resources.gradientShaderA = {path = "resources/shaders/gradient.glsl", func = love.graphics.newShader}
--- resources.applyAlphaA = {path = "resources/shaders/applyAlpha.glsl", func = love.graphics.newShader}
--- resources.uiBtnRoundingMask = {path = "resources/shaders/masks/uiBtnRoundingMask.glsl", func = love.graphics.newShader}
-
--- TODO: scan whole folder recursively
-
-local function reloadResource(k, path)
-    -- TODO:
-end
-
-
 
 local function hotReloadAssets()
     -- TODO: don't reload if resource was runtime modified
@@ -79,18 +68,29 @@ local function hotReloadAssets()
     for k, v in pairs(resources) do
         v.cachedFileLastModified = v.cachedFileLastModified or 0
         local fileInfo = love.filesystem.getInfo(v.path)
-        if v.cachedFileLastModified < fileInfo.modtime then
-            -- reload assset
-            -- TODO:
-            if v.asset and v.asset.release then v.asset:release() end
-            v.cachedFileLastModified = fileInfo.modtime
-            print("Hot reloaded " .. v.path)
-            resources[k].asset = v.func(v.path)
+        if v.cachedFileLastModified < fileInfo.modtime and v.func ~= stubResourceHandle then
+            reloadResource(k, v.path)
         end
     end
 end
 
-local deltaTime = 0
+
+-- API
+function assets.initOnServer()
+    init{
+        ["json"] = decodeJsonFile
+    }
+end
+
+function assets.initOnClient()
+    init{
+        ["png"] = love.graphics.newArrayImage,
+        ["glsl"] = love.graphics.newShader,
+        ["json"] = decodeJsonFile,
+        ["ttf"] = function(font) return love.graphics.newFont(font, 48) end
+    }
+end
+
 function assets.update(dt)
     deltaTime = deltaTime + dt
     if deltaTime < assets.get("settings").assetReloadUpdateFrequency then return end
@@ -136,5 +136,6 @@ end
 function assets.__index(where, what)
     error("You must use assets.get(filePathOrResourceName) to reference assets", 2)
 end
+
 assets.resources = resources
 return setmetatable(assets, assets)

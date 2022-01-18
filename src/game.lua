@@ -16,7 +16,7 @@ local options
 local testTileSet
 
 local enetclient
-local clientpeer
+local serverpeer
 
 local mockResolution = {2560, 1440}
 
@@ -34,85 +34,13 @@ local nicknamePickerUIBox
 local logMessageBoxDims = {1600, 400}
 local logMessageBox
 
--- test networking
-local function beginClient()
-    print("Attempting to join the server...")
+local activeUIElemIndex = 1
+local activeNicknamePickerField = "nickname"
 
-    -- establish a connection to host on same PC
-    enetclient = enet.host_create()
-    clientpeer = enetclient:connect("192.168.0.234:6750")
-end
+local serverAddress = "192.168.0.234:6750"
+local connectionFails = 0
 
-local function sendMessage(...)
-    local params = {...}
-    local message = table.concat(params, ":")
-    clientpeer:send(message)
-end
-
-
-
-local function receivedMessageHandle(hostevent)
-    local data = hostevent.data
-    local prefix, trimmedMessage  = network.getNetworkMessagePrefix(data)
-    if prefix == "status" then
-        t.delayCall(function()
-            sendMessage("status","ping!")
-        end, 2)
-    elseif prefix == "message" then
-        chatboxMessageHistory:append(trimmedMessage)
-    elseif prefix == "disconnection" then
-        -- server tells you to disconnect
-        -- TODO:
-    else
-        error(prefix .. "X" .. ":" ..trimmedMessage)
-    end
-end
-local function handleEnetClient()
-    -- TODO: reconnect if disconnected
-    if not enetclient then return end
-    local hostevent = enetclient:service()
-    if not hostevent then return end
-    -- if hostevent.peer == clientpeer then return end
-
-    local type = hostevent.type
-    if type == "connect" then
-        sendMessage("status", "ping!")
-        chatboxMessageHistory:append("You've connected to the server!")
-    end
-    if type == "receive" then
-        receivedMessageHandle(hostevent)
-    end
-    hostevent = nil
-end
--- API
-function game.load(args)
-    assert(type(args) == "table")
-    options = args
-    assets = require("assets")
-    love.window.setTitle("Backrooms v0.0.1 pre-dev")
-    love.keyboard.setKeyRepeat(true)
-    love.graphics.setFont(assets.get("font"))
-    assets.playerImage = animation.newCharacterAnimation("character")
-
-    -- init logic:
-    assets.playerImage:play(0.6, "run", true, false)
-
-    chatboxUIBox = uiBox.makeBox(chatboxDims[1], chatboxDims[2], "gradientShaderA", {}, 20)
-    nicknamePickerUIBox = uiBox.makeBox(nicknamePickerBoxDims[1], nicknamePickerBoxDims[2], "gradientShaderA", {}, 20)
-    logMessageBox = uiBox.makeBox(logMessageBoxDims[1], logMessageBoxDims[2], "gradientShaderA", {}, 20)
-
-    love.keyboard.setKeyRepeat(true)
-
-    beginClient()
-    nicknamePickerEnabled = true
-end
-
-function game.tick(deltaTime)
-    t.update()
-    animation.updateAnimations(deltaTime)
-    assets.update(deltaTime)
-    handleEnetClient()
-end
+-- helper functions
 
 --- Corrects position for resolutionChanges
 ---@param pos table Of the form {width, height}
@@ -130,6 +58,74 @@ local function resolutionScaledDraw(image, quad, x, y)
     local correctQuad = love.graphics.newQuad(cviewX, cviewY, cwidth, cheight, cscaleX, cscaleY)
     love.graphics.draw(image, correctQuad, correctX, correctY)
 end
+
+--- NETWORKING:
+
+local function beginClient()
+    chatboxMessageHistory:append("Attempting to join the server...")
+
+    -- establish a connection to host on same PC
+    enetclient = enet.host_create()
+    serverpeer = enetclient:connect(serverAddress)
+    serverpeer:timeout(0, 0, 5000)
+end
+
+local function sendMessage(...)
+    local params = {...}
+    local message = table.concat(params, ":")
+    serverpeer:send(message)
+end
+
+local function receivedMessageHandle(hostevent)
+    local data = hostevent.data
+    local prefix, trimmedMessage  = network.getNetworkMessagePrefix(data)
+    if prefix == "pingpong" then
+        t.delayCall(function()
+            sendMessage("pingpong","ping!")
+        end, 2)
+    elseif prefix == "message" then
+        chatboxMessageHistory:append(trimmedMessage)
+    elseif prefix == "logOut" then
+        -- server tells you to disconnect
+        -- TODO:
+    else
+        error(prefix .. "X" .. ":" ..trimmedMessage)
+    end
+end
+
+local function handleEnetClient()
+    -- TODO: reconnect if disconnected
+    local hostevent = enetclient:service()
+    if serverpeer:state() == "disconnected" then
+        connectionFails = connectionFails + 1
+        if connectionFails < 6 then
+            chatboxMessageHistory:append("Connection lost. Reconnecting...")
+        end
+        serverpeer:reset()
+        serverpeer = enetclient:connect(serverAddress)
+        serverpeer:timeout(0, 0, math.min(connectionFails, 6) * 5000)
+    end
+    if not enetclient then return end
+    if not hostevent then return end
+    -- if hostevent.peer == clientpeer then return end
+
+    local type = hostevent.type
+    if type == "connect" then
+        sendMessage("pingpong", "ping!")
+        chatboxMessageHistory:append("You've connected to the server!")
+    end
+    if type == "receive" then
+        receivedMessageHandle(hostevent)
+    end
+    if type == "disconnected" then
+        chatboxMessageHistory:append("You were disconnected")
+        serverpeer = enetclient:connect(serverAddress)
+    end
+    hostevent = nil
+end
+
+--- UI
+---- rendering
 
 local function renderOldUI()
     -- render log message box
@@ -188,30 +184,114 @@ local function drawGrid(tileSize)
     for i = 1, math.floor(mockResolution[2] / tileSize) do
         local pos1 = {0, i * tileSize}
         local pos2 =  {mockResolution[1], i * tileSize}
-        local cPos1 = resolutionScaledPos(pos1)
-        local cPos2 = resolutionScaledPos(pos2)
+        -- TODO: investigate: This should probably be corrected like this:
+        -- local cPos1 = resolutionScaledPos(pos1)
+        -- local cPos2 = resolutionScaledPos(pos2)
+        local cPos1 = pos1
+        local cPos2 = pos2
         love.graphics.line(cPos1[1], cPos1[2], cPos2[1], cPos2[2])
     end
     for i = 1, math.floor(mockResolution[1] / tileSize) do
-        local pos1 = {i* tileSize, 0}
+        local pos1 = {i * tileSize, 0}
         local pos2 =  {i * tileSize, mockResolution[2]}
-        local cPos1 = resolutionScaledPos(pos1)
-        local cPos2 = resolutionScaledPos(pos2)
+        -- local cPos1 = resolutionScaledPos(pos1)
+        -- local cPos2 = resolutionScaledPos(pos2)
+        local cPos1 = pos1
+        local cPos2 = pos2
         love.graphics.line(cPos1[1], cPos1[2], cPos2[1], cPos2[2])
     end
 end
 
 function renderNewUI()
     -- TODO: render tiled UI
-    -- local width, height = assets.get("uiPaperImage"):getDimensions()
-    -- local tileSize = 16
-    -- local x, y = 0, 0
-    -- local scale = 3
-    -- local quad = love.graphics.newQuad(scale * tileSize * x, scale * tileSize * y, scale * tileSize, scale * tileSize, scale * width, scale * height)
-    -- love.graphics.draw(assets.get("uiPaperImage"), quad)
-    love.graphics.draw(assets.get("uiPaperImage"), 0, 0, 0, 3, 3)
+    local width, height = assets.get("uiPaperImage"):getDimensions()
+    local tileSize = 16
+    local x, y = 0, 0
+    local scale = unpack(resolutionScaledPos{5, 0})
+    local quad = love.graphics.newQuad(scale * tileSize * x, scale * tileSize * y, scale * tileSize * 5, scale * tileSize * 5, scale * width, scale * height)
+    love.graphics.draw(assets.get("uiPaperImage"), quad)
+    -- love.graphics.draw(assets.get("uiPaperImage"), 0, 0, 0, 3, 3)
     -- -- TODO: DEBUG... why is it 4 here and 3 above this??
-    -- drawGrid(tileSize * 4)
+    -- drawGrid(tileSize * scale)
+end
+
+---- handling input
+
+function handleChatKp(key)
+    -- chat handling
+    if key == "return" then
+        if serverpeer then
+            sendMessage("message", clientChatboxMessage)
+        end
+        -- TODO: handle sends from the server
+        clientChatboxMessage = ""
+    elseif key == "backspace" then
+        clientChatboxMessage = string.popped(clientChatboxMessage)
+    end
+end
+
+function handleNickPickerKp(key)
+    if key == "return" then
+        if activeNicknamePickerField == "nickname" then activeNicknamePickerField = "password" return end
+        -- TODO: verify nickname
+        -- TODO: log IPs and how many accounts logged in with them
+        sendMessage("status", "logIn", nicknamePickerMessage .. ":" .. nicknamePickerPassword)
+        activeUIElemIndex = activeUIElemIndex + 1
+        nicknamePickerEnabled = false
+    elseif key == "backspace" then
+        if activeNicknamePickerField == "nickname" then
+            nicknamePickerMessage = string.popped(nicknamePickerMessage)
+        else
+            nicknamePickerPassword = string.popped(nicknamePickerPassword)
+        end
+    end
+end
+
+local UIElemHandlers = {{
+    keypressed = handleNickPickerKp,
+    textinput = function(t)
+        if activeNicknamePickerField == "password" then
+            nicknamePickerPassword = nicknamePickerPassword .. t
+        else
+            nicknamePickerMessage = nicknamePickerMessage .. t
+        end
+    end
+}, {
+    keypressed = handleChatKp,
+    textinput = function(t)
+        clientChatboxMessage = clientChatboxMessage .. t
+    end
+}}
+
+--- API
+
+function game.load(args)
+    assert(type(args) == "table")
+    options = args
+    assets = require("assets")
+    love.window.setTitle("Backrooms v0.0.1 pre-dev")
+    love.keyboard.setKeyRepeat(true)
+    love.graphics.setFont(assets.get("font"))
+    assets.playerImage = animation.newCharacterAnimation("character")
+
+    -- init logic:
+    assets.playerImage:play(0.6, "run", true, false)
+
+    chatboxUIBox = uiBox.makeBox(chatboxDims[1], chatboxDims[2], "gradientShaderA", {}, 20)
+    nicknamePickerUIBox = uiBox.makeBox(nicknamePickerBoxDims[1], nicknamePickerBoxDims[2], "gradientShaderA", {}, 20)
+    logMessageBox = uiBox.makeBox(logMessageBoxDims[1], logMessageBoxDims[2], "gradientShaderA", {}, 20)
+
+    love.keyboard.setKeyRepeat(true)
+
+    beginClient()
+    nicknamePickerEnabled = true
+end
+
+function game.tick(deltaTime)
+    t.update()
+    animation.updateAnimations(deltaTime)
+    assets.update(deltaTime)
+    handleEnetClient()
 end
 
 function game.draw()
@@ -250,54 +330,10 @@ function game.draw()
     renderNewUI()
 end
 
-local activeUIElemIndex = 1
-function handleChatKp(key)
-    -- chat handling
-    if key == "return" then
-        if clientpeer then
-            sendMessage("message", clientChatboxMessage)
-        end
-        -- TODO: handle sends from the server
-        clientChatboxMessage = ""
-    elseif key == "backspace" then
-        clientChatboxMessage = string.popped(clientChatboxMessage)
-    end
-end
-local activeNicknamePickerField = "nickname"
-function handleNickPickerKp(key)
-    if key == "return" then
-        if activeNicknamePickerField == "nickname" then activeNicknamePickerField = "password" return end
-        -- TODO: verify nickname
-        -- TODO: log IPs and how many accounts logged in with them
-        sendMessage("status", "logIn", nicknamePickerMessage .. ":" .. nicknamePickerPassword)
-        activeUIElemIndex = activeUIElemIndex + 1
-        nicknamePickerEnabled = false
-    elseif key == "backspace" then
-        if activeNicknamePickerField == "nickname" then
-            nicknamePickerMessage = string.popped(nicknamePickerMessage)
-        else
-            nicknamePickerPassword = string.popped(nicknamePickerPassword)
-        end
-    end
-end
-local UIElemHandlers = {{
-    keypressed = handleNickPickerKp,
-    textinput = function(t)
-        if activeNicknamePickerField == "password" then
-            nicknamePickerPassword = nicknamePickerPassword .. t
-        else
-            nicknamePickerMessage = nicknamePickerMessage .. t
-        end
-    end
-}, {
-    keypressed = handleChatKp,
-    textinput = function(t)
-        clientChatboxMessage = clientChatboxMessage .. t
-    end
-}}
 function love.keypressed(key)
     UIElemHandlers[activeUIElemIndex].keypressed(key)
 end
+
 function love.textinput(t)
     UIElemHandlers[activeUIElemIndex].textinput(t)
 end

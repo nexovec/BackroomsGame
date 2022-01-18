@@ -9,6 +9,6 @@
     }, // this too
     "width":1920,
     "height":1080,
-    "assetReloadUpdateFrequency":4
+    "assetReloadUpdateFrequency":2
 }
 // THIS IS ANOTHER COMMENT

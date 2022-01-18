@@ -3,8 +3,7 @@ local profile = require("profile")
 
 local std = require("std")
 local json = require("std.json")
-local settings = json.decode(love.filesystem.newFileData("data/settings.json"):getString())
-local assets
+local assets = require("assets")
 local game
 local server
 
@@ -24,16 +23,14 @@ function love.load(args)
     profile.start()
 
     if options.isServer then
-        -- TODO: read the real value
         server = require("server")
+        assets.initOnServer()
         if server == nil then print("You can't launch as a server because I yeeted the server files, precisely so you can't do this.") end
         server.load()
     else
         require("loveOverrides")
         game = require("game")
-        -- TODO: solve
-        assets = require("assets")
-        assets.init()
+        assets.initOnClient()
         love.graphics.setDefaultFilter("nearest", "nearest")
         -- FIXME: magic numbers
 
@@ -43,7 +40,7 @@ function love.load(args)
         game.load(options)
     end
 
-    if settings.logging.shouldPerformanceLog then
+    if assets.get("settings").logging.shouldPerformanceLog then
         print(profile.report(10))
     end
 
@@ -65,13 +62,13 @@ function love.update(dt)
         game.tick(dt)
     end
 
-    if settings.logging.shouldLogFPS and love.timer.getTime() - timeLastLoggedFPS > 1 then
+    if assets.get("settings").logging.shouldLogFPS and love.timer.getTime() - timeLastLoggedFPS > 1 then
         print(ticks .. "\t:\t" .. collectgarbage("count"))
         ticks = 0
         timeLastLoggedFPS = timeLastLoggedFPS + 1.0
     end
-    if (settings.logging.shouldPerformanceLog and love.timer.getTime() - timeLastLogged >
-    settings.logging.performanceLogPeriodInSeconds) then
+    if (assets.get("settings").logging.shouldPerformanceLog and love.timer.getTime() - timeLastLogged >
+    assets.get("settings").logging.performanceLogPeriodInSeconds) then
         print(profile.report(10))
         profile.reset()
         timeLastLogged = love.timer.getTime()
@@ -82,20 +79,11 @@ end
 
 function love.draw()
     profile.start()
-    -- if options.isServer then server.draw() else
-    --     -- TODO: don't double buffer like this, render in the actual resolution instead
-    --     sceneCanvas:renderTo(game.draw)
-    --     local _, _, width, height = love.window.getSafeArea()
-    --     local screenQuad = love.graphics.newQuad(0, 0, width, height, width, height)
-    --     love.graphics.draw(sceneCanvas, screenQuad, 0, 0, 0, 1, 1, 0, 0, 0, 0)
-    -- end
-    -- collectgarbage("step")
-    -- TODO:
     game.draw()
     profile.stop()
 end
 
 function love.quit()
-    -- TODO: track unused requires(detect unused things in types.makeType)
+    -- TODO: track unused requires(optionally detect unused things in types.makeType)
     print("Exiting the game...")
 end

@@ -5,6 +5,7 @@ local array = require("std.array")
 local timing = require("timing")
 local network = require("network")
 local assert = require("std.assert")
+local assets = require("assets")
 
 
 local enethost
@@ -54,7 +55,7 @@ local function receiveEnetHandle(hostevent)
         elseif trimmedData == "ping!" then
             local tempHost = hostevent
             timing.delayCall(function()
-                tempHost.peer:send("status:pong!")
+                tempHost.peer:send("pingpong:pong!")
             end, 2)
         else
             -- TODO:
@@ -73,6 +74,7 @@ function handleEnetServer()
     if hostevent then
         -- print("Server detected message type: " .. hostevent.type)
         if hostevent.type == "connect" then
+            -- TODO: implement max connection count
             print(hostevent.peer, "connected.")
             connectedPeers:append(hostevent.peer)
         end
@@ -80,6 +82,9 @@ function handleEnetServer()
             -- TODO: log unregistered clients trying to send messages
             print("ERRORRRROOROROOROROROR")
             return
+        end
+        if hostevent.type == "disconnect" then
+            print(hostevent.peer, "disconnected.")
         end
         if hostevent.type == "receive" then
             receiveEnetHandle(hostevent)
@@ -95,7 +100,7 @@ function server.load()
 end
 
 function server.update(dt)
-    -- TODO:
+    assets.update(dt)
     handleEnetServer()
 end
 
