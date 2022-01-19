@@ -106,6 +106,20 @@ function array:inverse()
     end
     return array.wrap(res)
 end
+
+--- Returns a copy with no nil values
+function array:squashed()
+    local res = array.wrap()
+    for i = 1, #self do
+        if self[i] ~= nil then res:append(self[i]) end
+    end
+    return res
+end
+
+function array:remove(k)
+    table.remove(k)
+end
+
 function array.wrap(obj)
     if type(obj) == "nil" then
         local emptyTable = {}

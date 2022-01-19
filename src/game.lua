@@ -8,7 +8,8 @@ local uiBox = require("uiBox")
 local array = require("std.array")
 local string = require("std.string")
 local network = require("network")
-local assets
+local tileAtlas = require("tileAtlas")
+local assets = require("assets")
 
 
 -- variables
@@ -204,12 +205,13 @@ end
 
 function renderNewUI()
     -- TODO: render tiled UI
-    local width, height = assets.get("uiPaperImage"):getDimensions()
-    local tileSize = 16
-    local x, y = 0, 0
-    local scale = unpack(resolutionScaledPos{5, 0})
-    local quad = love.graphics.newQuad(scale * tileSize * x, scale * tileSize * y, scale * tileSize * 5, scale * tileSize * 5, scale * width, scale * height)
-    love.graphics.draw(assets.get("uiPaperImage"), quad)
+    -- local width, height = assets.get("uiPaperImage"):getDimensions()
+    -- local tileSize = 16
+    -- local x, y = 0, 0
+    -- local scale = unpack(resolutionScaledPos{5, 0})
+    -- local quad = love.graphics.newQuad(scale * tileSize * x, scale * tileSize * y, scale * tileSize * 5, scale * tileSize * 5, scale * width, scale * height)
+    -- love.graphics.draw(assets.get("uiPaperImage"), quad)
+    tileAtlas.wrap("uiPaperImage", 16):drawTile(0, 0, 0, 0, 5 * 16, 5 * 16)
     -- love.graphics.draw(assets.get("uiPaperImage"), 0, 0, 0, 3, 3)
     -- -- TODO: DEBUG... why is it 4 here and 3 above this??
     -- drawGrid(tileSize * scale)
@@ -268,7 +270,6 @@ local UIElemHandlers = {{
 function game.load(args)
     assert(type(args) == "table")
     options = args
-    assets = require("assets")
     love.window.setTitle("Backrooms v0.0.1 pre-dev")
     love.keyboard.setKeyRepeat(true)
     love.graphics.setFont(assets.get("font"))

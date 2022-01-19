@@ -65,10 +65,32 @@ local function receiveEnetHandle(hostevent)
     end
 end
 
+local function onLogOut(peer)
+    -- TODO:
+    if getPeerUsername(peer) then
+        print("User " .. getPeerUsername(peer) .. " has logged out.")
+    end
+end
+
+local function onDisconnect(peer)
+    onLogOut(peer)
+    print("Address " .. tostr(peer) .. "has disconnected")
+    connectedPeers[connectedPeers:indexOf(peer)] = nil
+end
+
+local function handleDisconnections()
+    for k, v in ipairs(connectedPeers) do
+        if v:state() == "disconnected" then
+            onDisconnect(v)
+        end
+    end
+    connectedPeers = connectedPeers:squashed()
+end
+
 function handleEnetServer()
+    handleDisconnections()
     if not enethost then
-        error("Well this could be a problem")
-        return
+        error("You're running a different server instance already.")
     end
     local hostevent = enethost:service()
     if hostevent then
@@ -84,7 +106,7 @@ function handleEnetServer()
             return
         end
         if hostevent.type == "disconnect" then
-            print(hostevent.peer, "disconnected.")
+            onDisconnect(hostevent.peer)
         end
         if hostevent.type == "receive" then
             receiveEnetHandle(hostevent)
