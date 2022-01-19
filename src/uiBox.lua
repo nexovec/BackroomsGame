@@ -65,7 +65,7 @@ end
 
 function uiBox.makeBox(width, height, shader, uniformsTable, rounding)
     assert(type(shader) == "string", "Shader must be an asset name of a shader or a filepath to it", 2)
-    -- TODO: use uniformsTable
+    -- TODO: Use uniformsTable
     local self = {}
     -- draw ui box
     self.rounding = rounding
@@ -83,4 +83,4 @@ function uiBox.makeBox(width, height, shader, uniformsTable, rounding)
     return self
 end
 
-return types.makeType(uiBox)
+return types.makeType(uiBox, "uiBox")

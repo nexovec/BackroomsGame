@@ -1,8 +1,10 @@
 local assert = {}
-local types = require("std.types")
+
+-- API
+
 function assert.__call(term, errMsg, errLevel, errHandle)
-    -- TODO: use errHandle
-    -- TODO: test errMsg == nil
+    -- TODO: Use errHandle
+    -- TODO: Test errMsg == nil
     errMsg = errMsg or "assertion failed!"
     errLevel = errLevel or 1
     if not term then
@@ -10,4 +12,4 @@ function assert.__call(term, errMsg, errLevel, errHandle)
     end
 end
 setmetatable(assert, assert)
-return types.makeType(assert)
+return assert

@@ -1,5 +1,5 @@
 local assets = {}
--- TODO: make this work with server!
+-- TODO: Make this work with server!
 
 local json = require("std.json")
 local std = require("std")
@@ -25,35 +25,39 @@ local function stubResourceHandle(path)
     print("Extension " .. fileExtension .. " cannot currently be loaded")
 end
 
--- TODO: report unused assets
--- TODO: scan whole folder recursively
+-- TODO: Report unused assets
+-- TODO: Scan whole folder recursively
 local function reloadResource(k, path)
     -- reload assset
     local v = resources[k]
     if v.asset and v.asset.release then v.asset:release() end
-    -- TODO: check if it is the same kind of file
+    -- TODO: Check if it is the same kind of file
     v.cachedFileLastModified = love.filesystem.getInfo(v.path).modtime
     print("Hot reloaded " .. v.path)
     resources[k].asset = v.func(v.path)
 end
 
-local function registerResourcesFromJson(file)
-    local resTable = decodeJsonFile(file)
-    for k, v in pairs(resTable) do
-        if resources[k] == nil or resources[k].path ~= v.path then
-            resources[k] = v
-            local fileExtension = array.wrap(string.split(v.path, ".")):pop()
-            if funcsToCallBasedOnFileExtension[fileExtension] then
-                -- TODO: handle nil resources(can't load, doesn't exist etc.)
-                resources[k].func = funcsToCallBasedOnFileExtension[fileExtension]
-            else
-                resources[k].func = stubResourceHandle
-            end
+local function optionallyRegisterResource(k, v)
+    if resources[k] == nil or resources[k].path ~= v.path then
+        resources[k] = v
+        local fileExtension = array.wrap(string.split(v.path, ".")):pop()
+        if funcsToCallBasedOnFileExtension[fileExtension] then
+            -- TODO: Handle nil resources(can't load, doesn't exist etc.)
+            resources[k].func = funcsToCallBasedOnFileExtension[fileExtension]
+        else
+            resources[k].func = stubResourceHandle
         end
     end
 end
 
--- TODO: load based on assets.json
+local function registerResourcesFromJson(file)
+    local resTable = decodeJsonFile(file)
+    for k, v in pairs(resTable) do
+        optionallyRegisterResource(k,v)
+    end
+end
+
+-- TODO: Load based on assets.json
 local function init(funcsToCallBasedOnFileExtensionArg)
     funcsToCallBasedOnFileExtension = funcsToCallBasedOnFileExtensionArg
     setmetatable(funcsToCallBasedOnFileExtension, {__index = function(tbl, key)
@@ -63,7 +67,7 @@ local function init(funcsToCallBasedOnFileExtensionArg)
 end
 
 local function hotReloadAssets()
-    -- TODO: don't reload if resource was runtime modified
+    -- TODO: Don't reload if resource was runtime modified
     registerResourcesFromJson("data/assets.json")
     for k, v in pairs(resources) do
         v.cachedFileLastModified = v.cachedFileLastModified or 0
@@ -100,14 +104,14 @@ end
 
 function assets.get(filePathOrResourceName)
     if not resources[filePathOrResourceName] then
-        -- TODO: scan for duplicate resources
+        -- TODO: Scan for duplicate resources
         -- tries to load from file
         local fileInfo = love.filesystem.getInfo(filePathOrResourceName)
         local fileExists = fileInfo ~= nil
         if not fileExists then
-            error("Requested resource " .. filePathOrResourceName .. "doesn't exist", 2)
+            error("Requested resource " .. filePathOrResourceName .. " doesn't exist", 2)
         end
-        assert(fileInfo.type == file, "Loading folders is not yet implemented")
+        assert(fileInfo.type == "file", "Loading " .. fileInfo.type .. " is not yet implemented")
         local list = string.split(filePathOrResourceName, ".")
         local fileExtension = array.wrap(list):pop()
         local func = funcsToCallBasedOnFileExtension[fileExtension]

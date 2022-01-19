@@ -1,3 +1,5 @@
+-- API
+
 function love.graphics.withShader(shader, func)
     assert(type(func) == "function", "Argument #2 must not be nil.", 2)
     local oldShader = love.graphics.getShader()
@@ -6,8 +8,9 @@ function love.graphics.withShader(shader, func)
     love.graphics.setShader(oldShader)
     return res
 end
+
 function love.graphics.applyShader(canvas, textureShader, uniformsTable, options)
-    -- TODO: test
+    -- TODO: Test
     local oldCanvas = love.graphics.getCanvas()
     love.graphics.setCanvas(canvas)
     love.graphics.withShader(textureShader, function()
@@ -25,11 +28,12 @@ function love.graphics.applyShader(canvas, textureShader, uniformsTable, options
         end
     end)
     love.graphics.setCanvas()
-    -- FIXME: this breaks the code
+    -- FIXME: This breaks the code
     -- love.graphics.setCanvas(oldCanvas)
 end
+
 function love.wrapRequirePath(path, moduleNameOrFunc, passCurrentRequirePaths)
-    -- TODO: test
+    -- TODO: Test
     assert(type(path) == "string" and (type(moduleNameOrFunc) == "string" or type(moduleNameOrFunc) == "function"),
         "Unexpected moduleNameOrFunc argument type", 2, nil)
     local module
@@ -49,13 +53,14 @@ function love.wrapRequirePath(path, moduleNameOrFunc, passCurrentRequirePaths)
 end
 
 function love.requireDirectory(pathToDir, localRequires)
-    -- TODO: test
+    -- TODO: Test
     assert(type(pathToDir) == "string" ,nil, nil, nil)
     local requirePaths = localRequires .. ";"
     if localRequires then requirePaths = requirePaths .. love.filesystem.getRequirePath() end
-    -- TODO: make sure .init.lua is in requirePath.
+    -- TODO: Make sure .init.lua is in requirePath.
     return wrapRequirePath(pathToDir, localRequires)
 end
+
 function love.graphics.wrapGraphicsState(func)
     love.graphics.push("all")
     func()

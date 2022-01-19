@@ -95,7 +95,6 @@ local function receivedMessageHandle(hostevent)
 end
 
 local function handleEnetClient()
-    -- TODO: reconnect if disconnected
     local hostevent = enetclient:service()
     if serverpeer:state() == "disconnected" then
         connectionFails = connectionFails + 1
@@ -185,7 +184,7 @@ local function drawGrid(tileSize)
     for i = 1, math.floor(mockResolution[2] / tileSize) do
         local pos1 = {0, i * tileSize}
         local pos2 =  {mockResolution[1], i * tileSize}
-        -- TODO: investigate: This should probably be corrected like this:
+        -- TODO: Investigate: This should probably be corrected like this:
         -- local cPos1 = resolutionScaledPos(pos1)
         -- local cPos2 = resolutionScaledPos(pos2)
         local cPos1 = pos1
@@ -204,7 +203,7 @@ local function drawGrid(tileSize)
 end
 
 function renderNewUI()
-    -- TODO: render tiled UI
+    -- TODO: Render tiled UI
     -- local width, height = assets.get("uiPaperImage"):getDimensions()
     -- local tileSize = 16
     -- local x, y = 0, 0
@@ -225,7 +224,7 @@ function handleChatKp(key)
         if serverpeer then
             sendMessage("message", clientChatboxMessage)
         end
-        -- TODO: handle sends from the server
+        -- TODO: Handle sends from the server
         clientChatboxMessage = ""
     elseif key == "backspace" then
         clientChatboxMessage = string.popped(clientChatboxMessage)
@@ -235,8 +234,7 @@ end
 function handleNickPickerKp(key)
     if key == "return" then
         if activeNicknamePickerField == "nickname" then activeNicknamePickerField = "password" return end
-        -- TODO: verify nickname
-        -- TODO: log IPs and how many accounts logged in with them
+        -- TODO: Verify nickname
         sendMessage("status", "logIn", nicknamePickerMessage .. ":" .. nicknamePickerPassword)
         activeUIElemIndex = activeUIElemIndex + 1
         nicknamePickerEnabled = false
@@ -297,12 +295,12 @@ end
 
 function game.draw()
     -- draw background
-    -- FIXME: magic numbers
+    -- FIXME: Magic numbers
     local backgroundQuad = love.graphics.newQuad(0, 0, 2560, 1440, 2560, 1440)
     love.graphics.draw(assets.get("backgroundImage"), backgroundQuad, 0, 0, 0, 1, 1, 0, 0)
 
     -- draw scene
-    -- TODO: cache
+    -- TODO: Cache
     local playerAreaCanvas = love.graphics.newCanvas(1600, 720)
 
     playerAreaCanvas:renderTo(function()
@@ -329,6 +327,11 @@ function game.draw()
     resolutionScaledDraw(playerAreaCanvas, playfieldScenePlacementQuad, 100, 100)
     renderOldUI()
     renderNewUI()
+end
+
+function game.quit()
+    -- TODO: disconnect from server
+    print("Terminating the game")
 end
 
 function love.keypressed(key)

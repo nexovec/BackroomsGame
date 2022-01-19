@@ -24,9 +24,9 @@ local function parseImageTilesetIntoArrayImage(imagedata, tileSize)
         for j = 0, width / tileSize do
             local frame = love.image.newImageData(tileSize, tileSize)
             frame:paste(imagedata, 0, 0, j * tileSize, i * tileSize, tileSize, tileSize)
-            -- TODO: this other line causes emtpy frames to appear, investigate
+            -- TODO: This other line causes emtpy frames to appear, investigate
             -- frames[#frames + 1] = frame
-            -- NOTE: this one doesn't work at all:
+            -- NOTE: This one doesn't work at all:
             -- frames[#frames + math.floor(imagedata:getDimensions() / tileSize)] = frame
             frames[i * math.floor(imagedata:getDimensions() / tileSize) + j + 1] = frame
         end
@@ -65,7 +65,7 @@ function animation.updateAnimations(dt)
         v.tween:update(dt)
         -- looping
         if love.timer.getTime() > v.startTime + v.playbackDuration then
-            -- TODO: reset previous tween
+            -- TODO: Reset previous tween
             -- assert(v.ref.progress == 1, v.ref.progress)
             v.ref:play(v.playbackDuration, v.loopName, false, v.inReverse)
             v.startTime = v.startTime + v.playbackDuration
@@ -73,7 +73,7 @@ function animation.updateAnimations(dt)
     end
     for k, v in pairs(animationObjects) do
         if v.assetLastModified ~= assets.getModTime(v.assetFilePath) then
-            -- TODO: reload asset and restitch animation
+            -- TODO: Reload asset and restitch animation
         end
     end
 end
@@ -101,8 +101,7 @@ function animation:play(playbackDuration, loopName, isLooping, inReverse)
     assert(type(playbackDuration) == "number",
         "Unexpected playbackDuration: " .. type(playbackDuration) .. ", number expected", 2)
     assert(playbackDuration > 0, nil, 2)
-    -- FIXME: blinking
-    -- TODO: stop old tween
+    -- TODO: Stop old tween
     local tweenRef = tween.new(playbackDuration, self, {
         progress = 1 - 1 / self.frameCounts[self.activeLoop]
     }, "linear")
@@ -134,7 +133,7 @@ end
 function animation.newCharacterAnimation(image, tileSize, frameCounts, loopNames, skipToNextRowAfterLoop)
     local self
     local assetFilePath
-    -- TODO: use a tileatlas object instead of ArrayImage
+    -- TODO: Use a tileatlas object instead of ArrayImage
     if type(image) == "string" then
 
         -- load spritesheet from file from file
@@ -147,7 +146,7 @@ function animation.newCharacterAnimation(image, tileSize, frameCounts, loopNames
         loopNames = properties.loopNames
         skipToNextRowAfterLoop = properties.skipToNextRowAfterLoop
     end
-    -- TODO: test when type(image) == "userdata"
+    -- TODO: Test when type(image) == "userdata"
 
     local width, height = image:getDimensions()
     self = {
@@ -185,7 +184,7 @@ function animation.newCharacterAnimation(image, tileSize, frameCounts, loopNames
     end
 
     -- discard resources
-    -- TODO: discard unused tiles
+    -- TODO: Discard unused tiles
     animationObjects:append(self)
     image:release()
     return setmetatable(self, {
@@ -193,4 +192,4 @@ function animation.newCharacterAnimation(image, tileSize, frameCounts, loopNames
     })
 end
 
-return animation
+return types.makeType(animation, "animation")

@@ -3,6 +3,9 @@ local array = {}
 local error = require("std.error")
 local assert = require("std.assert")
 local types = require("std.types")
+
+-- API
+
 function array:shallowCopy()
     assert(self, "Call with : instead of .", 2)
     -- assert(type(a) == "table", "This can only be used on tables")
@@ -12,6 +15,7 @@ function array:shallowCopy()
     end
     return new
 end
+
 function array:append(elem)
     assert(self, "Call with : instead of .", 2)
     self[#self + 1] = elem
@@ -24,12 +28,14 @@ function array:concat(tbl)
         self:append(v)
     end
 end
+
 function array:pop()
     assert(self, "Call with : instead of .", 2)
     local res = self[#self]
     self[#self] = nil
     return res
 end
+
 function array:prettyPrint()
     if not self then
         return error('Table is nil!', 2)
@@ -45,6 +51,24 @@ function array:prettyPrint()
     end
     print('-----------')
 end
+
+function array:prettyPrintRec()
+    if not self then
+        return error('Table is nil!', 2)
+    end
+    print('contents of a table:')
+    print('-----------')
+    for k, v in pairs(self) do
+        if type(v) == "table" then
+            array.prettyPrintRec(v)
+        else
+            local strv = tostring(v)
+            print(tostring(k) .. string.rep(' ', math.max(50 - #strv, 0)) .. ':\t' .. strv)
+        end
+    end
+    print('-----------')
+end
+
 function array:contains(elem)
     assert(self, "Call with : instead of .", 2)
     for k, v in ipairs(self) do
@@ -56,7 +80,7 @@ function array:contains(elem)
 end
 
 function array:reverse()
-    -- TODO: test
+    -- TODO: Test
     local len = #self
     local res = array.wrap()
     for i = len, 1, -1 do
@@ -72,11 +96,12 @@ function array:indexOf(elem)
     end
     return nil
 end
+
 --- Functional programming filter. Uses ipairs under the hood.
 ---@param func Gets called for every element of the array with value, key, array as parameters. Must return a boolean
 function array:filter(func)
     assert(self, "Call with : instead of .", 2)
-    -- TODO: test
+    -- TODO: Test
     local new = {}
     for k, v in ipairs(self) do
         local res = func(v, k, self)
@@ -85,11 +110,12 @@ function array:filter(func)
     end
     return array.wrap(new)
 end
+
 --- Functional programming map. Uses ipairs under the hood.
 ---@param elem Gets called for every element of the array with value, key, array as parameters.
 function array:map(elem)
     assert(self, "Call with : instead of .", 2)
-    -- TODO: test
+    -- TODO: Test
     local new = {}
     for k, v in ipairs(self) do
         new[k] = func(v, k, self)

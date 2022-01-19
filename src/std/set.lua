@@ -54,7 +54,7 @@ function setInstanceParent:contains(elem)
     return false
 end
 
--- TODO: make setInstance.members private
+-- TODO: Make setInstance.members private
 function setInstanceParent:insert(elem)
     if not hasValue(self.members, elem) then return end
     self.members[#self.members + 1] = elem
@@ -65,7 +65,7 @@ function setInstanceParent.__newindex()
 end
 
 function setInstanceParent:__index(value)
-    -- TODO: test
+    -- TODO: Test
     for _,v in ipairs(self.members) do
         if v == value then return true end
     end

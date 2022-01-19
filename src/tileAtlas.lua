@@ -7,7 +7,7 @@ local assets = require("assets")
 -- API
 
 function tileAtlas:drawTile(posX, posY, x, y, width, height)
-    -- TODO: check bounds on the texture
+    -- TODO: Check bounds on the texture
     local width = width or self.tileSize
     local height = height or self.tileSize
     local tileX = x * self.tileSize

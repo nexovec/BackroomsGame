@@ -4,6 +4,7 @@ local profile = require("profile")
 local std = require("std")
 local json = require("std.json")
 local assets = require("assets")
+local types = require("std.types")
 local game
 local server
 
@@ -18,7 +19,7 @@ local options = {}
 
 
 function love.load(args)
-    -- TODO: untested platform warnings, compatibility checks
+    -- TODO: Untested platform warnings, compatibility checks
     options.isServer = args[1] == "--server"
     profile.start()
 
@@ -32,7 +33,7 @@ function love.load(args)
         game = require("game")
         assets.initOnClient()
         love.graphics.setDefaultFilter("nearest", "nearest")
-        -- FIXME: magic numbers
+        -- FIXME: Magic numbers
 
         -- make fullscreen
         love.window.setVSync(0)
@@ -84,6 +85,10 @@ function love.draw()
 end
 
 function love.quit()
-    -- TODO: track unused requires(optionally detect unused things in types.makeType)
-    print("Exiting the game...")
+    -- TODO: Track unused requires(optionally detect unused things in types.makeType)
+    if game then
+        types.optionalCall(game.quit)
+    else
+        types.optionalCall(server.quit)
+    end
 end

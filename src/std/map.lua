@@ -16,6 +16,27 @@ function map:prettyPrint()
     end
     print('-----------')
 end
+
+function map:prettyPrintRecursive()
+    if not self then
+        return error('Table is nil!', 2)
+    end
+    if type(self) ~= 'table' then
+        error('This is not a table. type: ' .. type(self) .. ((" " .. (self.type and self.type())) or ""), 2)
+    end
+    print('contents of a table:')
+    print('-----------')
+    for k, v in pairs(self) do
+        if type(v) == "table" then
+            map.prettyPrintRecursive(v)
+        else
+            local strv = tostring(v)
+            print(tostring(k) .. string.rep(' ', math.max(50 - #strv, 0)) .. ':\t' .. strv)
+        end
+    end
+    print('-----------')
+end
+
 function map:contains(elem)
     for k, v in pairs(self) do
         if v == elem then
@@ -24,15 +45,12 @@ function map:contains(elem)
     end
     return false
 end
+
 function map:indexOf(elem)
     for i, v in pairs(self) do
         if v == elem then return i end
     end
     return nil
-end
-
-function map:prettyPrint()
-    table.prettyPrint(self)
 end
 
 function map:invert()
@@ -51,8 +69,10 @@ function map.wrap(obj)
     assert(type(obj) == "table")
     return setmetatable(obj, map)
 end
+
 function map.new()
     local self = {}
     return map.wrap(self)
 end
-return types.makeType(map)
+
+return types.makeType(map, "map")

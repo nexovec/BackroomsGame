@@ -1,5 +1,6 @@
 local types = {}
 local set = require("std.set")
+local assert = require("std.assert")
 
 typeNamesLua = set.createSet{
     "string",
@@ -13,8 +14,8 @@ typeNamesLua = set.createSet{
 }
 
 typeNamesLove = set.createSet{
-    -- TODO: exclude the ones excluded in config.lua
-    -- TODO: move into a json file
+    -- TODO: Exclude the ones excluded in config.lua
+    -- TODO: Move into a json file
     "Object",
     "Data",
     "CompressedData",
@@ -78,11 +79,16 @@ local typeNamesStd = {
 }
 
 function types.makeType(obj, typeName)
-    -- assert(type(typeName) == "string")
+    assert(type(typeName) == "string", "You must specify a type name!", 2)
     obj.type = typeName
     obj.__index = obj.__index or obj
     return obj
 end
+
+function types.isCallable(var)
+    return type(var) == "function" or (type(var) == "table" and getmetatable(var).__call)
+end
+
 function types.isint(num)
     if type(num) ~= "number" then return false end
     if math.floor(num) ~= num then return false end
@@ -100,6 +106,10 @@ function types.isureal(num)
     if type(num) ~= "number" then return false end
     if num<=0 then return false end
     return true
+end
+
+function types.optionalCall(func, ...)
+    if isCallable(func) then return func(...) end
 end
 
 function types.checked(var, typeName, errorLevel, errHandle)

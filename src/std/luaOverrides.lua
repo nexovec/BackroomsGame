@@ -33,7 +33,7 @@ function assertType(var, ...)
     error("Type assert failed", 2)
 end
 function isCallable(var)
-    -- TODO: test
+    -- TODO: Test
     return type(var) == "function" or (type(var) == "table" and getmetatable(var).__call)
 end
 

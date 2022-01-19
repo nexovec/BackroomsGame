@@ -302,7 +302,7 @@ local function parse_array(str, i)
   end
   return res, i
 end
--- FIXME: broken multi-line comments
+-- FIXME: Broken multi-line comments
 local function parse_comment(str, i, shouldParseNext)
   if i > #str then return {}, i end
   if str:sub(i,i) ~= "/" then return {}, i end
@@ -391,7 +391,7 @@ end
 
 
 function json.decode(str)
-  -- FIXME: errors with comment after colon
+  -- FIXME: Errors with comment after colon
   if type(str) ~= "string" then
     error("expected argument of type string, got " .. type(str))
   end
