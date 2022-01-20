@@ -17,6 +17,7 @@ local userSessions = map.wrap()
 
 local credentialsPath = "data/credentials.json"
 local credentials
+
 local function beginServer()
     print("Starting the Server...")
 

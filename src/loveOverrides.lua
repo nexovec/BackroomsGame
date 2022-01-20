@@ -9,6 +9,10 @@ function love.graphics.withShader(shader, func)
     return res
 end
 
+function YOLO()
+    print("YOLO YOLO YOLO!!!!")
+end
+
 function love.graphics.applyShader(canvas, textureShader, uniformsTable, options)
     -- TODO: Test
     local oldCanvas = love.graphics.getCanvas()

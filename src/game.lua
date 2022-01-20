@@ -180,7 +180,10 @@ local function renderOldUI()
     love.graphics.pop()
 end
 
-local function drawGrid(tileSize)
+local function drawGrid(tileSize, color)
+    if color then
+        love.graphics.setColor(unpack(color))
+    end
     for i = 1, math.floor(mockResolution[2] / tileSize) do
         local pos1 = {0, i * tileSize}
         local pos2 =  {mockResolution[1], i * tileSize}
@@ -200,20 +203,59 @@ local function drawGrid(tileSize)
         local cPos2 = pos2
         love.graphics.line(cPos1[1], cPos1[2], cPos2[1], cPos2[2])
     end
+    if color then
+        love.graphics.setColor(1, 1, 1, 1)
+    end
+end
+
+local function tiledUIPanel(assetName, tileSize, scale, panelPos)
+    local self = {
+        assetName = assetName,
+        tileSize = tileSize,
+        scale = scale
+    }
+    function self:draw(xPosInTiles, yPosInTiles, widthInTiles, heightInTiles)
+        local scaledTileSize = self.tileSize * self.scale
+        assert(xPosInTiles >= 0 and yPosInTiles >= 0 and widthInTiles > 0 and widthInTiles > 0)
+        local atlas = tileAtlas.wrap(self.assetName, self.tileSize)
+        local startingX, startingY, panelWInTiles, panelHInTiles = 0, 4, 10, 10
+        for xI = 0, widthInTiles - 1 do
+            for yI = 0, heightInTiles - 1 do
+                -- assigns which tile gets rendered at this position(at scaledTileSize * posInTiles + index)
+                local tileX, tileY
+                if yI == 0 then
+                    tileY = startingY
+                end
+                if xI == 0 then
+                    tileX = startingX
+                end
+                if yI == heightInTiles - 1 then
+                    tileY = startingY + panelHInTiles - 1
+                end
+                if xI == widthInTiles - 1 then
+                    tileX = startingX + panelWInTiles - 1
+                end
+                -- TODO: pick edge tiles randomly
+                -- TODO: pick inner tiles randomly
+                if not tileX then tileX = startingX + 1 end
+                if not tileY then tileY = startingY + 1 end
+                -- atlas:drawTile(st * (x + xI), st * (y + yI), 1, 1, st, st)
+                atlas:drawTile((xPosInTiles + xI) * self.tileSize * self.scale, (yPosInTiles + yI) * self.tileSize * self.scale, tileX, tileY, self.scale * self.tileSize, self.scale * self.tileSize)
+            end
+        end
+    end
+
+    return self
 end
 
 function renderNewUI()
     -- TODO: Render tiled UI
-    -- local width, height = assets.get("uiPaperImage"):getDimensions()
-    -- local tileSize = 16
-    -- local x, y = 0, 0
-    -- local scale = unpack(resolutionScaledPos{5, 0})
-    -- local quad = love.graphics.newQuad(scale * tileSize * x, scale * tileSize * y, scale * tileSize * 5, scale * tileSize * 5, scale * width, scale * height)
-    -- love.graphics.draw(assets.get("uiPaperImage"), quad)
-    tileAtlas.wrap("uiPaperImage", 16):drawTile(0, 0, 0, 0, 5 * 16, 5 * 16)
-    -- love.graphics.draw(assets.get("uiPaperImage"), 0, 0, 0, 3, 3)
-    -- -- TODO: DEBUG... why is it 4 here and 3 above this??
-    -- drawGrid(tileSize * scale)
+    local x, y, width, height = 4, 4, 8, 3
+    local tileSize = 16
+    local scale = 5
+    -- local x, y, width, height = 0, 0, 1, 6
+    tiledUIPanel("uiPaperImage", tileSize, scale, {}):draw(x, y, width, height)
+    -- drawGrid(tileSize * scale, {1, 0, 1, 1})
 end
 
 ---- handling input
@@ -301,7 +343,8 @@ function game.draw()
 
     -- draw scene
     -- TODO: Cache
-    local playerAreaCanvas = love.graphics.newCanvas(1600, 720)
+    local playerAreaDims = array.wrap{720, 720}
+    local playerAreaCanvas = love.graphics.newCanvas(unpack(playerAreaDims))
 
     playerAreaCanvas:renderTo(function()
         love.graphics.clear(1.0, 1.0, 1.0)
@@ -322,16 +365,15 @@ function game.draw()
         local playerSpriteQuad = love.graphics.newQuad(0, 0, 720, 720, 720, 720)
         assets.playerImage:draw(playerSpriteQuad, 0, 0, 0, 1, 1, 0, 0)
     end)
-
-    local playfieldScenePlacementQuad = love.graphics.newQuad(0, 0, 1600, 720, 1600, 720)
+    local playfieldScenePlacementQuad = love.graphics.newQuad(0, 0, unpack(playerAreaDims:rep(2)))
     resolutionScaledDraw(playerAreaCanvas, playfieldScenePlacementQuad, 100, 100)
     renderOldUI()
     renderNewUI()
 end
 
 function game.quit()
-    -- TODO: disconnect from server
     print("Terminating the game")
+    serverpeer:disconnect_now()
 end
 
 function love.keypressed(key)

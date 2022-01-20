@@ -79,6 +79,14 @@ function array:contains(elem)
     return false
 end
 
+-- WITH side-effects
+function array:extend(other)
+    assert(other.type and other.type == "array")
+    for k,v in ipairs(other) do
+        self:append(v)
+    end
+end
+
 function array:reverse()
     -- TODO: Test
     local len = #self
@@ -138,6 +146,18 @@ function array:squashed()
     local res = array.wrap()
     for i = 1, #self do
         if self[i] ~= nil then res:append(self[i]) end
+    end
+    return res
+end
+
+-- no side-effects
+function array:rep(reps)
+    assert(reps >= 1)
+    local res = array.wrap()
+    if reps == 1 then return self:shallowCopy() end
+
+    for i = 1, reps do
+        res:extend(self)
     end
     return res
 end
