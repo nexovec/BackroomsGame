@@ -52,15 +52,21 @@ function array:prettyPrint()
     print('-----------')
 end
 
-function array:prettyPrintRec()
+function array:prettyPrintRecursive(passed)
+    local passed = passed or array.wrap()
+    passed:append(self)
     if not self then
-        return error('Table is nil!', 2)
+        return error('Array is nil!', 2)
     end
-    print('contents of a table:')
+    print('Contents of a array ' .. tostring(self) .. ':')
     print('-----------')
     for k, v in pairs(self) do
         if type(v) == "table" then
-            array.prettyPrintRec(v)
+            if passed:contains(self) == true then
+                print("<previous ".. tostring(self) .. " >")
+            else
+                array.prettyPrintRecursive(v, passed)
+            end
         else
             local strv = tostring(v)
             print(tostring(k) .. string.rep(' ', math.max(50 - #strv, 0)) .. ':\t' .. strv)

@@ -1,5 +1,6 @@
 local map = {}
 local types = require("std.types")
+local array = require("std.array")
 
 function map:prettyPrint()
     if not self then
@@ -17,18 +18,25 @@ function map:prettyPrint()
     print('-----------')
 end
 
-function map:prettyPrintRecursive()
+function map:prettyPrintRecursive(passed)
+    local passed = passed or array.wrap()
+    passed:append(self)
     if not self then
         return error('Table is nil!', 2)
     end
+    --TODO: typecheck against array
     if type(self) ~= 'table' then
         error('This is not a table. type: ' .. type(self) .. ((" " .. (self.type and self.type())) or ""), 2)
     end
-    print('contents of a table:')
+    print('contents of a map ' .. tostring(self) .. ':')
     print('-----------')
     for k, v in pairs(self) do
         if type(v) == "table" then
-            map.prettyPrintRecursive(v)
+            if passed:contains(self) == true then
+                print("<previous ".. tostring(self) .. " >")
+            else
+                map.prettyPrintRecursive(v, passed)
+            end
         else
             local strv = tostring(v)
             print(tostring(k) .. string.rep(' ', math.max(50 - #strv, 0)) .. ':\t' .. strv)

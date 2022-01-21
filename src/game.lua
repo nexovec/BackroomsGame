@@ -6,6 +6,7 @@ local enet = require("enet")
 local t = require("timing")
 local uiBox = require("uiBox")
 local array = require("std.array")
+local map = require("std.map")
 local string = require("std.string")
 local network = require("network")
 local tileAtlas = require("tileAtlas")
@@ -26,9 +27,9 @@ local clientChatboxMessage = ""
 local chatboxDims = {640, 1280}
 local chatboxUIBox
 
-local nicknamePickerEnabled
-local nicknamePickerMessage = ""
-local nicknamePickerPassword = ""
+local loginBoxEnabled
+local loginBoxUsernameText = ""
+local loginBoxPasswordText = ""
 local nicknamePickerBoxDims = {750, 300}
 local nicknamePickerUIBox
 
@@ -162,16 +163,16 @@ local function renderOldUI()
 
 
     -- render log-in box
-    if nicknamePickerEnabled then
+    if loginBoxEnabled then
         local nicknamePickerCanvas = nicknamePickerUIBox.textureCvs
         nicknamePickerUIBox:clear()
         nicknamePickerCanvas:renderTo(function()
             -- love.graphics.setColor(0.65, 0.15, 0.15, 1)
             local descX, fieldX, row1y, row2y = 50, 250, 80, 150
             love.graphics.print("name:", descX, row1y)
-            love.graphics.print(nicknamePickerMessage, fieldX, row1y)
+            love.graphics.print(loginBoxUsernameText, fieldX, row1y)
             love.graphics.print("password:", descX, row2y)
-            love.graphics.print( string.rep("*", #nicknamePickerPassword), fieldX, row2y)
+            love.graphics.print( string.rep("*", #loginBoxPasswordText), fieldX, row2y)
         end)
         local chatboxScenePlacementQuad = love.graphics.newQuad(0, 0, nicknamePickerBoxDims[1], nicknamePickerBoxDims[2],
             nicknamePickerBoxDims[1], nicknamePickerBoxDims[2])
@@ -235,11 +236,9 @@ local function tiledUIPanel(assetName, tileSize, scale, panelPos)
                 if xI == widthInTiles - 1 then
                     tileX = startingX + panelWInTiles - 1
                 end
-                -- TODO: pick edge tiles randomly
-                -- TODO: pick inner tiles randomly
+                -- TODO: pick which tile to draw randomly on the edges
                 if not tileX then tileX = startingX + 1 end
                 if not tileY then tileY = startingY + 1 end
-                -- atlas:drawTile(st * (x + xI), st * (y + yI), 1, 1, st, st)
                 atlas:drawTile((xPosInTiles + xI) * self.tileSize * self.scale, (yPosInTiles + yI) * self.tileSize * self.scale, tileX, tileY, self.scale * self.tileSize, self.scale * self.tileSize)
             end
         end
@@ -253,9 +252,35 @@ function renderNewUI()
     local x, y, width, height = 4, 4, 8, 3
     local tileSize = 16
     local scale = 5
-    -- local x, y, width, height = 0, 0, 1, 6
-    tiledUIPanel("uiPaperImage", tileSize, scale, {}):draw(x, y, width, height)
+
+    -- render loginbox
+    if loginBoxEnabled then
+        tiledUIPanel("uiPaperImage", tileSize, scale, {}):draw(x, y, width, height)
+        love.graphics.setColor(0, 0, 0, 1)
+        love.graphics.print("username:", x * tileSize * scale + 50, y * tileSize * scale + 60)
+        love.graphics.print(loginBoxUsernameText, x * tileSize * scale + 270, y * tileSize * scale + 60)
+        love.graphics.print("password:", x * tileSize * scale + 50, y * tileSize * scale + 110)
+        love.graphics.print(string.rep("*", #loginBoxPasswordText), x * tileSize * scale + 270, y * tileSize * scale + 110)
+        love.graphics.setColor(1, 1, 1, 1)
+    end
     -- drawGrid(tileSize * scale, {1, 0, 1, 1})
+
+    -- render chatbox
+    local x, y, width, height = 16.5, 1, 7, 12
+    local yDiff = 40
+    tiledUIPanel("uiPaperImage", tileSize, scale, {}):draw(x, y, width, height)
+    love.graphics.setColor(0, 0, 0, 1)
+    for i, messageText in ipairs(chatboxMessageHistory) do
+        love.graphics.print(messageText, x * tileSize * scale + 30, y * tileSize * scale + 30 - yDiff + yDiff * i)
+    end
+
+    love.graphics.print(clientChatboxMessage, x * tileSize * scale + 30, y * tileSize * scale + 880)
+    love.graphics.setColor(1, 1, 1, 1)
+
+    -- render logbox
+    local x, y, width, height = 1, 9, 15, 4
+    tiledUIPanel("uiPaperImage", tileSize, scale, {}):draw(x, y, width, height)
+
 end
 
 ---- handling input
@@ -277,14 +302,15 @@ function handleNickPickerKp(key)
     if key == "return" then
         if activeNicknamePickerField == "nickname" then activeNicknamePickerField = "password" return end
         -- TODO: Verify nickname
-        sendMessage("status", "logIn", nicknamePickerMessage .. ":" .. nicknamePickerPassword)
+        sendMessage("status", "logIn", loginBoxUsernameText .. ":" .. loginBoxPasswordText)
+        chatboxMessageHistory:append("Logging in...")
         activeUIElemIndex = activeUIElemIndex + 1
-        nicknamePickerEnabled = false
+        loginBoxEnabled = false
     elseif key == "backspace" then
         if activeNicknamePickerField == "nickname" then
-            nicknamePickerMessage = string.popped(nicknamePickerMessage)
+            loginBoxUsernameText = string.popped(loginBoxUsernameText)
         else
-            nicknamePickerPassword = string.popped(nicknamePickerPassword)
+            loginBoxPasswordText = string.popped(loginBoxPasswordText)
         end
     end
 end
@@ -293,9 +319,9 @@ local UIElemHandlers = {{
     keypressed = handleNickPickerKp,
     textinput = function(t)
         if activeNicknamePickerField == "password" then
-            nicknamePickerPassword = nicknamePickerPassword .. t
+            loginBoxPasswordText = loginBoxPasswordText .. t
         else
-            nicknamePickerMessage = nicknamePickerMessage .. t
+            loginBoxUsernameText = loginBoxUsernameText .. t
         end
     end
 }, {
@@ -325,7 +351,7 @@ function game.load(args)
     love.keyboard.setKeyRepeat(true)
 
     beginClient()
-    nicknamePickerEnabled = true
+    loginBoxEnabled = true
 end
 
 function game.tick(deltaTime)
@@ -367,7 +393,7 @@ function game.draw()
     end)
     local playfieldScenePlacementQuad = love.graphics.newQuad(0, 0, unpack(playerAreaDims:rep(2)))
     resolutionScaledDraw(playerAreaCanvas, playfieldScenePlacementQuad, 100, 100)
-    renderOldUI()
+    -- renderOldUI()
     renderNewUI()
 end
 

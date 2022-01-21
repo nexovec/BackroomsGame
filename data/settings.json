@@ -2,7 +2,7 @@
 {
     "logging": // this is a comment as well
     {
-        "shouldPerformanceLog": true,
+        "shouldPerformanceLog": false,
         //
         "performanceLogPeriodInSeconds": 60,
         "shouldLogFPS": false

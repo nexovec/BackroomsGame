@@ -8,11 +8,10 @@ uniform vec2 rectSize;
 
 vec4 quat_from_axis_angle(vec3 axis, float angle) {
   vec4 qr;
-  float half_angle = (angle * 0.5) * 3.14159 / 180.0;
-  qr.x = axis.x * sin(half_angle);
-  qr.y = axis.y * sin(half_angle);
-  qr.z = axis.z * sin(half_angle);
-  qr.w = cos(half_angle);
+  qr.x = axis.x * sin(angle);
+  qr.y = axis.y * sin(angle);
+  qr.z = axis.z * sin(angle);
+  qr.w = cos(angle);
   return qr;
 }
 
@@ -53,7 +52,7 @@ void effect() {
   float oldPosSize = size(oldPos);
   vec3 oldPosNormalized = oldPos / oldPosSize;
   // vec3 rot = rotate_vertex_position(oldPosNormalized, vec3(0, 0, 1), PI) * oldPosSize;
-  vec3 rot = rotate_vertex_position(oldPos, vec3(0, 0, 1), 90);
+  vec3 rot = rotate_vertex_position(oldPosNormalized, vec3(0, 0, 1), PI/4) * oldPosSize;
   rot += vec3(oldPos);
   int col = int(rot.x / rectSize.x) % 2 + int(rot.y / rectSize.y) % 2;
   if (col % 2 == 0) {
