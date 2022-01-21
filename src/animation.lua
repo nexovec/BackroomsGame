@@ -11,9 +11,6 @@ assert = std.assert
 
 -- helper functions
 
----@param imagedata love.ImageData
----@param tileSize number
----@return love.Image
 local function parseImageTilesetIntoArrayImage(imagedata, tileSize)
     assert(type(imagedata) == "userdata" and imagedata:type() == "ImageData",
         "expected: ImageData, got: " .. (imagedata.type and imagedata:type()) or type(imagedata), 2)

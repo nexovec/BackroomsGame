@@ -112,7 +112,7 @@ function array:indexOf(elem)
 end
 
 --- Functional programming filter. Uses ipairs under the hood.
----@param func Gets called for every element of the array with value, key, array as parameters. Must return a boolean
+---@param func function Gets called for every element of the array with value, key, array as parameters. Must return a boolean
 function array:filter(func)
     assert(self, "Call with : instead of .", 2)
     -- TODO: Test
@@ -126,8 +126,8 @@ function array:filter(func)
 end
 
 --- Functional programming map. Uses ipairs under the hood.
----@param elem Gets called for every element of the array with value, key, array as parameters.
-function array:map(elem)
+---@param func function Gets called for every element of the array with value, key, array as parameters.
+function array:map(func)
     assert(self, "Call with : instead of .", 2)
     -- TODO: Test
     local new = {}
@@ -135,6 +135,10 @@ function array:map(elem)
         new[k] = func(v, k, self)
     end
     return array.wrap(new)
+end
+
+function array:iter()
+    return ipairs(self)
 end
 
 function array:inverse()

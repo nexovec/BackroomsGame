@@ -5,6 +5,7 @@ local animation = require("animation")
 local enet = require("enet")
 local t = require("timing")
 local uiBox = require("uiBox")
+local assert = require("std.assert")
 local array = require("std.array")
 local map = require("std.map")
 local string = require("std.string")
@@ -30,6 +31,7 @@ local chatboxUIBox
 local loginBoxEnabled
 local loginBoxUsernameText = ""
 local loginBoxPasswordText = ""
+local loginBoxErrorText = ""
 local nicknamePickerBoxDims = {750, 300}
 local nicknamePickerUIBox
 
@@ -37,10 +39,13 @@ local logMessageBoxDims = {1600, 400}
 local logMessageBox
 
 local activeUIElemIndex = 1
-local activeNicknamePickerField = "nickname"
+local activeLoginBoxField = "nickname"
 
 local serverAddress = "192.168.0.234:6750"
 local connectionFails = 0
+local hasConnected = false
+
+-- TODO: encrypt credentials
 
 -- helper functions
 
@@ -61,6 +66,8 @@ local function resolutionScaledDraw(image, quad, x, y)
     love.graphics.draw(image, correctQuad, correctX, correctY)
 end
 
+-- TODO: make function that ensures no additional globals are defined
+
 --- NETWORKING:
 
 local function beginClient()
@@ -78,6 +85,24 @@ local function sendMessage(...)
     serverpeer:send(message)
 end
 
+local function attemptLogin(username, password)
+    sendMessage("status", "logIn", username .. ":" .. password)
+end
+
+local function loginPrompt(msg)
+    local msg = msg or ""
+    activeUIElemIndex = 1
+    activeNicknamePickerField = "nickname"
+    loginBoxEnabled = true
+    loginBoxErrorText = msg
+end
+
+local function disableLoginPrompt()
+    loginBoxEnabled = false
+    -- TODO: enum for active elements
+    activeUIElemIndex = 1
+end
+
 local function receivedMessageHandle(hostevent)
     local data = hostevent.data
     local prefix, trimmedMessage  = network.getNetworkMessagePrefix(data)
@@ -87,20 +112,34 @@ local function receivedMessageHandle(hostevent)
         end, 2)
     elseif prefix == "message" then
         chatboxMessageHistory:append(trimmedMessage)
-    elseif prefix == "logOut" then
-        -- server tells you to disconnect
-        -- TODO:
+    elseif prefix == "status" then
+        local prefix, trimmedMessage  = network.getNetworkMessagePrefix(trimmedMessage)
+        if prefix == "logOut" then
+            loginPrompt(trimmedMessage)
+            -- server tells you to disconnect
+            -- TODO:
+        else
+            print(prefix)
+            -- TODO:
+        end
     else
-        error(prefix .. "X" .. ":" ..trimmedMessage)
+        -- TODO: don't crash
+        error(prefix .. ":" ..trimmedMessage)
     end
 end
 
 local function handleEnetClient()
     local hostevent = enetclient:service()
+    -- FIXME: when pc sleeps
+--     AL lib: (EE) ALCwasapiPlayback_mixerProc: WaitForSingleObjectEx error: 0x102
+-- Error: src/game.lua:113: Error during service
     if serverpeer:state() == "disconnected" then
         connectionFails = connectionFails + 1
-        if connectionFails < 6 then
+        if connectionFails < 6 and hasConnected then
             chatboxMessageHistory:append("Connection lost. Reconnecting...")
+        elseif connectionFails < 2 and not hasConnected then
+            -- TODO: notify user you're waiting for a response from the server
+            chatboxMessageHistory:append("Can't connect to the server.")
         end
         serverpeer:reset()
         serverpeer = enetclient:connect(serverAddress)
@@ -113,6 +152,8 @@ local function handleEnetClient()
     local type = hostevent.type
     if type == "connect" then
         sendMessage("pingpong", "ping!")
+        connectionFails = 0
+        hasConnected = true
         chatboxMessageHistory:append("You've connected to the server!")
     end
     if type == "receive" then
@@ -126,6 +167,7 @@ local function handleEnetClient()
 end
 
 --- UI
+
 ---- rendering
 
 local function renderOldUI()
@@ -210,16 +252,20 @@ local function drawGrid(tileSize, color)
 end
 
 local function tiledUIPanel(assetName, tileSize, scale, panelPos)
+    assert(not panelPos or #panelPos == 4, "Invalid panelPos argument", 2)
+    -- assert(type(panelPos) == "nil" and panelPos[1] and panelPos[4], "Invlid panelPos", 2)
     local self = {
         assetName = assetName,
         tileSize = tileSize,
-        scale = scale
+        scale = scale,
+        panelPos = panelPos or {0, 4, 10, 10}
     }
-    function self:draw(xPosInTiles, yPosInTiles, widthInTiles, heightInTiles)
+    -- option is "flat" or "shadow"
+    function self:draw(xPosInTiles, yPosInTiles, widthInTiles, heightInTiles, option)
         local scaledTileSize = self.tileSize * self.scale
         assert(xPosInTiles >= 0 and yPosInTiles >= 0 and widthInTiles > 0 and widthInTiles > 0)
         local atlas = tileAtlas.wrap(self.assetName, self.tileSize)
-        local startingX, startingY, panelWInTiles, panelHInTiles = 0, 4, 10, 10
+        local startingX, startingY, panelWInTiles, panelHInTiles = self.panelPos[1], self.panelPos[2], self.panelPos[3], self.panelPos[4]
         for xI = 0, widthInTiles - 1 do
             for yI = 0, heightInTiles - 1 do
                 -- assigns which tile gets rendered at this position(at scaledTileSize * posInTiles + index)
@@ -255,12 +301,19 @@ function renderNewUI()
 
     -- render loginbox
     if loginBoxEnabled then
-        tiledUIPanel("uiPaperImage", tileSize, scale, {}):draw(x, y, width, height)
+        tiledUIPanel("uiPaperImage", tileSize, scale):draw(x, y, width, height)
+        tiledUIPanel("uiPaperImage", tileSize / 2, scale, {20, 20, 4, 4}):draw(x * 2 + 10 - 0.5, y * 2 + 4 - 0.1, 6, 2)
         love.graphics.setColor(0, 0, 0, 1)
+        love.graphics.print("login", (x + 5.8) * tileSize * scale, (y + 2.1) * tileSize * scale)
+
         love.graphics.print("username:", x * tileSize * scale + 50, y * tileSize * scale + 60)
         love.graphics.print(loginBoxUsernameText, x * tileSize * scale + 270, y * tileSize * scale + 60)
         love.graphics.print("password:", x * tileSize * scale + 50, y * tileSize * scale + 110)
         love.graphics.print(string.rep("*", #loginBoxPasswordText), x * tileSize * scale + 270, y * tileSize * scale + 110)
+        love.graphics.setColor(0.8, 0.3, 0.3, 1)
+        love.graphics.setFont(assets.get("resources/fonts/JPfallback.ttf", 24))
+        love.graphics.printf(loginBoxErrorText, x * tileSize * scale + 32, y * tileSize * scale + 170, 300, "left")
+        love.graphics.setFont(assets.get("font"))
         love.graphics.setColor(1, 1, 1, 1)
     end
     -- drawGrid(tileSize * scale, {1, 0, 1, 1})
@@ -268,7 +321,7 @@ function renderNewUI()
     -- render chatbox
     local x, y, width, height = 16.5, 1, 7, 12
     local yDiff = 40
-    tiledUIPanel("uiPaperImage", tileSize, scale, {}):draw(x, y, width, height)
+    tiledUIPanel("uiPaperImage", tileSize, scale):draw(x, y, width, height)
     love.graphics.setColor(0, 0, 0, 1)
     for i, messageText in ipairs(chatboxMessageHistory) do
         love.graphics.print(messageText, x * tileSize * scale + 30, y * tileSize * scale + 30 - yDiff + yDiff * i)
@@ -279,7 +332,7 @@ function renderNewUI()
 
     -- render logbox
     local x, y, width, height = 1, 9, 15, 4
-    tiledUIPanel("uiPaperImage", tileSize, scale, {}):draw(x, y, width, height)
+    tiledUIPanel("uiPaperImage", tileSize, scale):draw(x, y, width, height)
 
 end
 
@@ -288,6 +341,7 @@ end
 function handleChatKp(key)
     -- chat handling
     if key == "return" then
+        print(serverpeer:state())
         if serverpeer then
             sendMessage("message", clientChatboxMessage)
         end
@@ -298,16 +352,44 @@ function handleChatKp(key)
     end
 end
 
-function handleNickPickerKp(key)
+function handleLoginBoxKp(key)
+
+    local function focusChat()
+        activeUIElemIndex = 2
+    end
+
+    local function switchFields()
+        if activeLoginBoxField == "nickname" then
+            activeLoginBoxField = "password"
+        elseif activeLoginBoxField == "password" then
+            activeLoginBoxField = "nickname"
+        end
+    end
+    -- TODO: Render blinking cursor in the active field
     if key == "return" then
-        if activeNicknamePickerField == "nickname" then activeNicknamePickerField = "password" return end
         -- TODO: Verify nickname
-        sendMessage("status", "logIn", loginBoxUsernameText .. ":" .. loginBoxPasswordText)
-        chatboxMessageHistory:append("Logging in...")
-        activeUIElemIndex = activeUIElemIndex + 1
-        loginBoxEnabled = false
+        -- TODO: Lettercount limits
+        attemptLogin(loginBoxUsernameText, loginBoxPasswordText)
+        activeLoginBoxField = "password"
+        disableLoginPrompt()
+        focusChat()
+
+        if not serverpeer then
+            chatboxMessageHistory:append("Server is nil.")
+            return
+        end
+
+        if serverpeer:state() == "disconnected" then
+            chatboxMessageHistory:append("Not connected to the server.")
+        elseif serverpeer:state() == "connecting" then
+            chatboxMessageHistory:append("Still connecting to the server.")
+            -- TODO:
+        else
+        end
+    elseif key == "tab" then
+        switchFields()
     elseif key == "backspace" then
-        if activeNicknamePickerField == "nickname" then
+        if activeLoginBoxField == "nickname" then
             loginBoxUsernameText = string.popped(loginBoxUsernameText)
         else
             loginBoxPasswordText = string.popped(loginBoxPasswordText)
@@ -316,9 +398,9 @@ function handleNickPickerKp(key)
 end
 
 local UIElemHandlers = {{
-    keypressed = handleNickPickerKp,
+    keypressed = handleLoginBoxKp,
     textinput = function(t)
-        if activeNicknamePickerField == "password" then
+        if activeLoginBoxField == "password" then
             loginBoxPasswordText = loginBoxPasswordText .. t
         else
             loginBoxUsernameText = loginBoxUsernameText .. t
@@ -342,7 +424,7 @@ function game.load(args)
     assets.playerImage = animation.newCharacterAnimation("character")
 
     -- init logic:
-    assets.playerImage:play(0.6, "run", true, false)
+    assets.playerImage:play(2, "idle", true, false)
 
     chatboxUIBox = uiBox.makeBox(chatboxDims[1], chatboxDims[2], "gradientShaderA", {}, 20)
     nicknamePickerUIBox = uiBox.makeBox(nicknamePickerBoxDims[1], nicknamePickerBoxDims[2], "gradientShaderA", {}, 20)
@@ -368,8 +450,26 @@ function game.draw()
     love.graphics.draw(assets.get("backgroundImage"), backgroundQuad, 0, 0, 0, 1, 1, 0, 0)
 
     -- draw scene
-    -- TODO: Cache
+
+    -- character view
+    local x, y, width, height = 8, 0, 2, 2
+    local tileSize = 16
+    local scale = 5
+    tiledUIPanel("uiPaperImage", tileSize, scale, {10, 4, 2, 2}):draw(x, y, width, height)
+
+    -- equipment view
+    local x, y, width, height = 7, 1.5 - 0.1, 9, 7
+    local tileSize = 16
+    local scale = 5
+    tiledUIPanel("uiPaperImage", tileSize, scale, {0, 14, 10, 10}):draw(x, y, width, height)
+
+    local x, y, width, height = 0.5, 0.5, 8, 8
+    local tileSize = 16
+    local scale = 5
+    tiledUIPanel("uiPaperImage", tileSize, scale):draw(x, y, width, height)
+
     local playerAreaDims = array.wrap{720, 720}
+    -- FIXME: Cache
     local playerAreaCanvas = love.graphics.newCanvas(unpack(playerAreaDims))
 
     playerAreaCanvas:renderTo(function()
@@ -391,8 +491,10 @@ function game.draw()
         local playerSpriteQuad = love.graphics.newQuad(0, 0, 720, 720, 720, 720)
         assets.playerImage:draw(playerSpriteQuad, 0, 0, 0, 1, 1, 0, 0)
     end)
+    -- FIXME: Magic numbers
     local playfieldScenePlacementQuad = love.graphics.newQuad(0, 0, unpack(playerAreaDims:rep(2)))
-    resolutionScaledDraw(playerAreaCanvas, playfieldScenePlacementQuad, 100, 100)
+    local pos = scale * tileSize * (0.5 - (8 - 720 / (tileSize * scale)))
+    resolutionScaledDraw(playerAreaCanvas, playfieldScenePlacementQuad, pos, pos)
     -- renderOldUI()
     renderNewUI()
 end
@@ -404,6 +506,7 @@ end
 
 function love.keypressed(key)
     UIElemHandlers[activeUIElemIndex].keypressed(key)
+    if love.keyboard.isDown("f5") then love.event.quit("restart") end
 end
 
 function love.textinput(t)

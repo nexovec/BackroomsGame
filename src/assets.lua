@@ -34,7 +34,7 @@ local function reloadResource(k, path)
     -- TODO: Check if it is the same kind of file
     v.cachedFileLastModified = love.filesystem.getInfo(v.path).modtime
     print("Hot reloaded " .. v.path)
-    resources[k].asset = v.func(v.path)
+    resources[k].asset = v.func(v.path, unpack(v.params or {}))
 end
 
 local function optionallyRegisterResource(k, v)
@@ -57,7 +57,6 @@ local function registerResourcesFromJson(file)
     end
 end
 
--- TODO: Load based on assets.json
 local function init(funcsToCallBasedOnFileExtensionArg)
     funcsToCallBasedOnFileExtension = funcsToCallBasedOnFileExtensionArg
     setmetatable(funcsToCallBasedOnFileExtension, {__index = function(tbl, key)
@@ -68,11 +67,15 @@ end
 
 local function hotReloadAssets()
     -- TODO: Don't reload if resource was runtime modified
+    -- TODO: Don't do this:
     registerResourcesFromJson("data/assets.json")
+
     for k, v in pairs(resources) do
         v.cachedFileLastModified = v.cachedFileLastModified or 0
         local fileInfo = love.filesystem.getInfo(v.path)
-        if v.cachedFileLastModified < fileInfo.modtime and v.func ~= stubResourceHandle then
+        if not fileInfo then
+            error("A missing asset " .. k)
+        elseif v.cachedFileLastModified < fileInfo.modtime and v.func ~= stubResourceHandle then
             reloadResource(k, v.path)
         end
     end
@@ -91,7 +94,7 @@ function assets.initOnClient()
         ["png"] = love.graphics.newArrayImage,
         ["glsl"] = love.graphics.newShader,
         ["json"] = decodeJsonFile,
-        ["ttf"] = function(font) return love.graphics.newFont(font, 48) end
+        ["ttf"] = function(font, fontSize) return love.graphics.newFont(font, fontSize or 48) end
     }
 end
 
@@ -102,14 +105,15 @@ function assets.update(dt)
     hotReloadAssets()
 end
 
-function assets.get(filePathOrResourceName)
+function assets.get(filePathOrResourceName, ...)
     if not resources[filePathOrResourceName] then
         -- TODO: Scan for duplicate resources
         -- tries to load from file
         local fileInfo = love.filesystem.getInfo(filePathOrResourceName)
         local fileExists = fileInfo ~= nil
         if not fileExists then
-            error("Requested resource " .. filePathOrResourceName .. " doesn't exist", 2)
+            -- error("Requested resource " .. filePathOrResourceName .. " doesn't exist", 2)
+            return nil
         end
         assert(fileInfo.type == "file", "Loading " .. fileInfo.type .. " is not yet implemented")
         local list = string.split(filePathOrResourceName, ".")
@@ -118,19 +122,22 @@ function assets.get(filePathOrResourceName)
         if not func then error("Unknown file extension: " .. fileExtension, 2) end
         resources[filePathOrResourceName] = {
             path = filePathOrResourceName,
-            func = func
+            func = func,
+            params = {...}
         }
-        return assets.get(filePathOrResourceName)
+        return assets.get(filePathOrResourceName, ...)
     end
-    assert(resources[filePathOrResourceName], "This resource doesn't exist",  2)
-    if not resources[filePathOrResourceName].asset then
-        resources[filePathOrResourceName].asset = resources[filePathOrResourceName].func(resources[filePathOrResourceName].path)
+    resource = resources[filePathOrResourceName]
+    assert(resource, "This resource doesn't exist",  2)
+
+    if not resource.asset then
+        resource.asset = resource.func(resource.path, ...)
     end
-    return resources[filePathOrResourceName].asset
+    return resource.asset
 end
 
 function assets.getModTime(asset)
-    return assets.get(asset).cachedFileLastModified
+    return assets.get(asset, unpack(resources[asset] and resources[asset].params or {})).cachedFileLastModified
 end
 
 function assets.set(key, resource)

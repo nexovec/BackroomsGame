@@ -61,10 +61,11 @@ local function attemptLogin(peer, username, password)
     -- TODO: Don't actually say what the user's done wrong.
     if #username < 3 or #username > 16 then
         -- TODO: Allow only alphabet, _ and numerics in player names
+        -- TODO: use enum for network errors, darn it!
         return peer:send("status:logOut:Username must be 3 to 16 characters long.")
     end
     if #password < 3 or #password > 32 then
-        return peer:send("status:logOut:Password must not be retarded.")
+        return peer:send("status:logOut:⨻Password must not be retarded.")
     end
     for _, v in ipairs(credentials) do
         if type(v.username) ~= "string" or type(v.password) ~= "string" then
@@ -98,7 +99,9 @@ local function receiveEnetHandle(hostevent)
         -- broadcast message to everybody
         local userSession = userSessions[hostevent.peer]
         if not userSession then
-            error("Invalid user session of peer " .. tostring(hostevent.peer))
+            -- error("Invalid user session of peer " .. tostring(hostevent.peer))
+            -- TODO: log suspicious number of those
+            return hostevent.peer:send("status:logOut:Server restarted. Log in again.")
         end
         local authorName = userSession.username
         if not authorName then

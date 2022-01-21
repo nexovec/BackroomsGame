@@ -1,3 +1,5 @@
+local utf8 = require("utf8")
+
 -- API
 
 function love.graphics.withShader(shader, func)
@@ -12,6 +14,33 @@ end
 function YOLO()
     print("YOLO YOLO YOLO!!!!")
 end
+
+-- function love.graphics.printWrapped(msg, x, y, maxWidth)
+--     -- PERFORMANCE: reallocates for every character, EXTREMELY SLOW!
+--     if not maxWidth then
+--         return love.graphics.print(msg, x, y)
+--     end
+--     local font = love.graphics.getFont()
+--     if font:getWidth(msg) < maxWidth then
+--         return love.graphics.print(msg, x, y)
+--     end
+--     local textWidth = font:getWidth(msg)
+--     local elevation = 0
+--     local rowString = ""
+--     for k, v in utf8.codes(msg) do
+--         local char = utf8.char(v)
+--         local newRowString = rowString .. char
+--         -- TODO: investigate if each character can be measured independently
+--         if font:getWidth(newRowString) > maxWidth then
+--             love.graphics.print(rowString, x, y + elevation)
+--             elevation = elevation + font:getHeight(rowString)
+--             rowString = char
+--         else
+--             rowString = newRowString
+--         end
+--     end
+--     love.graphics.print(rowString, x, y + elevation)
+-- end
 
 function love.graphics.applyShader(canvas, textureShader, uniformsTable, options)
     -- TODO: Test

@@ -54,6 +54,10 @@ function map:contains(elem)
     return false
 end
 
+function map:iter()
+    return pairs(self)
+end
+
 function map:indexOf(elem)
     for i, v in pairs(self) do
         if v == elem then return i end
