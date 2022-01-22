@@ -305,6 +305,19 @@ local function tiledUIPanel(assetName, tileSize, scale, panelPos)
     return self
 end
 
+local handleLoginClick
+
+local function focusChat()
+    activeUIElemIndex = 2
+end
+
+function loginClicked()
+    attemptLogin(loginBoxUsernameText, loginBoxPasswordText)
+    activeLoginBoxField = "password"
+    disableLoginPrompt()
+    focusChat()
+end
+
 function renderNewUI()
     local x, y, width, height = 4, 4, 8, 3
     local tileSize = 16
@@ -323,6 +336,14 @@ function renderNewUI()
         tiledUIPanel("uiImage", tileSize, scale):draw(x, y, width, height)
         tiledUIPanel("uiImage", tileSize / 2, scale, {20, 20, 4, 4}):draw(x * 2 + 10 - 0.5, y * 2 + 4 - 0.1, 6, 2)
         love.graphics.setColor(0, 0, 0, 1)
+        handleLoginClick = function(xIn, yIn, mb, repeating)
+            -- and xIn / 8 > (x * 2 + 10 - 0.5) + 6 and yIn / 8 >= y * 2 + 4 - 0.1 and yIn / 8 < y * 2 + 4 - 0.1 + 2
+            -- print(xIn, yIn, widthIn, heightIn)
+            -- print(8 * (x * 2 + 10 - 0.5))
+            if xIn >= 8 * scale * (x * 2 + 10 - 0.5) and xIn < 8 * scale * (x * 2 + 10 - 0.5 + 6) and yIn >= 8 * scale * (y * 2 + 4 - 0.1) and yIn < 8 * scale * (y * 2 + 4 - 0.1 + 2) then
+                loginClicked()
+            end
+        end
         love.graphics.print("login", (x + 5.8) * tileSize * scale, (y + 2.1) * tileSize * scale)
         love.graphics.print("username:", x * tileSize * scale + 50, y * tileSize * scale + 60)
         tintedTextField(x * tileSize * scale + 270, y * tileSize * scale + 60, 300, 2)
@@ -362,7 +383,6 @@ function renderNewUI()
     -- render logbox
     local x, y, width, height = 1, 9, 15, 4
     tiledUIPanel("uiImage", tileSize, scale):draw(x, y, width, height)
-
 end
 
 ---- handling input
@@ -383,10 +403,6 @@ end
 
 function handleLoginBoxKp(key)
 
-    local function focusChat()
-        activeUIElemIndex = 2
-    end
-
     local function switchFields()
         if activeLoginBoxField == "nickname" then
             activeLoginBoxField = "password"
@@ -398,10 +414,7 @@ function handleLoginBoxKp(key)
     if key == "return" then
         -- TODO: Verify nickname
         -- TODO: Lettercount limits
-        attemptLogin(loginBoxUsernameText, loginBoxPasswordText)
-        activeLoginBoxField = "password"
-        disableLoginPrompt()
-        focusChat()
+        loginClicked()
 
         if not serverpeer then
             chatboxMessageHistory:append("Server is nil.")
@@ -532,6 +545,10 @@ end
 function game.quit()
     print("Terminating the game")
     serverpeer:disconnect_now()
+end
+
+function love.mousepressed(x, y, width, height)
+    handleLoginClick(x, y, width, height)
 end
 
 function love.keypressed(key)
