@@ -185,4 +185,5 @@ function array.wrap(obj)
     setmetatable(obj, array)
     return obj
 end
+
 return types.makeType(array, "array")

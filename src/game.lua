@@ -11,6 +11,7 @@ local map = require("std.map")
 local string = require("std.string")
 local network = require("network")
 local tileAtlas = require("tileAtlas")
+local cbkHandle = require("std.cbkHandle")
 local assets = require("assets")
 
 
@@ -44,6 +45,11 @@ local activeLoginBoxField = "nickname"
 local serverAddress = "192.168.0.234:6750"
 local connectionFails = 0
 local hasConnected = false
+
+local delta = 0
+
+-- FIXME: causes crash
+-- local mousepressedCbkHandle = cbkHandle:wrap()
 
 -- TODO: encrypt credentials
 
@@ -282,9 +288,15 @@ local function tiledUIPanel(assetName, tileSize, scale, panelPos)
                 if xI == widthInTiles - 1 then
                     tileX = startingX + panelWInTiles - 1
                 end
-                -- TODO: pick which tile to draw randomly on the edges
-                if not tileX then tileX = startingX + 1 end
-                if not tileY then tileY = startingY + 1 end
+                if not tileX then
+                    tileX = startingX + 1
+                    -- TODO: Thin the edge folds of paper ui
+                    -- tileX = startingX + 1 + xI % (panelWInTiles - 2)
+                end
+                if not tileY then
+                    tileY = startingY + 1
+                    -- tileY = startingY + 1 + yI % (panelHInTiles - 2)
+                end
                 atlas:drawTile((xPosInTiles + xI) * self.tileSize * self.scale, (yPosInTiles + yI) * self.tileSize * self.scale, tileX, tileY, self.scale * self.tileSize, self.scale * self.tileSize)
             end
         end
@@ -294,22 +306,36 @@ local function tiledUIPanel(assetName, tileSize, scale, panelPos)
 end
 
 function renderNewUI()
-    -- TODO: Render tiled UI
     local x, y, width, height = 4, 4, 8, 3
     local tileSize = 16
     local scale = 5
 
+    local function tintedTextField(x, y, width, vertMargins)
+        local ascent = assets.get("font"):getAscent()
+        love.graphics.setColor(0, 0, 0, 0.1)
+        love.graphics.rectangle("fill",  x, y, width, ascent + 2 * vertMargins)
+        love.graphics.setColor(0, 0, 0, 1)
+    end
+    local underscore
+    if delta % 1 < 0.5 then underscore = "_" else underscore = "" end
     -- render loginbox
     if loginBoxEnabled then
-        tiledUIPanel("uiPaperImage", tileSize, scale):draw(x, y, width, height)
-        tiledUIPanel("uiPaperImage", tileSize / 2, scale, {20, 20, 4, 4}):draw(x * 2 + 10 - 0.5, y * 2 + 4 - 0.1, 6, 2)
+        tiledUIPanel("uiImage", tileSize, scale):draw(x, y, width, height)
+        tiledUIPanel("uiImage", tileSize / 2, scale, {20, 20, 4, 4}):draw(x * 2 + 10 - 0.5, y * 2 + 4 - 0.1, 6, 2)
         love.graphics.setColor(0, 0, 0, 1)
         love.graphics.print("login", (x + 5.8) * tileSize * scale, (y + 2.1) * tileSize * scale)
-
         love.graphics.print("username:", x * tileSize * scale + 50, y * tileSize * scale + 60)
-        love.graphics.print(loginBoxUsernameText, x * tileSize * scale + 270, y * tileSize * scale + 60)
+        tintedTextField(x * tileSize * scale + 270, y * tileSize * scale + 60, 300, 2)
+        local usernameUscore = ""
+        if activeLoginBoxField == "nickname" then usernameUscore = underscore end
+        love.graphics.print(loginBoxUsernameText .. usernameUscore, x * tileSize * scale + 270, y * tileSize * scale + 60)
         love.graphics.print("password:", x * tileSize * scale + 50, y * tileSize * scale + 110)
-        love.graphics.print(string.rep("*", #loginBoxPasswordText), x * tileSize * scale + 270, y * tileSize * scale + 110)
+        love.graphics.setColor(0, 0, 0, 0.1)
+        tintedTextField( x * tileSize * scale + 270, y * tileSize * scale + 110, 300, 2)
+        love.graphics.setColor(0, 0, 0, 1)
+        local pwdUscore = ""
+        if activeLoginBoxField == "password" then pwdUscore = underscore end
+        love.graphics.print(string.rep("*", #loginBoxPasswordText)  .. pwdUscore, x * tileSize * scale + 270, y * tileSize * scale + 110)
         love.graphics.setColor(0.8, 0.3, 0.3, 1)
         love.graphics.setFont(assets.get("resources/fonts/JPfallback.ttf", 24))
         love.graphics.printf(loginBoxErrorText, x * tileSize * scale + 32, y * tileSize * scale + 170, 300, "left")
@@ -320,19 +346,22 @@ function renderNewUI()
 
     -- render chatbox
     local x, y, width, height = 16.5, 1, 7, 12
-    local yDiff = 40
-    tiledUIPanel("uiPaperImage", tileSize, scale):draw(x, y, width, height)
+    local yDiff = assets.get("font"):getAscent()
+    local scrollDistance = math.max(#chatboxMessageHistory * yDiff - 1000, 0)
+    tiledUIPanel("uiImage", tileSize, scale):draw(x, y, width, height)
     love.graphics.setColor(0, 0, 0, 1)
     for i, messageText in ipairs(chatboxMessageHistory) do
         love.graphics.print(messageText, x * tileSize * scale + 30, y * tileSize * scale + 30 - yDiff + yDiff * i)
     end
-
-    love.graphics.print(clientChatboxMessage, x * tileSize * scale + 30, y * tileSize * scale + 880)
+    tintedTextField(x * tileSize * scale + 30, y * tileSize * scale + 880, 450, 2)
+    local a = ""
+    if activeUIElemIndex == 2 then a = underscore end
+    love.graphics.print(clientChatboxMessage .. a, x * tileSize * scale + 30, y * tileSize * scale + 880)
     love.graphics.setColor(1, 1, 1, 1)
 
     -- render logbox
     local x, y, width, height = 1, 9, 15, 4
-    tiledUIPanel("uiPaperImage", tileSize, scale):draw(x, y, width, height)
+    tiledUIPanel("uiImage", tileSize, scale):draw(x, y, width, height)
 
 end
 
@@ -440,6 +469,7 @@ function game.tick(deltaTime)
     t.update()
     animation.updateAnimations(deltaTime)
     assets.update(deltaTime)
+    delta = delta + deltaTime
     handleEnetClient()
 end
 
@@ -455,18 +485,18 @@ function game.draw()
     local x, y, width, height = 8, 0, 2, 2
     local tileSize = 16
     local scale = 5
-    tiledUIPanel("uiPaperImage", tileSize, scale, {10, 4, 2, 2}):draw(x, y, width, height)
+    tiledUIPanel("uiImage", tileSize, scale, {10, 4, 2, 2}):draw(x, y, width, height)
 
     -- equipment view
     local x, y, width, height = 7, 1.5 - 0.1, 9, 7
     local tileSize = 16
     local scale = 5
-    tiledUIPanel("uiPaperImage", tileSize, scale, {0, 14, 10, 10}):draw(x, y, width, height)
+    tiledUIPanel("uiImage", tileSize, scale, {0, 14, 10, 10}):draw(x, y, width, height)
 
     local x, y, width, height = 0.5, 0.5, 8, 8
     local tileSize = 16
     local scale = 5
-    tiledUIPanel("uiPaperImage", tileSize, scale):draw(x, y, width, height)
+    tiledUIPanel("uiImage", tileSize, scale):draw(x, y, width, height)
 
     local playerAreaDims = array.wrap{720, 720}
     -- FIXME: Cache

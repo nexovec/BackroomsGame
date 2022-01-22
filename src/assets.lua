@@ -33,8 +33,9 @@ local function reloadResource(k, path)
     if v.asset and v.asset.release then v.asset:release() end
     -- TODO: Check if it is the same kind of file
     v.cachedFileLastModified = love.filesystem.getInfo(v.path).modtime
-    print("Hot reloaded " .. v.path)
-    resources[k].asset = v.func(v.path, unpack(v.params or {}))
+    print("Updated " .. v.path)
+    -- resources[k].asset = v.func(v.path, unpack(v.params or {}))
+    resources[k].asset = nil
 end
 
 local function optionallyRegisterResource(k, v)
@@ -66,16 +67,16 @@ local function init(funcsToCallBasedOnFileExtensionArg)
 end
 
 local function hotReloadAssets()
+    -- TODO: Optional immediate loading
     -- TODO: Don't reload if resource was runtime modified
-    -- TODO: Don't do this:
-    registerResourcesFromJson("data/assets.json")
 
     for k, v in pairs(resources) do
-        v.cachedFileLastModified = v.cachedFileLastModified or 0
         local fileInfo = love.filesystem.getInfo(v.path)
         if not fileInfo then
             error("A missing asset " .. k)
-        elseif v.cachedFileLastModified < fileInfo.modtime and v.func ~= stubResourceHandle then
+        end
+        v.cachedFileLastModified = v.cachedFileLastModified or fileInfo.modtime
+        if v.cachedFileLastModified < fileInfo.modtime and v.func ~= stubResourceHandle then
             reloadResource(k, v.path)
         end
     end
@@ -102,6 +103,7 @@ function assets.update(dt)
     deltaTime = deltaTime + dt
     if deltaTime < assets.get("settings").assetReloadUpdateFrequency then return end
     deltaTime = 0
+    registerResourcesFromJson("data/assets.json")
     hotReloadAssets()
 end
 
@@ -123,14 +125,16 @@ function assets.get(filePathOrResourceName, ...)
         resources[filePathOrResourceName] = {
             path = filePathOrResourceName,
             func = func,
-            params = {...}
+            params = {...},
+            cachedFileLastModified = fileInfo.modtime
         }
         return assets.get(filePathOrResourceName, ...)
     end
-    resource = resources[filePathOrResourceName]
+    local resource = resources[filePathOrResourceName]
     assert(resource, "This resource doesn't exist",  2)
 
     if not resource.asset then
+        print("Loaded " .. resource.path)
         resource.asset = resource.func(resource.path, ...)
     end
     return resource.asset

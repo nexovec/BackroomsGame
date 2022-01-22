@@ -4,7 +4,7 @@
     "animations" : {"path" : "data/animations.json"},
     "font" : {"path" : "resources/fonts/Pixel UniCode.ttf"},
     "backgroundImage" : {"path" : "resources/images/background1.png"},
-    "uiPaperImage" : {"path" : "resources/images/ui/uiPaperFlat.png"},
+    "uiImage" : {"path" : "resources/images/ui/uiPaperFlat.png"},
     "basicShaderA" : {"path" : "resources/shaders/basic.glsl"},
     "invertShaderA" : {"path" : "resources/shaders/invert.glsl"},
     "testShaderA" : {"path" : "resources/shaders/test.glsl"},
