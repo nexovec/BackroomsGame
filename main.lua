@@ -36,7 +36,7 @@ function love.load(args)
         -- FIXME: Magic numbers
 
         -- make fullscreen
-        love.window.setVSync(0)
+        love.window.setVSync(1)
         love.window.requestAttention()
         game.load(options)
     end
@@ -57,6 +57,7 @@ function love.update(dt)
     profile.start()
     ticks = ticks + 1
 
+    -- TODO: Update at 60 fps
     if options.isServer then
         server.update(dt)
     else
@@ -79,6 +80,7 @@ function love.update(dt)
 end
 
 function love.draw()
+    -- TODO: Render at display refresh rate
     profile.start()
     game.draw()
     profile.stop()

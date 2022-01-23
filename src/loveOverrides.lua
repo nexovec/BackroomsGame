@@ -12,7 +12,7 @@ function love.graphics.withShader(shader, func)
 end
 
 function YOLO()
-    print("YOLO YOLO YOLO!!!!")
+    print("YOLO!!!!")
 end
 
 -- function love.graphics.printWrapped(msg, x, y, maxWidth)

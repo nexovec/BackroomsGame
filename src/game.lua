@@ -14,7 +14,6 @@ local tileAtlas = require("tileAtlas")
 local cbkHandle = require("std.cbkHandle")
 local assets = require("assets")
 
-
 -- variables
 local options
 local testTileSet
@@ -23,6 +22,9 @@ local enetclient
 local serverpeer
 
 local mockResolution = {2560, 1440}
+
+local playerAreaCanvas
+local playerAreaDims = array.wrap {720, 720}
 
 local chatboxMessageHistory = array.wrap()
 local clientChatboxMessage = ""
@@ -58,16 +60,17 @@ local delta = 0
 --- Corrects position for resolutionChanges
 ---@param pos table Of the form {width, height}
 local function resolutionScaledPos(pos)
-    return {(assets.get("settings").width / mockResolution[1]) * pos[1],(assets.get("settings").height / mockResolution[2]) * pos[2]}
+    return {(assets.get("settings").width / mockResolution[1]) * pos[1],
+            (assets.get("settings").height / mockResolution[2]) * pos[2]}
 end
 local function resolutionScaledDraw(image, quad, x, y)
-    local correctX, correctY = unpack(resolutionScaledPos{x, y})
-    --TODO:
+    local correctX, correctY = unpack(resolutionScaledPos {x, y})
+    -- TODO:
     local viewX, viewY, width, height = quad:getViewport()
     local scaleX, scaleY = quad:getTextureDimensions()
-    local cviewX, cviewY = unpack(resolutionScaledPos{viewX,viewY})
-    local cwidth, cheight = unpack(resolutionScaledPos{width, height})
-    local cscaleX, cscaleY = unpack(resolutionScaledPos{scaleX, scaleY})
+    local cviewX, cviewY = unpack(resolutionScaledPos {viewX, viewY})
+    local cwidth, cheight = unpack(resolutionScaledPos {width, height})
+    local cscaleX, cscaleY = unpack(resolutionScaledPos {scaleX, scaleY})
     local correctQuad = love.graphics.newQuad(cviewX, cviewY, cwidth, cheight, cscaleX, cscaleY)
     love.graphics.draw(image, correctQuad, correctX, correctY)
 end
@@ -111,15 +114,15 @@ end
 
 local function receivedMessageHandle(hostevent)
     local data = hostevent.data
-    local prefix, trimmedMessage  = network.getNetworkMessagePrefix(data)
+    local prefix, trimmedMessage = network.getNetworkMessagePrefix(data)
     if prefix == "pingpong" then
         t.delayCall(function()
-            sendMessage("pingpong","ping!")
+            sendMessage("pingpong", "ping!")
         end, 2)
     elseif prefix == "message" then
         chatboxMessageHistory:append(trimmedMessage)
     elseif prefix == "status" then
-        local prefix, trimmedMessage  = network.getNetworkMessagePrefix(trimmedMessage)
+        local prefix, trimmedMessage = network.getNetworkMessagePrefix(trimmedMessage)
         if prefix == "logOut" then
             loginPrompt(trimmedMessage)
             -- server tells you to disconnect
@@ -130,15 +133,15 @@ local function receivedMessageHandle(hostevent)
         end
     else
         -- TODO: don't crash
-        error(prefix .. ":" ..trimmedMessage)
+        error(prefix .. ":" .. trimmedMessage)
     end
 end
 
 local function handleEnetClient()
     local hostevent = enetclient:service()
     -- FIXME: when pc sleeps
---     AL lib: (EE) ALCwasapiPlayback_mixerProc: WaitForSingleObjectEx error: 0x102
--- Error: src/game.lua:113: Error during service
+    --     AL lib: (EE) ALCwasapiPlayback_mixerProc: WaitForSingleObjectEx error: 0x102
+    -- Error: src/game.lua:113: Error during service
     if serverpeer:state() == "disconnected" then
         connectionFails = connectionFails + 1
         if connectionFails < 6 and hasConnected then
@@ -151,8 +154,12 @@ local function handleEnetClient()
         serverpeer = enetclient:connect(serverAddress)
         serverpeer:timeout(0, 0, math.min(connectionFails, 6) * 5000)
     end
-    if not enetclient then return end
-    if not hostevent then return end
+    if not enetclient then
+        return
+    end
+    if not hostevent then
+        return
+    end
     -- if hostevent.peer == clientpeer then return end
 
     local type = hostevent.type
@@ -184,11 +191,10 @@ local function renderOldUI()
     logMessageBoxCanvas:renderTo(function()
         love.graphics.print("This will show your log.", 30, 30)
     end)
-    local logMessageBoxScenePlacementQuad = love.graphics.newQuad(0, 0, logMessageBoxDims[1], logMessageBoxDims[2], logMessageBoxDims[1],
-        logMessageBoxDims[2])
+    local logMessageBoxScenePlacementQuad = love.graphics.newQuad(0, 0, logMessageBoxDims[1], logMessageBoxDims[2],
+        logMessageBoxDims[1], logMessageBoxDims[2])
     -- love.graphics.draw(logMessageBoxCanvas, logMessageBoxScenePlacementQuad, 100, 950, 0, 1, 1, 0, 0, 0, 0)
     resolutionScaledDraw(logMessageBoxCanvas, logMessageBoxScenePlacementQuad, 100, 950)
-
 
     -- render messages
     local chatboxCanvas = chatboxUIBox.textureCvs
@@ -206,9 +212,8 @@ local function renderOldUI()
     end)
 
     local chatboxScenePlacementQuad = love.graphics.newQuad(0, 0, chatboxDims[1], chatboxDims[2], chatboxDims[1],
-    chatboxDims[2])
+        chatboxDims[2])
     resolutionScaledDraw(chatboxCanvas, chatboxScenePlacementQuad, 1800, 100)
-
 
     -- render log-in box
     if loginBoxEnabled then
@@ -220,10 +225,10 @@ local function renderOldUI()
             love.graphics.print("name:", descX, row1y)
             love.graphics.print(loginBoxUsernameText, fieldX, row1y)
             love.graphics.print("password:", descX, row2y)
-            love.graphics.print( string.rep("*", #loginBoxPasswordText), fieldX, row2y)
+            love.graphics.print(string.rep("*", #loginBoxPasswordText), fieldX, row2y)
         end)
-        local chatboxScenePlacementQuad = love.graphics.newQuad(0, 0, nicknamePickerBoxDims[1], nicknamePickerBoxDims[2],
-            nicknamePickerBoxDims[1], nicknamePickerBoxDims[2])
+        local chatboxScenePlacementQuad = love.graphics.newQuad(0, 0, nicknamePickerBoxDims[1],
+            nicknamePickerBoxDims[2], nicknamePickerBoxDims[1], nicknamePickerBoxDims[2])
         resolutionScaledDraw(nicknamePickerCanvas, chatboxScenePlacementQuad, 550, 550)
     end
     love.graphics.pop()
@@ -235,7 +240,7 @@ local function drawGrid(tileSize, color)
     end
     for i = 1, math.floor(mockResolution[2] / tileSize) do
         local pos1 = {0, i * tileSize}
-        local pos2 =  {mockResolution[1], i * tileSize}
+        local pos2 = {mockResolution[1], i * tileSize}
         -- TODO: Investigate: This should probably be corrected like this:
         -- local cPos1 = resolutionScaledPos(pos1)
         -- local cPos2 = resolutionScaledPos(pos2)
@@ -245,7 +250,7 @@ local function drawGrid(tileSize, color)
     end
     for i = 1, math.floor(mockResolution[1] / tileSize) do
         local pos1 = {i * tileSize, 0}
-        local pos2 =  {i * tileSize, mockResolution[2]}
+        local pos2 = {i * tileSize, mockResolution[2]}
         -- local cPos1 = resolutionScaledPos(pos1)
         -- local cPos2 = resolutionScaledPos(pos2)
         local cPos1 = pos1
@@ -271,7 +276,8 @@ local function tiledUIPanel(assetName, tileSize, scale, panelPos)
         local scaledTileSize = self.tileSize * self.scale
         assert(xPosInTiles >= 0 and yPosInTiles >= 0 and widthInTiles > 0 and widthInTiles > 0)
         local atlas = tileAtlas.wrap(self.assetName, self.tileSize)
-        local startingX, startingY, panelWInTiles, panelHInTiles = self.panelPos[1], self.panelPos[2], self.panelPos[3], self.panelPos[4]
+        local startingX, startingY, panelWInTiles, panelHInTiles = self.panelPos[1], self.panelPos[2], self.panelPos[3],
+            self.panelPos[4]
         for xI = 0, widthInTiles - 1 do
             for yI = 0, heightInTiles - 1 do
                 -- assigns which tile gets rendered at this position(at scaledTileSize * posInTiles + index)
@@ -297,7 +303,9 @@ local function tiledUIPanel(assetName, tileSize, scale, panelPos)
                     tileY = startingY + 1
                     -- tileY = startingY + 1 + yI % (panelHInTiles - 2)
                 end
-                atlas:drawTile((xPosInTiles + xI) * self.tileSize * self.scale, (yPosInTiles + yI) * self.tileSize * self.scale, tileX, tileY, self.scale * self.tileSize, self.scale * self.tileSize)
+                atlas:drawTile((xPosInTiles + xI) * self.tileSize * self.scale,
+                    (yPosInTiles + yI) * self.tileSize * self.scale, tileX, tileY, self.scale * self.tileSize,
+                    self.scale * self.tileSize)
             end
         end
     end
@@ -318,55 +326,22 @@ function loginClicked()
     focusChat()
 end
 
-function renderNewUI()
-    local x, y, width, height = 4, 4, 8, 3
-    local tileSize = 16
-    local scale = 5
+local function tintedTextField(x, y, width, vertMargins)
+    local ascent = assets.get("font"):getAscent()
+    love.graphics.setColor(0, 0, 0, 0.1)
+    love.graphics.rectangle("fill", x, y, width, ascent + 2 * vertMargins)
+    love.graphics.setColor(0, 0, 0, 1)
+end
 
-    local function tintedTextField(x, y, width, vertMargins)
-        local ascent = assets.get("font"):getAscent()
-        love.graphics.setColor(0, 0, 0, 0.1)
-        love.graphics.rectangle("fill",  x, y, width, ascent + 2 * vertMargins)
-        love.graphics.setColor(0, 0, 0, 1)
-    end
-    local underscore
-    if delta % 1 < 0.5 then underscore = "_" else underscore = "" end
-    -- render loginbox
-    if loginBoxEnabled then
-        tiledUIPanel("uiImage", tileSize, scale):draw(x, y, width, height)
-        tiledUIPanel("uiImage", tileSize / 2, scale, {20, 20, 4, 4}):draw(x * 2 + 10 - 0.5, y * 2 + 4 - 0.1, 6, 2)
-        love.graphics.setColor(0, 0, 0, 1)
-        handleLoginClick = function(xIn, yIn, mb, repeating)
-            -- and xIn / 8 > (x * 2 + 10 - 0.5) + 6 and yIn / 8 >= y * 2 + 4 - 0.1 and yIn / 8 < y * 2 + 4 - 0.1 + 2
-            -- print(xIn, yIn, widthIn, heightIn)
-            -- print(8 * (x * 2 + 10 - 0.5))
-            if xIn >= 8 * scale * (x * 2 + 10 - 0.5) and xIn < 8 * scale * (x * 2 + 10 - 0.5 + 6) and yIn >= 8 * scale * (y * 2 + 4 - 0.1) and yIn < 8 * scale * (y * 2 + 4 - 0.1 + 2) then
-                loginClicked()
-            end
-        end
-        love.graphics.print("login", (x + 5.8) * tileSize * scale, (y + 2.1) * tileSize * scale)
-        love.graphics.print("username:", x * tileSize * scale + 50, y * tileSize * scale + 60)
-        tintedTextField(x * tileSize * scale + 270, y * tileSize * scale + 60, 300, 2)
-        local usernameUscore = ""
-        if activeLoginBoxField == "nickname" then usernameUscore = underscore end
-        love.graphics.print(loginBoxUsernameText .. usernameUscore, x * tileSize * scale + 270, y * tileSize * scale + 60)
-        love.graphics.print("password:", x * tileSize * scale + 50, y * tileSize * scale + 110)
-        love.graphics.setColor(0, 0, 0, 0.1)
-        tintedTextField( x * tileSize * scale + 270, y * tileSize * scale + 110, 300, 2)
-        love.graphics.setColor(0, 0, 0, 1)
-        local pwdUscore = ""
-        if activeLoginBoxField == "password" then pwdUscore = underscore end
-        love.graphics.print(string.rep("*", #loginBoxPasswordText)  .. pwdUscore, x * tileSize * scale + 270, y * tileSize * scale + 110)
-        love.graphics.setColor(0.8, 0.3, 0.3, 1)
-        love.graphics.setFont(assets.get("resources/fonts/JPfallback.ttf", 24))
-        love.graphics.printf(loginBoxErrorText, x * tileSize * scale + 32, y * tileSize * scale + 170, 300, "left")
-        love.graphics.setFont(assets.get("font"))
-        love.graphics.setColor(1, 1, 1, 1)
-    end
-    -- drawGrid(tileSize * scale, {1, 0, 1, 1})
-
-    -- render chatbox
+function drawChatBox()
+    local tileSize, scale = 16, 5
     local x, y, width, height = 16.5, 1, 7, 12
+    local underscore
+    if delta % 1 < 0.5 then
+        underscore = "_"
+    else
+        underscore = ""
+    end
     local yDiff = assets.get("font"):getAscent()
     local scrollDistance = math.max(#chatboxMessageHistory * yDiff - 1000, 0)
     tiledUIPanel("uiImage", tileSize, scale):draw(x, y, width, height)
@@ -376,13 +351,90 @@ function renderNewUI()
     end
     tintedTextField(x * tileSize * scale + 30, y * tileSize * scale + 880, 450, 2)
     local a = ""
-    if activeUIElemIndex == 2 then a = underscore end
+    if activeUIElemIndex == 2 then
+        a = underscore
+    end
     love.graphics.print(clientChatboxMessage .. a, x * tileSize * scale + 30, y * tileSize * scale + 880)
     love.graphics.setColor(1, 1, 1, 1)
+end
 
+function drawLoginBox()
+    local tileSize, scale = 16, 5
+    local x, y, width, height = 4, 4, 8, 3
+    local underscore
+    if delta % 1 < 0.5 then
+        underscore = "_"
+    else
+        underscore = ""
+    end
+    -- render loginbox
+    if loginBoxEnabled then
+        tiledUIPanel("uiImage", tileSize, scale):draw(x, y, width, height)
+        tiledUIPanel("uiImage", tileSize / 2, scale, {20, 20, 4, 4}):draw(x * 2 + 10 - 0.5, y * 2 + 4 - 0.1, 6, 2)
+        love.graphics.setColor(0, 0, 0, 1)
+        -- TODO: Disable after logging in.
+        handleLoginClick = function(xIn, yIn, mb, repeating)
+            -- and xIn / 8 > (x * 2 + 10 - 0.5) + 6 and yIn / 8 >= y * 2 + 4 - 0.1 and yIn / 8 < y * 2 + 4 - 0.1 + 2
+            -- print(xIn, yIn, widthIn, heightIn)
+            -- print(8 * (x * 2 + 10 - 0.5))
+            if xIn >= 8 * scale * (x * 2 + 10 - 0.5) and xIn < 8 * scale * (x * 2 + 10 - 0.5 + 6) and yIn >= 8 * scale *
+                (y * 2 + 4 - 0.1) and yIn < 8 * scale * (y * 2 + 4 - 0.1 + 2) then
+                loginClicked()
+            end
+        end
+        love.graphics.print("login", (x + 5.8) * tileSize * scale, (y + 2.1) * tileSize * scale)
+        love.graphics.print("username:", x * tileSize * scale + 50, y * tileSize * scale + 60)
+        tintedTextField(x * tileSize * scale + 270, y * tileSize * scale + 60, 300, 2)
+        local usernameUscore = ""
+        if activeLoginBoxField == "nickname" then
+            usernameUscore = underscore
+        end
+        love.graphics.print(loginBoxUsernameText .. usernameUscore, x * tileSize * scale + 270,
+            y * tileSize * scale + 60)
+        love.graphics.print("password:", x * tileSize * scale + 50, y * tileSize * scale + 110)
+        love.graphics.setColor(0, 0, 0, 0.1)
+        tintedTextField(x * tileSize * scale + 270, y * tileSize * scale + 110, 300, 2)
+        love.graphics.setColor(0, 0, 0, 1)
+        local pwdUscore = ""
+        if activeLoginBoxField == "password" then
+            pwdUscore = underscore
+        end
+        love.graphics.print(string.rep("*", #loginBoxPasswordText) .. pwdUscore, x * tileSize * scale + 270,
+            y * tileSize * scale + 110)
+        love.graphics.setColor(0.8, 0.3, 0.3, 1)
+        love.graphics.setFont(assets.get("resources/fonts/JPfallback.ttf", 24))
+        love.graphics.printf(loginBoxErrorText, x * tileSize * scale + 32, y * tileSize * scale + 170, 300, "left")
+        love.graphics.setFont(assets.get("font"))
+        love.graphics.setColor(1, 1, 1, 1)
+    end
+end
+
+function renderNewUI()
+    local tileSize = 16
+    local scale = 5
+
+    -- equipment view
+    local x, y, width, height = 8, 0, 2, 2
+    tiledUIPanel("uiImage", tileSize, scale, {10, 4, 2, 2}):draw(x, y, width, height)
+
+    local x, y, width, height = 10, 0, 2, 2
+    tiledUIPanel("uiImage", tileSize, scale, {10, 4, 2, 2}):draw(x, y, width, height)
+
+    local x, y, width, height = 12, 0, 2, 2
+    tiledUIPanel("uiImage", tileSize, scale, {10, 4, 2, 2}):draw(x, y, width, height)
+
+    local x, y, width, height = 7, 1.5 - 0.1, 9, 7
+    tiledUIPanel("uiImage", tileSize, scale, {0, 14, 10, 10}):draw(x, y, width, height)
+
+    -- character view
+    local x, y, width, height = 0.5, 0.5, 8, 8
+    tiledUIPanel("uiImage", tileSize, scale):draw(x, y, width, height)
+
+    -- drawGrid(tileSize * scale, {1, 0, 1, 1})
     -- render logbox
     local x, y, width, height = 1, 9, 15, 4
     tiledUIPanel("uiImage", tileSize, scale):draw(x, y, width, height)
+    drawChatBox()
 end
 
 ---- handling input
@@ -466,6 +518,7 @@ function game.load(args)
     assets.playerImage = animation.newCharacterAnimation("character")
 
     -- init logic:
+    playerAreaCanvas = love.graphics.newCanvas(unpack(playerAreaDims))
     assets.playerImage:play(2, "idle", true, false)
 
     chatboxUIBox = uiBox.makeBox(chatboxDims[1], chatboxDims[2], "gradientShaderA", {}, 20)
@@ -492,28 +545,11 @@ function game.draw()
     local backgroundQuad = love.graphics.newQuad(0, 0, 2560, 1440, 2560, 1440)
     love.graphics.draw(assets.get("backgroundImage"), backgroundQuad, 0, 0, 0, 1, 1, 0, 0)
 
+    -- renderOldUI()
+    renderNewUI()
     -- draw scene
-
-    -- character view
-    local x, y, width, height = 8, 0, 2, 2
     local tileSize = 16
     local scale = 5
-    tiledUIPanel("uiImage", tileSize, scale, {10, 4, 2, 2}):draw(x, y, width, height)
-
-    -- equipment view
-    local x, y, width, height = 7, 1.5 - 0.1, 9, 7
-    local tileSize = 16
-    local scale = 5
-    tiledUIPanel("uiImage", tileSize, scale, {0, 14, 10, 10}):draw(x, y, width, height)
-
-    local x, y, width, height = 0.5, 0.5, 8, 8
-    local tileSize = 16
-    local scale = 5
-    tiledUIPanel("uiImage", tileSize, scale):draw(x, y, width, height)
-
-    local playerAreaDims = array.wrap{720, 720}
-    -- FIXME: Cache
-    local playerAreaCanvas = love.graphics.newCanvas(unpack(playerAreaDims))
 
     playerAreaCanvas:renderTo(function()
         love.graphics.clear(1.0, 1.0, 1.0)
@@ -538,8 +574,62 @@ function game.draw()
     local playfieldScenePlacementQuad = love.graphics.newQuad(0, 0, unpack(playerAreaDims:rep(2)))
     local pos = scale * tileSize * (0.5 - (8 - 720 / (tileSize * scale)))
     resolutionScaledDraw(playerAreaCanvas, playfieldScenePlacementQuad, pos, pos)
-    -- renderOldUI()
-    renderNewUI()
+
+    -- render character silhouette
+
+    -- FIXME: Cache canvas
+    -- TODO: Use stencil (like src/uiBox.lua:15)
+    local characterSpriteCanvas = love.graphics.newCanvas(32, 32)
+    characterSpriteCanvas:renderTo(function()
+        characterSpriteCanvas:setFilter("linear", "linear", 4)
+        local asset = assets.get("resources/images/character.png")
+        local width, height = asset:getDimensions()
+        local characterSheetQuad = love.graphics.newQuad(0, 0, 32, 32, width, height)
+        love.graphics.draw(asset, characterSheetQuad, 0, 0)
+    end)
+
+    local tempCanvas = love.graphics.newCanvas(32, 32)
+    tempCanvas:setFilter("linear", "linear", 4)
+    local maskShader = assets.get("resources/shaders/masks/maskFromTexture.glsl")
+    tempCanvas:renderTo(function()
+        love.graphics.withShader(maskShader, function()
+            -- love.graphics.clear(1.0, 1.0, 1.0)
+            maskShader:send("Tex", characterSpriteCanvas)
+            love.graphics.draw(characterSpriteCanvas, love.graphics.newQuad(0, 0, 24, 32, 24, 32), 0, 0)
+        end)
+    end)
+
+    local quad = love.graphics.newQuad(0, 0, 800, 800, 800, 800)
+    resolutionScaledDraw(tempCanvas, quad, 1040, 80)
+
+    -- draw equipment slots.
+    local tileSize = 16
+    local scale = 5
+
+    -- equipment view
+    -- local x, y, width, height = 9 - 0.2, 2, 2, 2
+    -- tiledUIPanel("uiImage", tileSize, scale, {10, 6, 2, 2}):draw(x, y, width, height)
+
+    local x, y, width, height = 9 - 0.2, 4, 2, 2
+    tiledUIPanel("uiImage", tileSize, scale, {10, 6, 2, 2}):draw(x, y, width, height)
+
+    local x, y, width, height = 9 - 0.2, 6, 2, 2
+    tiledUIPanel("uiImage", tileSize, scale, {10, 6, 2, 2}):draw(x, y, width, height)
+
+
+    local x, y, width, height = 13, 2, 2, 2
+    tiledUIPanel("uiImage", tileSize, scale, {10, 6, 2, 2}):draw(x, y, width, height)
+
+    local x, y, width, height = 13.5, 4, 2, 2
+    tiledUIPanel("uiImage", tileSize, scale, {10, 6, 2, 2}):draw(x, y, width, height)
+
+    local x, y, width, height = 13, 6, 2, 2
+    tiledUIPanel("uiImage", tileSize, scale, {10, 6, 2, 2}):draw(x, y, width, height)
+
+    -- local x, y, width, height = 11.8, 6, 2, 2
+    -- tiledUIPanel("uiImage", tileSize, scale, {10, 4, 2, 2}):draw(x, y, width, height)
+
+    drawLoginBox()
 end
 
 function game.quit()
@@ -553,7 +643,9 @@ end
 
 function love.keypressed(key)
     UIElemHandlers[activeUIElemIndex].keypressed(key)
-    if love.keyboard.isDown("f5") then love.event.quit("restart") end
+    if love.keyboard.isDown("f5") then
+        love.event.quit("restart")
+    end
 end
 
 function love.textinput(t)

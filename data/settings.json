@@ -5,7 +5,7 @@
         "shouldPerformanceLog": false,
         //
         "performanceLogPeriodInSeconds": 60,
-        "shouldLogFPS": false
+        "shouldLogFPS": true
     }, // this too
     "width":1920,
     "height":1080,
