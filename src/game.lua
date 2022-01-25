@@ -576,19 +576,18 @@ function game.draw()
             assets.get("testShaderA"):send("rectSize", {64, 64})
             love.graphics.rectangle("fill", 0, 0, 720, 720)
         end)
-
         -- love.graphics.withShader(blurShader, function()
         --     blurShader:send("blurSize", 1 / (2560 / 16))
         --     blurShader:send("sigma", 5)
         --     local playerSpriteQuad = love.graphics.newQuad(0, 0, 720, 720, 720, 720)
         --     assets.playerImage:draw(playerSpriteQuad, 0, 0, 0, 1, 1, 0, 0)
         -- end)
-
         local playerSpriteQuad = love.graphics.newQuad(0, 0, 720, 720, 720, 720)
+        love.graphics.draw(assets.get("resources/images/background2.png"), playerSpriteQuad)
         assets.playerImage:draw(playerSpriteQuad, 0, 0, 0, 1, 1, 0, 0)
     end)
-    -- FIXME: Magic numbers
     local playfieldScenePlacementQuad = love.graphics.newQuad(0, 0, unpack(playerAreaDims:rep(2)))
+    -- FIXME: Magic numbers
     local pos = scale * tileSize * (0.5 - (8 - 720 / (tileSize * scale)))
     resolutionScaledDraw(playerAreaCanvas, playfieldScenePlacementQuad, pos, pos)
 
@@ -619,6 +618,8 @@ function game.draw()
     local quad = love.graphics.newQuad(0, 0, 800, 800, 800, 800)
     resolutionScaledDraw(tempCanvas, quad, 1040, 80)
 
+    local ta = tileAtlas.wrap("resources/images/slotIcons.png", 32)
+
     -- draw equipment slots.
     local tileSize = 16
     local scale = 5
@@ -627,21 +628,26 @@ function game.draw()
     -- local x, y, width, height = 9 - 0.2, 2, 2, 2
     -- tiledUIPanel("uiImage", tileSize, scale, {10, 6, 2, 2}):draw(x, y, width, height)
 
+    -- FIXME: TileAtlas offsets??
     local x, y, width, height = 9 - 0.2, 4, 2, 2
     tiledUIPanel("uiImage", tileSize, scale, {10, 6, 2, 2}):draw(x, y, width, height)
+    ta:drawTile((x + 0.1) * tileSize * scale, (y + 0.15) * tileSize * scale, 3, 1, (width - 0.5) * tileSize * scale, (height - 0.5) * tileSize * scale)
 
     local x, y, width, height = 9 - 0.2, 6, 2, 2
     tiledUIPanel("uiImage", tileSize, scale, {10, 6, 2, 2}):draw(x, y, width, height)
-
+    ta:drawTile((x + 0.1) * tileSize * scale, (y + 0.15) * tileSize * scale, 3, 1, (width - 0.5) * tileSize * scale, (height - 0.5) * tileSize * scale)
 
     local x, y, width, height = 13, 2, 2, 2
     tiledUIPanel("uiImage", tileSize, scale, {10, 6, 2, 2}):draw(x, y, width, height)
+    ta:drawTile((x + 0.1) * tileSize * scale, (y + 0.15) * tileSize * scale, 1, 0, (width - 0.5) * tileSize * scale, (height - 0.5) * tileSize * scale)
 
     local x, y, width, height = 13.5, 4, 2, 2
     tiledUIPanel("uiImage", tileSize, scale, {10, 6, 2, 2}):draw(x, y, width, height)
+    ta:drawTile((x + 0.1) * tileSize * scale, (y + 0.15) * tileSize * scale, 0, 0, (width - 0.5) * tileSize * scale, (height - 0.5) * tileSize * scale)
 
     local x, y, width, height = 13, 6, 2, 2
     tiledUIPanel("uiImage", tileSize, scale, {10, 6, 2, 2}):draw(x, y, width, height)
+    ta:drawTile((x + 0.1) * tileSize * scale, (y + 0.15) * tileSize * scale, 7, 0, (width - 0.5) * tileSize * scale, (height - 0.5) * tileSize * scale)
 
     -- local x, y, width, height = 11.8, 6, 2, 2
     -- tiledUIPanel("uiImage", tileSize, scale, {10, 4, 2, 2}):draw(x, y, width, height)
