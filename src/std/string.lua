@@ -36,4 +36,4 @@ function string.split(str, sep)
     return res
 end
 
-return types.makeType(string)
+return types.makeType(string, "string")

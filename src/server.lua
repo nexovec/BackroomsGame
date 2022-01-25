@@ -41,7 +41,9 @@ local function onUserLogout(peer)
 end
 
 local function registerAccount(creds, peer)
-    assert(creds.username and creds.password)
+    -- TODO: Load fallback credentials instead of failing here.
+    assert(creds.username)
+    assert(creds.password)
     local username = creds.username
     local password = creds.password
     credentials:append{username = username, password = password}
@@ -49,6 +51,7 @@ local function registerAccount(creds, peer)
     -- TODO: Ban SERVER as username
     peer = peer or "SERVER"
     print(tostring(peer), "has just registered as", username, "!")
+    -- TODO: Save credentials.
     -- love.filesystem.write(credentialsPath, json.encode(credentials))
 end
 
@@ -158,10 +161,10 @@ function handleEnetServer()
     if hostevent then
         -- print("Server detected message type: " .. hostevent.type)
         if hostevent.type == "connect" then
-            -- TODO: Implement max connection count
             print(hostevent.peer, "connected.")
             connectedPeers:append(hostevent.peer)
             hostevent.peer:timeout(0, 0, 5000)
+            -- TODO: Implement max connection count
         end
         if not connectedPeers:contains(hostevent.peer) then
             -- TODO: Log unregistered clients trying to send messages
@@ -179,19 +182,26 @@ function handleEnetServer()
     hostevent = nil
 end
 
+local function decodeJsonFile(filepath)
+    local dataJson = love.filesystem.newFileData(filepath):getString()
+    assert(dataJson)
+    return json.decode(dataJson)
+end
+
 function server.load()
     beginServer()
-    -- TODO: server console
-
-    -- TODO: save credentials when new account registers
-    -- love.filesystem.createDirectory("data")
-
+    -- TODO: Server console
+    -- TODO: Save credentials when new account registers
     -- TODO: Username blacklist
     -- TODO: Ip blacklist
+    -- credentials = array.wrap()
+    local listOfCredentials = array.wrap(decodeJsonFile("data/credentials.json"))
     credentials = array.wrap()
-
+    for k,v in listOfCredentials:iter() do
+            registerAccount(v)
+    end
     -- DEBUG:
-    registerAccount({username = "nexovec", password = "heslo"})
+    -- registerAccount({username = "nexovec", password = "heslo"})
 end
 
 function server.update(dt)

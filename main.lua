@@ -17,6 +17,8 @@ local timeLastLoggedFPS = nil
 local ticks = 0
 local options = {}
 
+local reportedFPS = 0
+
 
 function love.load(args)
     -- TODO: Untested platform warnings, compatibility checks
@@ -65,7 +67,8 @@ function love.update(dt)
     end
 
     if assets.get("settings").logging.shouldLogFPS and love.timer.getTime() - timeLastLoggedFPS > 1 then
-        print(ticks .. "\t:\t" .. collectgarbage("count"))
+        -- print(ticks .. "\t:\t" .. collectgarbage("count"))
+        reportedFPS = ticks
         ticks = 0
         timeLastLoggedFPS = timeLastLoggedFPS + 1.0
     end
@@ -75,7 +78,7 @@ function love.update(dt)
         profile.reset()
         timeLastLogged = love.timer.getTime()
     end
-    collectgarbage("collect")
+    collectgarbage("step")
     profile.stop()
 end
 
@@ -84,6 +87,10 @@ function love.draw()
     profile.start()
     game.draw()
     profile.stop()
+    if assets.get("settings").logging.shouldLogFPS then
+        love.graphics.setFont(assets.get("font"))
+        love.graphics.print(reportedFPS)
+    end
 end
 
 function love.quit()

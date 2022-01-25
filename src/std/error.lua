@@ -1,6 +1,3 @@
-local error = {}
-local types = require("std.types")
-function error.__call(msg, level)
-    error(errMsg, 1 + errLevel)
+return function(msg, level)
+    error(msg, 1 + level)
 end
-return types.makeType(error)

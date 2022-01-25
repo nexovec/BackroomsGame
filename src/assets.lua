@@ -32,6 +32,7 @@ local function reloadResource(k, path)
     local v = resources[k]
     if v.asset and v.asset.release then v.asset:release() end
     -- TODO: Check if it is the same kind of file
+    -- TODO: Fallback to the original file if new one isn't compatible or file doesn't exist.
     v.cachedFileLastModified = love.filesystem.getInfo(v.path).modtime
     print("Updated " .. v.path)
     -- resources[k].asset = v.func(v.path, unpack(v.params or {}))

@@ -1,15 +1,11 @@
-local assert = {}
+local error = require("std.error")
 
--- API
-
-function assert.__call(term, errMsg, errLevel, errHandle)
+return function(term, errMsg, errLevel, errHandle)
     -- TODO: Use errHandle
     -- TODO: Test errMsg == nil
-    errMsg = errMsg or "assertion failed!"
+    errMsg = errMsg or "Assertion failed!"
     errLevel = errLevel or 1
     if not term then
         error(errMsg, 1 + errLevel)
     end
 end
-setmetatable(assert, assert)
-return assert

@@ -127,9 +127,11 @@ local function receivedMessageHandle(hostevent)
             loginPrompt(trimmedMessage)
             -- server tells you to disconnect
             -- TODO:
-        else
-            print(prefix)
+        elseif prefix == "connected" then
             -- TODO:
+        else
+            -- FIXME: security vulnerability (force-crash)
+            error("Enet: message prefix " .. prefix .. " is unhandled!")
         end
     else
         -- TODO: don't crash
@@ -342,12 +344,26 @@ function drawChatBox()
     else
         underscore = ""
     end
-    local yDiff = assets.get("font"):getAscent()
-    local scrollDistance = math.max(#chatboxMessageHistory * yDiff - 1000, 0)
+
+    local font = assets.get("font")
+    local ascent = font:getAscent()
+    local scrollDistance = math.max(#chatboxMessageHistory * ascent - 1000, 0)
     tiledUIPanel("uiImage", tileSize, scale):draw(x, y, width, height)
     love.graphics.setColor(0, 0, 0, 1)
-    for i, messageText in ipairs(chatboxMessageHistory) do
-        love.graphics.print(messageText, x * tileSize * scale + 30, y * tileSize * scale + 30 - yDiff + yDiff * i)
+    -- TODO: Fade out top of the chat window
+    -- TODO: Smooth chat scrolling
+    local rowIndex = 0
+    local maxRowWidth = 400
+    local firstRowY = y * tileSize * scale + 30 - ascent
+    for _, messageText in chatboxMessageHistory:iter() do
+        local msgWidth, listOfRows = font:getWrap(messageText, maxRowWidth)
+        -- local toSkip = math.ceil(msgWidth % maxRowWidth)
+        for k, v in ipairs(listOfRows) do
+            love.graphics.print(v, x * tileSize * scale + 30, firstRowY + ascent * rowIndex)
+            rowIndex = rowIndex + 1
+        end
+        -- love.graphics.printf(messageText, x * tileSize * scale + 30, y * tileSize * scale + 30 - ascent + ascent * rowIndex, maxRowWidth)
+        -- rowIndex = rowIndex + #listOfRows - 1
     end
     tintedTextField(x * tileSize * scale + 30, y * tileSize * scale + 880, 450, 2)
     local a = ""
@@ -367,6 +383,7 @@ function drawLoginBox()
     else
         underscore = ""
     end
+    -- TODO: Don't flicker the login box if credentials are rejected. (fade-out ?)
     -- render loginbox
     if loginBoxEnabled then
         tiledUIPanel("uiImage", tileSize, scale):draw(x, y, width, height)

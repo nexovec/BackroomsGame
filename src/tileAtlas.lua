@@ -32,4 +32,4 @@ function tileAtlas.wrap(drawableNameOrDrawable, tileSize)
     }, tileAtlas)
 end
 
-return types.makeType(tileAtlas)
+return types.makeType(tileAtlas, "tileAtlas")
