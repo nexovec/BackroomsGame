@@ -1,14 +1,13 @@
 local utf8 = require("utf8")
+local assert = require("std.assert")
+local json = require("std.json")
 
 -- API
 
-function love.graphics.withShader(shader, func)
-    assert(type(func) == "function", "Argument #2 must not be nil.", 2)
-    local oldShader = love.graphics.getShader()
-    love.graphics.setShader(shader)
-    local res = func()
-    love.graphics.setShader(oldShader)
-    return res
+function decodeJsonFile(filepath)
+    local dataJson = love.filesystem.newFileData(filepath):getString()
+    assert(dataJson)
+    return json.decode(dataJson)
 end
 
 function YOLO()
@@ -41,6 +40,15 @@ end
 --     end
 --     love.graphics.print(rowString, x, y + elevation)
 -- end
+if love.graphics then
+function love.graphics.withShader(shader, func)
+    assert(type(func) == "function", "Argument #2 must not be nil.", 2)
+    local oldShader = love.graphics.getShader()
+    love.graphics.setShader(shader)
+    local res = func()
+    love.graphics.setShader(oldShader)
+    return res
+end
 
 function love.graphics.applyShader(canvas, textureShader, uniformsTable, options)
     -- TODO: Test
@@ -65,6 +73,14 @@ function love.graphics.applyShader(canvas, textureShader, uniformsTable, options
     -- love.graphics.setCanvas(oldCanvas)
 end
 
+function love.graphics.wrapGraphicsState(func)
+    love.graphics.push("all")
+    func()
+    love.graphics.pop()
+end
+end
+
+if love.filesystem then
 function love.wrapRequirePath(path, moduleNameOrFunc, passCurrentRequirePaths)
     -- TODO: Test
     assert(type(path) == "string" and (type(moduleNameOrFunc) == "string" or type(moduleNameOrFunc) == "function"),
@@ -93,9 +109,4 @@ function love.requireDirectory(pathToDir, localRequires)
     -- TODO: Make sure .init.lua is in requirePath.
     return wrapRequirePath(pathToDir, localRequires)
 end
-
-function love.graphics.wrapGraphicsState(func)
-    love.graphics.push("all")
-    func()
-    love.graphics.pop()
 end

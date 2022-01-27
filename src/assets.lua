@@ -6,6 +6,7 @@ local std = require("std")
 local map = require("std.map")
 local string = require("std.string")
 local array = require("std.array")
+require("loveOverrides")
 
 
 local resources = map.wrap()
@@ -14,11 +15,6 @@ local deltaTime = 0
 
 
 -- helper functions
-local function decodeJsonFile(filepath)
-    local dataJson = love.filesystem.newFileData(filepath):getString()
-    assert(dataJson)
-    return json.decode(dataJson)
-end
 
 local function stubResourceHandle(path)
     local fileExtension = array.wrap(string.split(v.path, ".")):pop()

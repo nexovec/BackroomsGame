@@ -9,6 +9,7 @@ local assets = require("assets")
 local json = require("std.json")
 local enet = require("enet")
 local map = require("std.map")
+require("loveOverrides")
 
 
 local enetServer
@@ -182,19 +183,12 @@ function handleEnetServer()
     hostevent = nil
 end
 
-local function decodeJsonFile(filepath)
-    local dataJson = love.filesystem.newFileData(filepath):getString()
-    assert(dataJson)
-    return json.decode(dataJson)
-end
-
 function server.load()
     beginServer()
     -- TODO: Server console
     -- TODO: Save credentials when new account registers
     -- TODO: Username blacklist
     -- TODO: Ip blacklist
-    -- credentials = array.wrap()
     local listOfCredentials = array.wrap(decodeJsonFile("data/credentials.json"))
     credentials = array.wrap()
     for k,v in listOfCredentials:iter() do

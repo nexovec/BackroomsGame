@@ -335,6 +335,8 @@ local function tintedTextField(x, y, width, vertMargins)
     love.graphics.setColor(0, 0, 0, 1)
 end
 
+-- TODO: Draw rectangle around image
+
 function drawChatBox()
     local tileSize, scale = 16, 5
     local x, y, width, height = 16.5, 1, 7, 12
@@ -353,7 +355,7 @@ function drawChatBox()
     -- TODO: Fade out top of the chat window
     -- TODO: Smooth chat scrolling
     local rowIndex = 0
-    local maxRowWidth = 400
+    local maxRowWidth = 500
     local firstRowY = y * tileSize * scale + 30 - ascent
     for _, messageText in chatboxMessageHistory:iter() do
         local msgWidth, listOfRows = font:getWrap(messageText, maxRowWidth)
@@ -618,7 +620,7 @@ function game.draw()
     local quad = love.graphics.newQuad(0, 0, 800, 800, 800, 800)
     resolutionScaledDraw(tempCanvas, quad, 1040, 80)
 
-    local ta = tileAtlas.wrap("resources/images/slotIcons.png", 32)
+    local slotIconsAtlas = tileAtlas.wrap("resources/images/slotIcons.png", 32, 6)
 
     -- draw equipment slots.
     local tileSize = 16
@@ -629,25 +631,34 @@ function game.draw()
     -- tiledUIPanel("uiImage", tileSize, scale, {10, 6, 2, 2}):draw(x, y, width, height)
 
     -- FIXME: TileAtlas offsets??
-    local x, y, width, height = 9 - 0.2, 4, 2, 2
-    tiledUIPanel("uiImage", tileSize, scale, {10, 6, 2, 2}):draw(x, y, width, height)
-    ta:drawTile((x + 0.1) * tileSize * scale, (y + 0.15) * tileSize * scale, 3, 1, (width - 0.5) * tileSize * scale, (height - 0.5) * tileSize * scale)
+    local itemBoxCanvas = love.graphics.newCanvas(tileSize, tileSize)
+    itemBoxCanvas:renderTo(function()
+        tiledUIPanel("uiImage", tileSize, scale, {10, 6, 2, 2}):draw(1, 1, 1, 1)
+    end)
 
+    local x, y, width, height = 9 - 0.2, 4, 2, 2
+    -- love.graphics.draw(itemBoxCanvas, love.graphics.newQuad(0, 0, width, height, width, height), x * tileSize * scale, y * tileSize * scale)
+    tiledUIPanel("uiImage", tileSize, scale, {10, 6, 2, 2}):draw(x, y, width, height)
+    slotIconsAtlas:drawTile((x + 0.1) * tileSize * scale, (y + 0.15) * tileSize * scale, 3, 1, (width - 0.5) * tileSize * scale, (height - 0.5) * tileSize * scale)
+    
     local x, y, width, height = 9 - 0.2, 6, 2, 2
     tiledUIPanel("uiImage", tileSize, scale, {10, 6, 2, 2}):draw(x, y, width, height)
-    ta:drawTile((x + 0.1) * tileSize * scale, (y + 0.15) * tileSize * scale, 3, 1, (width - 0.5) * tileSize * scale, (height - 0.5) * tileSize * scale)
-
+    slotIconsAtlas:drawTile((x + 0.1) * tileSize * scale, (y + 0.15) * tileSize * scale, 3, 1, (width - 0.5) * tileSize * scale, (height - 0.5) * tileSize * scale)
+    
     local x, y, width, height = 13, 2, 2, 2
     tiledUIPanel("uiImage", tileSize, scale, {10, 6, 2, 2}):draw(x, y, width, height)
-    ta:drawTile((x + 0.1) * tileSize * scale, (y + 0.15) * tileSize * scale, 1, 0, (width - 0.5) * tileSize * scale, (height - 0.5) * tileSize * scale)
+    -- FIXME:
+    love.graphics.draw(itemBoxCanvas, love.graphics.newQuad(0, 0, 16, 16, 16, 16), 50, 100)
+    -- love.graphics.draw(itemBoxCanvas, love.graphics.newQuad(0, 0, width * scale * tileSize, height * scale * tileSize, width * scale * tileSize, height * scale * tileSize))
+    slotIconsAtlas:drawTile((x + 0.1) * tileSize * scale, (y + 0.15) * tileSize * scale, 1, 0, (width - 0.5) * tileSize * scale, (height - 0.5) * tileSize * scale)
 
     local x, y, width, height = 13.5, 4, 2, 2
     tiledUIPanel("uiImage", tileSize, scale, {10, 6, 2, 2}):draw(x, y, width, height)
-    ta:drawTile((x + 0.1) * tileSize * scale, (y + 0.15) * tileSize * scale, 0, 0, (width - 0.5) * tileSize * scale, (height - 0.5) * tileSize * scale)
+    slotIconsAtlas:drawTile((x + 0.1) * tileSize * scale, (y + 0.15) * tileSize * scale, 0, 0, (width - 0.5) * tileSize * scale, (height - 0.5) * tileSize * scale)
 
     local x, y, width, height = 13, 6, 2, 2
     tiledUIPanel("uiImage", tileSize, scale, {10, 6, 2, 2}):draw(x, y, width, height)
-    ta:drawTile((x + 0.1) * tileSize * scale, (y + 0.15) * tileSize * scale, 7, 0, (width - 0.5) * tileSize * scale, (height - 0.5) * tileSize * scale)
+    slotIconsAtlas:drawTile((x + 0.1) * tileSize * scale, (y + 0.15) * tileSize * scale, 7, 0, (width - 0.5) * tileSize * scale, (height - 0.5) * tileSize * scale)
 
     -- local x, y, width, height = 11.8, 6, 2, 2
     -- tiledUIPanel("uiImage", tileSize, scale, {10, 4, 2, 2}):draw(x, y, width, height)

@@ -15,7 +15,7 @@ void effect()
       love_PixelColor = vec4(0, 0, 0, 0);
   }else{
     // love_PixelColor = vec4(1, 1, 1, 1);
-    love_PixelColor = vec4(1, 1, 1, 1) * vec4(0.1,0.1,0.1,1);
+    love_PixelColor = vec4(1, 1, 1, 1) * vec4(0.1, 0.1, 0.1, 0.7);
   }
 }
 #endif
