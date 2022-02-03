@@ -55,15 +55,27 @@ function love.load(args)
     timeLastLogged = love.timer.getTime()
 end
 
+deltaTime = 0
+
 function love.update(dt)
     profile.start()
     ticks = ticks + 1
 
-    -- TODO: Update at 60 fps
     if options.isServer then
         server.update(dt)
     else
-        game.tick(dt)
+        targetTPS = assets.get("settings").targetTPS
+        if not targetTPS then
+            game.tick(dt)
+        else
+            msPerTick = 1 / targetTPS
+            deltaTime = deltaTime + dt
+            if deltaTime >= msPerTick then
+                -- shouldRender = true
+                deltaTime = deltaTime - msPerTick
+                game.tick(dt)
+            end
+        end
     end
 
     if assets.get("settings").logging.shouldLogFPS and love.timer.getTime() - timeLastLoggedFPS > 1 then

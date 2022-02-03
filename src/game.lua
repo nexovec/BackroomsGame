@@ -315,7 +315,30 @@ local function tiledUIPanel(assetName, tileSize, scale, panelPos)
     return self
 end
 
-local handleLoginClick
+local UITileSize = 16
+local UIScale = 5
+local shouldHandleLoginClick = false
+local loginBoxSize = {
+    x = 4,
+    y = 4,
+    width = 8,
+    height = 3
+}
+
+local loginBoxTextFieldsSizes = {
+    username = {
+        x = loginBoxSize.x * UITileSize * UIScale + 270,
+        y = loginBoxSize.y * UITileSize * UIScale + 60,
+        width = 300,
+        margins = 2
+    },
+    password = {
+        x = loginBoxSize.x * UITileSize * UIScale + 270,
+        y = loginBoxSize.y * UITileSize * UIScale + 110,
+        width = 300,
+        margins = 2
+    }
+}
 
 local function focusChat()
     activeUIElemIndex = 2
@@ -326,6 +349,33 @@ function loginClicked()
     activeLoginBoxField = "password"
     disableLoginPrompt()
     focusChat()
+end
+
+function pointIntersectsQuad(pX, pY, qX, qY, qW, qH)
+    return pX >= qX and pX < qX + qW and pY >= qY and pY < qY + qH
+end
+
+local function handleLoginBoxFieldFocusOnMouseClick(xIn, yIn, mb, repeating)
+    if not loginBoxEnabled then
+        return
+    end
+    if pointIntersectsQuad(xIn, yIn, loginBoxTextFieldsSizes.username.x, loginBoxTextFieldsSizes.username.y,
+        loginBoxTextFieldsSizes.username.width,
+        assets.get("font"):getAscent() + loginBoxTextFieldsSizes.username.margins) then
+        -- FIXME: Disables tabbing and caret rendering
+        activeLoginBoxField = "username"
+    end
+end
+
+local function handleLoginClick(xIn, yIn, mb, repeating)
+    if not shouldHandleLoginClick then
+        return
+    end
+    if pointIntersectsQuad(xIn, yIn, UITileSize / 2 * UIScale * (loginBoxSize.x * 2 + 10 - 0.5),
+        UITileSize / 2 * UIScale * (loginBoxSize.y * 2 + 4 - 0.1), 3 * UITileSize * UIScale, UITileSize * UIScale) then
+        loginClicked()
+        shouldHandleLoginClick = false
+    end
 end
 
 local function tintedTextField(x, y, width, vertMargins)
@@ -377,8 +427,8 @@ function drawChatBox()
 end
 
 function drawLoginBox()
-    local tileSize, scale = 16, 5
-    local x, y, width, height = 4, 4, 8, 3
+    local tileSize, scale = UITileSize, UIScale
+    local x, y, width, height = loginBoxSize.x, loginBoxSize.y, loginBoxSize.width, loginBoxSize.height
     local underscore
     if delta % 1 < 0.5 then
         underscore = "_"
@@ -388,22 +438,17 @@ function drawLoginBox()
     -- TODO: Don't flicker the login box if credentials are rejected. (fade-out ?)
     -- render loginbox
     if loginBoxEnabled then
+        shouldHandleLoginClick = true
+
         tiledUIPanel("uiImage", tileSize, scale):draw(x, y, width, height)
         tiledUIPanel("uiImage", tileSize / 2, scale, {20, 20, 4, 4}):draw(x * 2 + 10 - 0.5, y * 2 + 4 - 0.1, 6, 2)
         love.graphics.setColor(0, 0, 0, 1)
         -- TODO: Disable after logging in.
-        handleLoginClick = function(xIn, yIn, mb, repeating)
-            -- and xIn / 8 > (x * 2 + 10 - 0.5) + 6 and yIn / 8 >= y * 2 + 4 - 0.1 and yIn / 8 < y * 2 + 4 - 0.1 + 2
-            -- print(xIn, yIn, widthIn, heightIn)
-            -- print(8 * (x * 2 + 10 - 0.5))
-            if xIn >= 8 * scale * (x * 2 + 10 - 0.5) and xIn < 8 * scale * (x * 2 + 10 - 0.5 + 6) and yIn >= 8 * scale *
-                (y * 2 + 4 - 0.1) and yIn < 8 * scale * (y * 2 + 4 - 0.1 + 2) then
-                loginClicked()
-            end
-        end
         love.graphics.print("login", (x + 5.8) * tileSize * scale, (y + 2.1) * tileSize * scale)
         love.graphics.print("username:", x * tileSize * scale + 50, y * tileSize * scale + 60)
-        tintedTextField(x * tileSize * scale + 270, y * tileSize * scale + 60, 300, 2)
+        usernameTextFieldSizes = loginBoxTextFieldsSizes.username
+        tintedTextField(usernameTextFieldSizes.x, usernameTextFieldSizes.y, usernameTextFieldSizes.width,
+            usernameTextFieldSizes.margins)
         local usernameUscore = ""
         if activeLoginBoxField == "nickname" then
             usernameUscore = underscore
@@ -412,7 +457,10 @@ function drawLoginBox()
             y * tileSize * scale + 60)
         love.graphics.print("password:", x * tileSize * scale + 50, y * tileSize * scale + 110)
         love.graphics.setColor(0, 0, 0, 0.1)
-        tintedTextField(x * tileSize * scale + 270, y * tileSize * scale + 110, 300, 2)
+
+        local passwordTextFieldSizes = loginBoxTextFieldsSizes.password
+        tintedTextField(passwordTextFieldSizes.x, passwordTextFieldSizes.y, passwordTextFieldSizes.width,
+            passwordTextFieldSizes.margins)
         love.graphics.setColor(0, 0, 0, 1)
         local pwdUscore = ""
         if activeLoginBoxField == "password" then
@@ -429,8 +477,8 @@ function drawLoginBox()
 end
 
 function renderNewUI()
-    local tileSize = 16
-    local scale = 5
+    local tileSize = UITileSize
+    local scale = UIScale
 
     -- equipment view
     local x, y, width, height = 8, 0, 2, 2
@@ -547,7 +595,7 @@ function game.load(args)
     love.keyboard.setKeyRepeat(true)
 
     beginClient()
-    loginBoxEnabled = true
+    loginPrompt()
 end
 
 function game.tick(deltaTime)
@@ -627,38 +675,31 @@ function game.draw()
     local scale = 5
 
     -- equipment view
-    -- local x, y, width, height = 9 - 0.2, 2, 2, 2
-    -- tiledUIPanel("uiImage", tileSize, scale, {10, 6, 2, 2}):draw(x, y, width, height)
-
-    -- FIXME: TileAtlas offsets??
-    local itemBoxCanvas = love.graphics.newCanvas(tileSize, tileSize)
-    itemBoxCanvas:renderTo(function()
-        tiledUIPanel("uiImage", tileSize, scale, {10, 6, 2, 2}):draw(1, 1, 1, 1)
-    end)
-
     local x, y, width, height = 9 - 0.2, 4, 2, 2
     -- love.graphics.draw(itemBoxCanvas, love.graphics.newQuad(0, 0, width, height, width, height), x * tileSize * scale, y * tileSize * scale)
     tiledUIPanel("uiImage", tileSize, scale, {10, 6, 2, 2}):draw(x, y, width, height)
-    slotIconsAtlas:drawTile((x + 0.1) * tileSize * scale, (y + 0.15) * tileSize * scale, 3, 1, (width - 0.5) * tileSize * scale, (height - 0.5) * tileSize * scale)
-    
+    slotIconsAtlas:drawTile((x + 0.1) * tileSize * scale, (y + 0.15) * tileSize * scale, 3, 1,
+        (width - 0.5) * tileSize * scale, (height - 0.5) * tileSize * scale)
+
     local x, y, width, height = 9 - 0.2, 6, 2, 2
     tiledUIPanel("uiImage", tileSize, scale, {10, 6, 2, 2}):draw(x, y, width, height)
-    slotIconsAtlas:drawTile((x + 0.1) * tileSize * scale, (y + 0.15) * tileSize * scale, 3, 1, (width - 0.5) * tileSize * scale, (height - 0.5) * tileSize * scale)
-    
+    slotIconsAtlas:drawTile((x + 0.1) * tileSize * scale, (y + 0.15) * tileSize * scale, 3, 1,
+        (width - 0.5) * tileSize * scale, (height - 0.5) * tileSize * scale)
+
     local x, y, width, height = 13, 2, 2, 2
     tiledUIPanel("uiImage", tileSize, scale, {10, 6, 2, 2}):draw(x, y, width, height)
-    -- FIXME:
-    love.graphics.draw(itemBoxCanvas, love.graphics.newQuad(0, 0, 16, 16, 16, 16), 50, 100)
-    -- love.graphics.draw(itemBoxCanvas, love.graphics.newQuad(0, 0, width * scale * tileSize, height * scale * tileSize, width * scale * tileSize, height * scale * tileSize))
-    slotIconsAtlas:drawTile((x + 0.1) * tileSize * scale, (y + 0.15) * tileSize * scale, 1, 0, (width - 0.5) * tileSize * scale, (height - 0.5) * tileSize * scale)
+    slotIconsAtlas:drawTile((x + 0.1) * tileSize * scale, (y + 0.15) * tileSize * scale, 1, 0,
+        (width - 0.5) * tileSize * scale, (height - 0.5) * tileSize * scale)
 
     local x, y, width, height = 13.5, 4, 2, 2
     tiledUIPanel("uiImage", tileSize, scale, {10, 6, 2, 2}):draw(x, y, width, height)
-    slotIconsAtlas:drawTile((x + 0.1) * tileSize * scale, (y + 0.15) * tileSize * scale, 0, 0, (width - 0.5) * tileSize * scale, (height - 0.5) * tileSize * scale)
+    slotIconsAtlas:drawTile((x + 0.1) * tileSize * scale, (y + 0.15) * tileSize * scale, 0, 0,
+        (width - 0.5) * tileSize * scale, (height - 0.5) * tileSize * scale)
 
     local x, y, width, height = 13, 6, 2, 2
     tiledUIPanel("uiImage", tileSize, scale, {10, 6, 2, 2}):draw(x, y, width, height)
-    slotIconsAtlas:drawTile((x + 0.1) * tileSize * scale, (y + 0.15) * tileSize * scale, 7, 0, (width - 0.5) * tileSize * scale, (height - 0.5) * tileSize * scale)
+    slotIconsAtlas:drawTile((x + 0.1) * tileSize * scale, (y + 0.15) * tileSize * scale, 7, 0,
+        (width - 0.5) * tileSize * scale, (height - 0.5) * tileSize * scale)
 
     -- local x, y, width, height = 11.8, 6, 2, 2
     -- tiledUIPanel("uiImage", tileSize, scale, {10, 4, 2, 2}):draw(x, y, width, height)
@@ -673,6 +714,7 @@ end
 
 function love.mousepressed(x, y, width, height)
     handleLoginClick(x, y, width, height)
+    handleLoginBoxFieldFocusOnMouseClick(x, y, width, height)
 end
 
 function love.keypressed(key)

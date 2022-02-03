@@ -1,14 +1,13 @@
-// this is a comment
 {
-    "logging": // this is a comment as well
+    "logging":
     {
         "shouldPerformanceLog": false,
         //
-        "performanceLogPeriodInSeconds": 60,
+        "performanceLogPeriodInSeconds": 30,
         "shouldLogFPS": true
-    }, // this too
+    },
     "width":1920,
     "height":1080,
     "assetReloadUpdateFrequency":2
+    // "targetTPS": 60
 }
-// THIS IS ANOTHER COMMENT
