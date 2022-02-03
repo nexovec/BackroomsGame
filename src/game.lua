@@ -341,7 +341,10 @@ local loginBoxTextFieldsSizes = {
 }
 
 local function focusChat()
-    activeUIElemIndex = 2
+    if not loginBoxEnabled then
+        return
+    end
+    activeLoginBoxField = "nickname"
 end
 
 function loginClicked()
@@ -362,8 +365,12 @@ local function handleLoginBoxFieldFocusOnMouseClick(xIn, yIn, mb, repeating)
     if pointIntersectsQuad(xIn, yIn, loginBoxTextFieldsSizes.username.x, loginBoxTextFieldsSizes.username.y,
         loginBoxTextFieldsSizes.username.width,
         assets.get("font"):getAscent() + loginBoxTextFieldsSizes.username.margins) then
-        -- FIXME: Disables tabbing and caret rendering
-        activeLoginBoxField = "username"
+            print("HELLLLOOOO")
+        activeLoginBoxField = "nickname"
+    elseif pointIntersectsQuad(xIn, yIn, loginBoxTextFieldsSizes.password.x, loginBoxTextFieldsSizes.password.y,
+    loginBoxTextFieldsSizes.password.width,
+    assets.get("font"):getAscent() + loginBoxTextFieldsSizes.password.margins) then
+        activeLoginBoxField = "password"
     end
 end
 
@@ -429,11 +436,11 @@ end
 function drawLoginBox()
     local tileSize, scale = UITileSize, UIScale
     local x, y, width, height = loginBoxSize.x, loginBoxSize.y, loginBoxSize.width, loginBoxSize.height
-    local underscore
+    local caret
     if delta % 1 < 0.5 then
-        underscore = "_"
+        caret = "_"
     else
-        underscore = ""
+        caret = ""
     end
     -- TODO: Don't flicker the login box if credentials are rejected. (fade-out ?)
     -- render loginbox
@@ -449,11 +456,11 @@ function drawLoginBox()
         usernameTextFieldSizes = loginBoxTextFieldsSizes.username
         tintedTextField(usernameTextFieldSizes.x, usernameTextFieldSizes.y, usernameTextFieldSizes.width,
             usernameTextFieldSizes.margins)
-        local usernameUscore = ""
+        local usernameCaret = ""
         if activeLoginBoxField == "nickname" then
-            usernameUscore = underscore
+            usernameCaret = caret
         end
-        love.graphics.print(loginBoxUsernameText .. usernameUscore, x * tileSize * scale + 270,
+        love.graphics.print(loginBoxUsernameText .. usernameCaret, x * tileSize * scale + 270,
             y * tileSize * scale + 60)
         love.graphics.print("password:", x * tileSize * scale + 50, y * tileSize * scale + 110)
         love.graphics.setColor(0, 0, 0, 0.1)
@@ -462,11 +469,11 @@ function drawLoginBox()
         tintedTextField(passwordTextFieldSizes.x, passwordTextFieldSizes.y, passwordTextFieldSizes.width,
             passwordTextFieldSizes.margins)
         love.graphics.setColor(0, 0, 0, 1)
-        local pwdUscore = ""
+        local pwdCaret = ""
         if activeLoginBoxField == "password" then
-            pwdUscore = underscore
+            pwdCaret = caret
         end
-        love.graphics.print(string.rep("*", #loginBoxPasswordText) .. pwdUscore, x * tileSize * scale + 270,
+        love.graphics.print(string.rep("*", #loginBoxPasswordText) .. pwdCaret, x * tileSize * scale + 270,
             y * tileSize * scale + 110)
         love.graphics.setColor(0.8, 0.3, 0.3, 1)
         love.graphics.setFont(assets.get("resources/fonts/JPfallback.ttf", 24))

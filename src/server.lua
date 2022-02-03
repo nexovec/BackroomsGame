@@ -29,6 +29,7 @@ end
 
 local function onUserLogin(peer, username, password)
     if userSessions[peer] then
+        -- FIXME: Don't crash, this is ok...
         error("Address " .. peer .. " was already logged in.")
     end
     userSessions[peer] = {
