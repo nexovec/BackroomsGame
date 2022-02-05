@@ -28,6 +28,9 @@ local playerAreaDims = array.wrap {720, 720}
 
 local playerAnimation
 
+local tempCanvas
+local characterSpriteCanvas
+
 local chatboxMessageHistory = array.wrap()
 local clientChatboxMessage = ""
 local chatboxDims = {640, 1280}
@@ -52,11 +55,6 @@ local hasConnected = false
 
 local delta = 0
 
--- FIXME: causes crash
--- local mousepressedCbkHandle = cbkHandle:wrap()
-
--- TODO: encrypt credentials
-
 -- helper functions
 
 --- Corrects position for resolutionChanges
@@ -67,7 +65,6 @@ local function resolutionScaledPos(pos)
 end
 local function resolutionScaledDraw(image, quad, x, y)
     local correctX, correctY = unpack(resolutionScaledPos {x, y})
-    -- TODO:
     local viewX, viewY, width, height = quad:getViewport()
     local scaleX, scaleY = quad:getTextureDimensions()
     local cviewX, cviewY = unpack(resolutionScaledPos {viewX, viewY})
@@ -77,7 +74,7 @@ local function resolutionScaledDraw(image, quad, x, y)
     love.graphics.draw(image, correctQuad, correctX, correctY)
 end
 
--- TODO: make function that ensures no additional globals are defined
+-- TODO: Make function that ensures no additional globals are defined
 
 --- NETWORKING:
 
@@ -97,6 +94,7 @@ local function sendMessage(...)
 end
 
 local function attemptLogin(username, password)
+    -- TODO: Encrypt password
     sendMessage("status", "logIn", username .. ":" .. password)
 end
 
@@ -110,8 +108,8 @@ end
 
 local function disableLoginPrompt()
     loginBoxEnabled = false
-    -- TODO: enum for active elements
-    activeUIElemIndex = 1
+    -- TODO: Enum for active elements
+    activeUIElemIndex = 2
 end
 
 local function receivedMessageHandle(hostevent)
@@ -132,18 +130,17 @@ local function receivedMessageHandle(hostevent)
         elseif prefix == "connected" then
             -- TODO:
         else
-            -- FIXME: security vulnerability (force-crash)
             error("Enet: message prefix " .. prefix .. " is unhandled!")
         end
     else
-        -- TODO: don't crash
+        -- TODO: Don't crash
         error(prefix .. ":" .. trimmedMessage)
     end
 end
 
 local function handleEnetClient()
     local hostevent = enetclient:service()
-    -- FIXME: when pc sleeps
+    -- FIXME: When pc sleeps
     --     AL lib: (EE) ALCwasapiPlayback_mixerProc: WaitForSingleObjectEx error: 0x102
     -- Error: src/game.lua:113: Error during service
     if serverpeer:state() == "disconnected" then
@@ -151,7 +148,7 @@ local function handleEnetClient()
         if connectionFails < 6 and hasConnected then
             chatboxMessageHistory:append("Connection lost. Reconnecting...")
         elseif connectionFails < 2 and not hasConnected then
-            -- TODO: notify user you're waiting for a response from the server
+            -- TODO: Notify user you're waiting for a response from the server
             chatboxMessageHistory:append("Can't connect to the server.")
         end
         serverpeer:reset()
@@ -204,8 +201,6 @@ local function renderOldUI()
     local chatboxCanvas = chatboxUIBox.textureCvs
     chatboxUIBox:clear()
     chatboxCanvas:renderTo(function()
-        -- FIXME:
-        -- love.graphics.setColor(0.65, 0.15, 0.15, 1)
         local yDiff = 40
 
         for i, messageText in ipairs(chatboxMessageHistory) do
@@ -552,8 +547,8 @@ function handleLoginBoxKp(key)
             chatboxMessageHistory:append("Not connected to the server.")
         elseif serverpeer:state() == "connecting" then
             chatboxMessageHistory:append("Still connecting to the server.")
-            -- TODO:
         else
+            -- TODO:
         end
     elseif key == "tab" then
         switchFields()
@@ -595,6 +590,8 @@ function game.load(args)
     -- init logic:
     -- FIXME: Fix rendering when scaling
     playerAreaCanvas = love.graphics.newCanvas(unpack(playerAreaDims))
+    tempCanvas = love.graphics.newCanvas(32, 32)
+    characterSpriteCanvas = love.graphics.newCanvas(32, 32)
     playerAnimation:play(2, "idle", true)
 
     chatboxUIBox = uiBox.makeBox(chatboxDims[1], chatboxDims[2], "gradientShaderA", {}, 20)
@@ -654,10 +651,9 @@ function game.draw()
 
     -- render character silhouette
     -- FIXME: Fix rendering when scaling
-    -- FIXME: Cache canvas
     -- TODO: Use stencil (like src/uiBox.lua:15)
-    local characterSpriteCanvas = love.graphics.newCanvas(32, 32)
     characterSpriteCanvas:renderTo(function()
+        love.graphics.clear()
         characterSpriteCanvas:setFilter("linear", "linear", 4)
         local asset = assets.get("resources/images/character.png")
         local width, height = asset:getDimensions()
@@ -665,12 +661,11 @@ function game.draw()
         love.graphics.draw(asset, characterSheetQuad, 0, 0)
     end)
 
-    local tempCanvas = love.graphics.newCanvas(32, 32)
     tempCanvas:setFilter("linear", "linear", 4)
     local maskShader = assets.get("resources/shaders/masks/maskFromTexture.glsl")
     tempCanvas:renderTo(function()
         love.graphics.withShader(maskShader, function()
-            -- love.graphics.clear(1.0, 1.0, 1.0)
+            love.graphics.clear()
             maskShader:send("Tex", characterSpriteCanvas)
             love.graphics.draw(characterSpriteCanvas, love.graphics.newQuad(0, 0, 24, 32, 24, 32), 0, 0)
         end)

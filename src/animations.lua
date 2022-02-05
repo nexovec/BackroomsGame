@@ -66,7 +66,7 @@ function animations:draw(x, y, width, height)
     local i = math.floor(self.offsets[self.activeAnimation] + self.frameCounts[self.activeAnimation] * self.progress)
     self.tileAtlas:drawTile(x or 0, y or 0, i % self.widthInTiles, math.floor(i / self.widthInTiles), width or 128,
         height or 128)
-    -- TODO: positions and scaling
+    -- TODO: Positions and scaling
 
 end
 

@@ -29,7 +29,7 @@ end
 --     for k, v in utf8.codes(msg) do
 --         local char = utf8.char(v)
 --         local newRowString = rowString .. char
---         -- TODO: investigate if each character can be measured independently
+--         -- TODO: Investigate if each character can be measured independently
 --         if font:getWidth(newRowString) > maxWidth then
 --             love.graphics.print(rowString, x, y + elevation)
 --             elevation = elevation + font:getHeight(rowString)

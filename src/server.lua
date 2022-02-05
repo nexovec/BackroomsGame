@@ -26,9 +26,17 @@ local function beginServer()
 end
 
 local function onUserLogin(peer, username, password)
+    -- print("Peer IP:", peer)
+    -- TODO: Logging of peer activity
     if userSessions[peer] then
         -- FIXME: Don't crash, this is ok...
         error("Address " .. peer .. " was already logged in.")
+    end
+
+    for k, v in pairs(userSessions) do
+        if v.username == username then
+            error("A peer " .. tostring(peer) .. " requested a login with username " .. tostring(username) .. " already logged in by " .. tostring(k))
+        end
     end
     userSessions[peer] = {
         username = username,
@@ -67,7 +75,7 @@ local function attemptLogin(peer, username, password)
     -- TODO: Don't actually say what the user's done wrong.
     if #username < 3 or #username > 16 then
         -- TODO: Allow only alphabet, _ and numerics in player names
-        -- TODO: use enum for network errors, darn it!
+        -- TODO: Use enum for network errors, darn it!
         return peer:send("status:logOut:Username must be 3 to 16 characters long.")
     end
     if #password < 3 or #password > 32 then

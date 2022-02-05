@@ -82,9 +82,4 @@ function map.wrap(obj)
     return setmetatable(obj, map)
 end
 
-function map.new()
-    local self = {}
-    return map.wrap(self)
-end
-
 return types.makeType(map, "map")
