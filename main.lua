@@ -72,8 +72,8 @@ function love.update(dt)
             deltaTime = deltaTime + dt
             if deltaTime >= msPerTick then
                 -- shouldRender = true
-                deltaTime = deltaTime - msPerTick
-                game.tick(dt)
+                game.tick(deltaTime)
+                deltaTime = 0
             end
         end
     end

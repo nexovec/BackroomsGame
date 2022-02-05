@@ -21,7 +21,8 @@ function tileAtlas:drawTile(posX, posY, tileX, tileY, width, height)
     local tileXInPixels = tileX * (self.tileSize + self.stride)
     local tileYInPixels = tileY * (self.tileSize + self.stride)
 
-    local quad = love.graphics.newQuad(tileXInPixels * scalingFactor, tileYInPixels * scalingFactor, self.tileSize * scalingFactor, self.tileSize * scalingFactor, sWidth, sHeight)
+    local quad = love.graphics.newQuad(tileXInPixels * scalingFactor, tileYInPixels * scalingFactor,
+        self.tileSize * scalingFactor, self.tileSize * scalingFactor, sWidth, sHeight)
     love.graphics.draw(asset, quad, posX, posY)
 end
 

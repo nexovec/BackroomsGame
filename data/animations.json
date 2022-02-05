@@ -5,6 +5,7 @@
         "widthInTiles":13,
         "frameCounts":[13, 8, 10, 10, 6, 4, 7, 13, 8, 10, 10, 10, 6, 4, 7],
         "loopNames":["idle", "run", "attack1", "attack2", "attack3", "jump", "hurt", "die"],
+        "animationNames":["idle", "run", "attack1", "attack2", "attack3", "jump", "hurt", "die"],
         "skipToNextRowAfterLoop":true
     },
     "tileset":{

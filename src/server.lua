@@ -1,6 +1,5 @@
 local server = {}
 
-
 local array = require("std.array")
 local timing = require("timing")
 local network = require("network")
@@ -10,7 +9,6 @@ local json = require("std.json")
 local enet = require("enet")
 local map = require("std.map")
 require("loveOverrides")
-
 
 local enetServer
 local connectedPeers = array.wrap()
@@ -48,7 +46,10 @@ local function registerAccount(creds, peer)
     assert(creds.password)
     local username = creds.username
     local password = creds.password
-    credentials:append{username = username, password = password}
+    credentials:append{
+        username = username,
+        password = password
+    }
     enetServer:broadcast("message: Username " .. tostring(username) .. " was just registered.")
     -- TODO: Ban SERVER as username
     peer = peer or "SERVER"
@@ -92,7 +93,10 @@ local function attemptLogin(peer, username, password)
         ::continue::
     end
     -- register new username
-    registerAccount({username = username, password = password}, peer)
+    registerAccount({
+        username = username,
+        password = password
+    }, peer)
     onUserLogin(peer, username, password)
 end
 
@@ -133,7 +137,11 @@ local function receiveEnetHandle(hostevent)
 end
 
 local function isLoggedIn(peer)
-    if userSessions[peer] then return true else return false end
+    if userSessions[peer] then
+        return true
+    else
+        return false
+    end
 end
 
 local function onDisconnect(peer)
@@ -192,8 +200,8 @@ function server.load()
     -- TODO: Ip blacklist
     local listOfCredentials = array.wrap(decodeJsonFile("data/credentials.json"))
     credentials = array.wrap()
-    for k,v in listOfCredentials:iter() do
-            registerAccount(v)
+    for k, v in listOfCredentials:iter() do
+        registerAccount(v)
     end
     -- DEBUG:
     -- registerAccount({username = "nexovec", password = "heslo"})

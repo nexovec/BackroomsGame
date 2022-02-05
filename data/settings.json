@@ -8,6 +8,6 @@
     },
     "width":1920,
     "height":1080,
-    "assetReloadUpdateFrequency":2
-    // "targetTPS": 60
+    "assetReloadUpdateFrequency":2,
+    "targetTPS": 60
 }

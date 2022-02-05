@@ -1,8 +1,7 @@
 local game = {}
 
 -- requires
-local animation = require("animation")
-local new_animations = require("new_animations")
+local animations = require("animations")
 local enet = require("enet")
 local t = require("timing")
 local uiBox = require("uiBox")
@@ -27,7 +26,7 @@ local mockResolution = {2560, 1440}
 local playerAreaCanvas
 local playerAreaDims = array.wrap {720, 720}
 
-local DEBUG_playerAnimation
+local playerAnimation
 
 local chatboxMessageHistory = array.wrap()
 local clientChatboxMessage = ""
@@ -370,8 +369,8 @@ local function handleLoginBoxFieldFocusOnMouseClick(xIn, yIn, mb, repeating)
         assets.get("font"):getAscent() + loginBoxTextFieldsSizes.username.margins) then
         activeLoginBoxField = "nickname"
     elseif pointIntersectsQuad(xIn, yIn, loginBoxTextFieldsSizes.password.x, loginBoxTextFieldsSizes.password.y,
-    loginBoxTextFieldsSizes.password.width,
-    assets.get("font"):getAscent() + loginBoxTextFieldsSizes.password.margins) then
+        loginBoxTextFieldsSizes.password.width,
+        assets.get("font"):getAscent() + loginBoxTextFieldsSizes.password.margins) then
         activeLoginBoxField = "password"
     end
 end
@@ -462,8 +461,8 @@ function drawLoginBox()
         if activeLoginBoxField == "nickname" then
             usernameCaret = caret
         end
-        love.graphics.print(loginBoxUsernameText .. usernameCaret, x * tileSize * scale + 270,
-            y * tileSize * scale + 60)
+        love.graphics
+            .print(loginBoxUsernameText .. usernameCaret, x * tileSize * scale + 270, y * tileSize * scale + 60)
         love.graphics.print("password:", x * tileSize * scale + 50, y * tileSize * scale + 110)
         love.graphics.setColor(0, 0, 0, 0.1)
 
@@ -591,14 +590,12 @@ function game.load(args)
     love.window.setTitle("Backrooms v0.0.1 pre-dev")
     love.keyboard.setKeyRepeat(true)
     love.graphics.setFont(assets.get("font"))
-    assets.playerImage = animation.newCharacterAnimation("character")
-    DEBUG_playerAnimation = new_animations.newCharacterAnimation("character")
+    playerAnimation = animations.newCharacterAnimation("character")
 
     -- init logic:
     -- FIXME: Fix rendering when scaling
     playerAreaCanvas = love.graphics.newCanvas(unpack(playerAreaDims))
-    assets.playerImage:play(2, "idle", true, false)
-    DEBUG_playerAnimation:play(2)
+    playerAnimation:play(2, "idle", true)
 
     chatboxUIBox = uiBox.makeBox(chatboxDims[1], chatboxDims[2], "gradientShaderA", {}, 20)
     nicknamePickerUIBox = uiBox.makeBox(nicknamePickerBoxDims[1], nicknamePickerBoxDims[2], "gradientShaderA", {}, 20)
@@ -612,8 +609,7 @@ end
 
 function game.tick(deltaTime)
     t.update()
-    animation.updateAnimations(deltaTime)
-    new_animations.updateAnimations(deltaTime)
+    animations.updateAnimations(deltaTime)
     assets.update(deltaTime)
     delta = delta + deltaTime
     handleEnetClient()
@@ -639,16 +635,17 @@ function game.draw()
             assets.get("testShaderA"):send("rectSize", {64, 64})
             love.graphics.rectangle("fill", 0, 0, 720, 720)
         end)
+
         -- love.graphics.withShader(blurShader, function()
         --     blurShader:send("blurSize", 1 / (2560 / 16))
         --     blurShader:send("sigma", 5)
         --     local playerSpriteQuad = love.graphics.newQuad(0, 0, 720, 720, 720, 720)
         --     assets.playerImage:draw(playerSpriteQuad, 0, 0, 0, 1, 1, 0, 0)
         -- end)
-        local playerSpriteQuad = love.graphics.newQuad(0, 0, 720, 720, 720, 720)
-        love.graphics.draw(assets.get("resources/images/background2.png"), playerSpriteQuad)
-        assets.playerImage:draw(playerSpriteQuad, 0, 0, 0, 1, 1, 0, 0)
-        DEBUG_playerAnimation:draw()
+
+        local playerAreaQuad = love.graphics.newQuad(0, 0, 720, 720, 720, 720)
+        love.graphics.draw(assets.get("resources/images/background2.png"), playerAreaQuad)
+        playerAnimation:draw(0, 0, 720, 720)
     end)
     local playfieldScenePlacementQuad = love.graphics.newQuad(0, 0, unpack(playerAreaDims:rep(2)))
     -- FIXME: Magic numbers

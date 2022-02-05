@@ -4,9 +4,8 @@ This is the backrooms game private repository. (This is public for now) I am a s
 
 ## Conventions
 
-- Return values of modules must have the same name as the file.
 - Don't define global variables, including functions. Don't monkeypatch anything on built-in objects.
-- use `var = "string"` instead of `var = 'string'`.
+- Use `var = "string"` instead of `var = 'string'`.
 - For std, don't have dependencies to external code.
 
 ## How to run the game
