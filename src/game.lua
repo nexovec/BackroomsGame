@@ -479,20 +479,35 @@ function drawLoginBox()
     end
 end
 
+local slotIconsAtlas = tileAtlas.wrap("resources/images/slotIcons.png", 32, 6)
+
+function renderUIBtn()
+    -- TODO:
+end
+
 function renderNewUI()
     local tileSize = UITileSize
     local scale = UIScale
 
     -- equipment view
+    -- inventory tabs
     local x, y, width, height = 8, 0, 2, 2
     tiledUIPanel("uiImage", tileSize, scale, {10, 4, 2, 2}):draw(x, y, width, height)
+    slotIconsAtlas:drawTile((x + 0.1) * tileSize * scale, (y + 0.15) * tileSize * scale, 2, 1,
+    (width - 0.5) * tileSize * scale, (height - 0.5) * tileSize * scale)
 
     local x, y, width, height = 10, 0, 2, 2
     tiledUIPanel("uiImage", tileSize, scale, {10, 4, 2, 2}):draw(x, y, width, height)
+    slotIconsAtlas:drawTile((x + 0.1) * tileSize * scale, (y + 0.15) * tileSize * scale, 7, 1,
+    (width - 0.5) * tileSize * scale, (height - 0.5) * tileSize * scale)
 
     local x, y, width, height = 12, 0, 2, 2
     tiledUIPanel("uiImage", tileSize, scale, {10, 4, 2, 2}):draw(x, y, width, height)
+    -- TODO: Scale down
+    slotIconsAtlas:drawTile((x + 0.1) * tileSize * scale, (y + 0.15) * tileSize * scale, 8, 1,
+    (width - 0.5) * tileSize * scale, (height - 0.5) * tileSize * scale)
 
+    -- panel
     local x, y, width, height = 7, 1.5 - 0.1, 9, 7
     tiledUIPanel("uiImage", tileSize, scale, {0, 14, 10, 10}):draw(x, y, width, height)
 
@@ -612,6 +627,7 @@ function game.tick(deltaTime)
     handleEnetClient()
 end
 
+
 function game.draw()
     -- draw background
     -- FIXME: Magic numbers
@@ -674,7 +690,6 @@ function game.draw()
     local quad = love.graphics.newQuad(0, 0, 800, 800, 800, 800)
     resolutionScaledDraw(tempCanvas, quad, 1040, 80)
 
-    local slotIconsAtlas = tileAtlas.wrap("resources/images/slotIcons.png", 32, 6)
 
     -- draw equipment slots.
     local tileSize = 16
