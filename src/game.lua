@@ -407,6 +407,7 @@ function drawChatBox()
     love.graphics.setColor(0, 0, 0, 1)
     -- TODO: Fade out top of the chat window
     -- TODO: Smooth chat scrolling
+    -- TODO: Implement maximum chat message length
     local rowIndex = 0
     local maxRowWidth = 500
     local firstRowY = y * tileSize * scale + 30 - ascent
@@ -426,6 +427,7 @@ function drawChatBox()
         a = underscore
     end
     love.graphics.print(clientChatboxMessage .. a, x * tileSize * scale + 30, y * tileSize * scale + 880)
+    -- TODO: Render send button (choose an icon)
     love.graphics.setColor(1, 1, 1, 1)
 end
 
@@ -440,43 +442,48 @@ function drawLoginBox()
     end
     -- TODO: Don't flicker the login box if credentials are rejected. (fade-out ?)
     -- render loginbox
-    if loginBoxEnabled then
-        shouldHandleLoginClick = true
-
-        tiledUIPanel("uiImage", tileSize, scale):draw(x, y, width, height)
-        tiledUIPanel("uiImage", tileSize / 2, scale, {20, 20, 4, 4}):draw(x * 2 + 10 - 0.5, y * 2 + 4 - 0.1, 6, 2)
-        love.graphics.setColor(0, 0, 0, 1)
-        -- TODO: Disable after logging in.
-        love.graphics.print("login", (x + 5.8) * tileSize * scale, (y + 2.1) * tileSize * scale)
-        love.graphics.print("username:", x * tileSize * scale + 50, y * tileSize * scale + 60)
-        usernameTextFieldSizes = loginBoxTextFieldsSizes.username
-        tintedTextField(usernameTextFieldSizes.x, usernameTextFieldSizes.y, usernameTextFieldSizes.width,
-            usernameTextFieldSizes.margins)
-        local usernameCaret = ""
-        if activeLoginBoxField == "nickname" then
-            usernameCaret = caret
-        end
-        love.graphics
-            .print(loginBoxUsernameText .. usernameCaret, x * tileSize * scale + 270, y * tileSize * scale + 60)
-        love.graphics.print("password:", x * tileSize * scale + 50, y * tileSize * scale + 110)
-        love.graphics.setColor(0, 0, 0, 0.1)
-
-        local passwordTextFieldSizes = loginBoxTextFieldsSizes.password
-        tintedTextField(passwordTextFieldSizes.x, passwordTextFieldSizes.y, passwordTextFieldSizes.width,
-            passwordTextFieldSizes.margins)
-        love.graphics.setColor(0, 0, 0, 1)
-        local pwdCaret = ""
-        if activeLoginBoxField == "password" then
-            pwdCaret = caret
-        end
-        love.graphics.print(string.rep("*", #loginBoxPasswordText) .. pwdCaret, x * tileSize * scale + 270,
-            y * tileSize * scale + 110)
-        love.graphics.setColor(0.8, 0.3, 0.3, 1)
-        love.graphics.setFont(assets.get("resources/fonts/JPfallback.ttf", 24))
-        love.graphics.printf(loginBoxErrorText, x * tileSize * scale + 32, y * tileSize * scale + 170, 300, "left")
-        love.graphics.setFont(assets.get("font"))
-        love.graphics.setColor(1, 1, 1, 1)
+    if not loginBoxEnabled then
+        return
     end
+
+    love.graphics.setColor(0, 0, 0, 0.8)
+    love.graphics.rectangle("fill", 0, 0, unpack(resolutionScaledPos(mockResolution)))
+    love.graphics.setColor(1, 1, 1)
+
+    shouldHandleLoginClick = true
+
+    tiledUIPanel("uiImage", tileSize, scale):draw(x, y, width, height)
+    tiledUIPanel("uiImage", tileSize / 2, scale, {20, 20, 4, 4}):draw(x * 2 + 10 - 0.5, y * 2 + 4 - 0.1, 6, 2)
+    love.graphics.setColor(0, 0, 0, 1)
+    -- TODO: Disable after logging in.
+    love.graphics.print("login", (x + 5.8) * tileSize * scale, (y + 2.1) * tileSize * scale)
+    love.graphics.print("username:", x * tileSize * scale + 50, y * tileSize * scale + 60)
+    usernameTextFieldSizes = loginBoxTextFieldsSizes.username
+    tintedTextField(usernameTextFieldSizes.x, usernameTextFieldSizes.y, usernameTextFieldSizes.width,
+        usernameTextFieldSizes.margins)
+    local usernameCaret = ""
+    if activeLoginBoxField == "nickname" then
+        usernameCaret = caret
+    end
+    love.graphics.print(loginBoxUsernameText .. usernameCaret, x * tileSize * scale + 270, y * tileSize * scale + 60)
+    love.graphics.print("password:", x * tileSize * scale + 50, y * tileSize * scale + 110)
+    love.graphics.setColor(0, 0, 0, 0.1)
+
+    local passwordTextFieldSizes = loginBoxTextFieldsSizes.password
+    tintedTextField(passwordTextFieldSizes.x, passwordTextFieldSizes.y, passwordTextFieldSizes.width,
+        passwordTextFieldSizes.margins)
+    love.graphics.setColor(0, 0, 0, 1)
+    local pwdCaret = ""
+    if activeLoginBoxField == "password" then
+        pwdCaret = caret
+    end
+    love.graphics.print(string.rep("*", #loginBoxPasswordText) .. pwdCaret, x * tileSize * scale + 270,
+        y * tileSize * scale + 110)
+    love.graphics.setColor(0.8, 0.3, 0.3, 1)
+    love.graphics.setFont(assets.get("resources/fonts/JPfallback.ttf", 24))
+    love.graphics.printf(loginBoxErrorText, x * tileSize * scale + 32, y * tileSize * scale + 170, 300, "left")
+    love.graphics.setFont(assets.get("font"))
+    love.graphics.setColor(1, 1, 1, 1)
 end
 
 local slotIconsAtlas = tileAtlas.wrap("resources/images/slotIcons.png", 32, 6)
@@ -494,18 +501,18 @@ function renderNewUI()
     local x, y, width, height = 8, 0, 2, 2
     tiledUIPanel("uiImage", tileSize, scale, {10, 4, 2, 2}):draw(x, y, width, height)
     slotIconsAtlas:drawTile((x + 0.1) * tileSize * scale, (y + 0.15) * tileSize * scale, 2, 1,
-    (width - 0.5) * tileSize * scale, (height - 0.5) * tileSize * scale)
+        (width - 0.5) * tileSize * scale, (height - 0.5) * tileSize * scale)
 
     local x, y, width, height = 10, 0, 2, 2
     tiledUIPanel("uiImage", tileSize, scale, {10, 4, 2, 2}):draw(x, y, width, height)
     slotIconsAtlas:drawTile((x + 0.1) * tileSize * scale, (y + 0.15) * tileSize * scale, 7, 1,
-    (width - 0.5) * tileSize * scale, (height - 0.5) * tileSize * scale)
+        (width - 0.5) * tileSize * scale, (height - 0.5) * tileSize * scale)
 
     local x, y, width, height = 12, 0, 2, 2
     tiledUIPanel("uiImage", tileSize, scale, {10, 4, 2, 2}):draw(x, y, width, height)
     -- TODO: Scale down
     slotIconsAtlas:drawTile((x + 0.1) * tileSize * scale, (y + 0.15) * tileSize * scale, 8, 1,
-    (width - 0.5) * tileSize * scale, (height - 0.5) * tileSize * scale)
+        (width - 0.5) * tileSize * scale, (height - 0.5) * tileSize * scale)
 
     -- panel
     local x, y, width, height = 7, 1.5 - 0.1, 9, 7
@@ -627,7 +634,6 @@ function game.tick(deltaTime)
     handleEnetClient()
 end
 
-
 function game.draw()
     -- draw background
     -- FIXME: Magic numbers
@@ -690,7 +696,6 @@ function game.draw()
     local quad = love.graphics.newQuad(0, 0, 800, 800, 800, 800)
     resolutionScaledDraw(tempCanvas, quad, 1040, 80)
 
-
     -- draw equipment slots.
     local tileSize = 16
     local scale = 5
@@ -724,7 +729,7 @@ function game.draw()
 
     -- local x, y, width, height = 11.8, 6, 2, 2
     -- tiledUIPanel("uiImage", tileSize, scale, {10, 4, 2, 2}):draw(x, y, width, height)
-
+    -- TODO: Render setting button (choose an icon)
     drawLoginBox()
 end
 
