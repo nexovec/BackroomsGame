@@ -403,7 +403,7 @@ function drawChatBox()
     local font = assets.get("font")
     local ascent = font:getAscent()
     local scrollDistance = math.max(#chatboxMessageHistory * ascent - 1000, 0)
-    tiledUIPanel("uiImage", tileSize, scale):draw(x, y, width, height)
+    renderUIPanel(x, y, width, height)
     love.graphics.setColor(0, 0, 0, 1)
     -- TODO: Fade out top of the chat window
     -- TODO: Smooth chat scrolling
@@ -413,13 +413,10 @@ function drawChatBox()
     local firstRowY = y * tileSize * scale + 30 - ascent
     for _, messageText in chatboxMessageHistory:iter() do
         local msgWidth, listOfRows = font:getWrap(messageText, maxRowWidth)
-        -- local toSkip = math.ceil(msgWidth % maxRowWidth)
         for k, v in ipairs(listOfRows) do
             love.graphics.print(v, x * tileSize * scale + 30, firstRowY + ascent * rowIndex)
             rowIndex = rowIndex + 1
         end
-        -- love.graphics.printf(messageText, x * tileSize * scale + 30, y * tileSize * scale + 30 - ascent + ascent * rowIndex, maxRowWidth)
-        -- rowIndex = rowIndex + #listOfRows - 1
     end
     tintedTextField(x * tileSize * scale + 30, y * tileSize * scale + 880, 450, 2)
     local a = ""
@@ -488,8 +485,14 @@ end
 
 local slotIconsAtlas = tileAtlas.wrap("resources/images/slotIcons.png", 32, 6)
 
-function renderUIBtn()
-    -- TODO:
+function renderUITab(x, y, width, height, horizontalIconTileIndex, verticalIconTileIndex)
+    tiledUIPanel("uiImage", UITileSize, UIScale, {10, 4, 2, 2}):draw(x, y, width, height)
+    slotIconsAtlas:drawTile((x + 0.1) * UITileSize * UIScale, (y + 0.15) * UITileSize * UIScale, horizontalIconTileIndex, verticalIconTileIndex,
+        (width - 0.5) * UITileSize * UIScale, (height - 0.5) * UITileSize * UIScale)
+end
+
+function renderUIPanel(x, y, width, height, shape)
+    tiledUIPanel("uiImage", UITileSize, UIScale, shape):draw(x, y, width, height)
 end
 
 function renderNewUI()
@@ -498,34 +501,19 @@ function renderNewUI()
 
     -- equipment view
     -- inventory tabs
-    local x, y, width, height = 8, 0, 2, 2
-    tiledUIPanel("uiImage", tileSize, scale, {10, 4, 2, 2}):draw(x, y, width, height)
-    slotIconsAtlas:drawTile((x + 0.1) * tileSize * scale, (y + 0.15) * tileSize * scale, 2, 1,
-        (width - 0.5) * tileSize * scale, (height - 0.5) * tileSize * scale)
-
-    local x, y, width, height = 10, 0, 2, 2
-    tiledUIPanel("uiImage", tileSize, scale, {10, 4, 2, 2}):draw(x, y, width, height)
-    slotIconsAtlas:drawTile((x + 0.1) * tileSize * scale, (y + 0.15) * tileSize * scale, 7, 1,
-        (width - 0.5) * tileSize * scale, (height - 0.5) * tileSize * scale)
-
-    local x, y, width, height = 12, 0, 2, 2
-    tiledUIPanel("uiImage", tileSize, scale, {10, 4, 2, 2}):draw(x, y, width, height)
-    -- TODO: Scale down
-    slotIconsAtlas:drawTile((x + 0.1) * tileSize * scale, (y + 0.15) * tileSize * scale, 8, 1,
-        (width - 0.5) * tileSize * scale, (height - 0.5) * tileSize * scale)
+    renderUITab(8, 0, 2, 2, 2, 1)
+    renderUITab(10, 0, 2, 2, 7, 1)
+    renderUITab(12, 0, 2, 2, 8, 1)
 
     -- panel
-    local x, y, width, height = 7, 1.5 - 0.1, 9, 7
-    tiledUIPanel("uiImage", tileSize, scale, {0, 14, 10, 10}):draw(x, y, width, height)
+    renderUIPanel(7, 1.5 - 0.1, 9, 7, {0, 14, 10, 10})
 
     -- character view
-    local x, y, width, height = 0.5, 0.5, 8, 8
-    tiledUIPanel("uiImage", tileSize, scale):draw(x, y, width, height)
-
+    renderUIPanel(0.5, 0.5, 8, 8)
     -- drawGrid(tileSize * scale, {1, 0, 1, 1})
+
     -- render logbox
-    local x, y, width, height = 1, 9, 15, 4
-    tiledUIPanel("uiImage", tileSize, scale):draw(x, y, width, height)
+    renderUIPanel(1, 9, 15, 4)
     drawChatBox()
 end
 

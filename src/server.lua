@@ -27,21 +27,26 @@ end
 
 local function onUserLogin(peer, username, password)
     -- print("Peer IP:", peer)
+    assert(peer.disconnect)
     -- TODO: Logging of peer activity
     if userSessions[peer] then
-        -- FIXME: Don't crash, this is ok...
-        error("Address " .. peer .. " was already logged in.")
+        print("Address " .. peer .. " was already logged in.")
+        peer:send("status:logOut:Peer is already logged in.")
+        return false
     end
 
     for k, v in pairs(userSessions) do
         if v.username == username then
-            error("A peer " .. tostring(peer) .. " requested a login with username " .. tostring(username) .. " already logged in by " .. tostring(k))
+            print("A peer " .. tostring(peer) .. " requested a login with username " .. tostring(username) .. " already logged in by " .. tostring(k))
+            peer:send("status:logOut:User was already logged in.")
+            return false
         end
     end
     userSessions[peer] = {
         username = username,
         password = password
     }
+    return true
 end
 
 local function onUserLogout(peer)
@@ -89,23 +94,26 @@ local function attemptLogin(peer, username, password)
         if v.username == username then
             if v.password == password then
                 -- logged in
-                onUserLogin(peer, username, password)
+                if onUserLogin(peer, username, password) == false then return false end
                 enetServer:broadcast("message: User " .. username .. " just logged in.")
                 print(peer, "just logged in as ", username, "!")
                 return
             else
                 -- wrong password
-                return peer:send("status:logOut:Wrong password.")
+                peer:send("status:logOut:Wrong password.")
+                return false
             end
         end
         ::continue::
     end
+
     -- register new username
     registerAccount({
         username = username,
         password = password
     }, peer)
     onUserLogin(peer, username, password)
+    return true
 end
 
 local function receiveEnetHandle(hostevent)
