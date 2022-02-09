@@ -26,12 +26,11 @@ local function beginServer()
 end
 
 local function onUserLogin(peer, username, password)
-    -- print("Peer IP:", peer)
-    assert(peer.disconnect)
     -- TODO: Logging of peer activity
+    -- TODO: Optional 1 logged-in account for one IP, disregarding port
     if userSessions[peer] then
-        print("Address " .. peer .. " was already logged in.")
-        peer:send("status:logOut:Peer is already logged in.")
+        print("Address " .. tostring(peer) .. " was already logged in.")
+        peer:send("status:logOut:Peer was already logged in.")
         return false
     end
 
@@ -97,7 +96,7 @@ local function attemptLogin(peer, username, password)
                 if onUserLogin(peer, username, password) == false then return false end
                 enetServer:broadcast("message: User " .. username .. " just logged in.")
                 print(peer, "just logged in as ", username, "!")
-                return
+                return true
             else
                 -- wrong password
                 peer:send("status:logOut:Wrong password.")
@@ -122,15 +121,19 @@ local function receiveEnetHandle(hostevent)
     if prefix == "message" then
         -- TODO: Maximum message length
         -- broadcast message to everybody
+        -- FIXME: userSession is not guaranteed to exist
         local userSession = userSessions[hostevent.peer]
         if not userSession then
             -- error("Invalid user session of peer " .. tostring(hostevent.peer))
             -- TODO: log suspicious number of those
-            return hostevent.peer:send("status:logOut:Server restarted. Log in again.")
+            hostevent.peer:send("status:logOut:Server restarted. Log in again.")
+            return false
         end
         local authorName = userSession.username
+        -- FIXME: If userSession exists, authorName should be guaranteed to exist as well.
         if not authorName then
-            error("A user tried to write to chat without logging in.")
+            print("A user " .. hostevent.peer .. " tried to write to chat without logging in.")
+            return false
         end
         local msg = authorName .. ": " .. trimmedData
         print(msg)
@@ -150,6 +153,7 @@ local function receiveEnetHandle(hostevent)
     else
         -- TODO: Handle unwanted messages
     end
+    return true
 end
 
 local function isLoggedIn(peer)
