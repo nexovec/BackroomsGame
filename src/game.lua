@@ -1,3 +1,4 @@
+-- FIXME: Add the fire lading circles image (downscaled, so the repo size doesn't go through the roof)
 local game = {}
 
 -- requires
@@ -36,7 +37,9 @@ local clientChatboxMessage = ""
 local chatboxDims = {640, 1280}
 local chatboxUIBox
 
+local shouldHandleSettingsBtnClick = true
 local loginBoxEnabled
+local tintDrawn = false
 local loginBoxUsernameText = ""
 local loginBoxPasswordText = ""
 local loginBoxErrorText = ""
@@ -321,6 +324,12 @@ local loginBoxSize = {
     width = 8,
     height = 3
 }
+local settingsBoxSize = {
+    x = 6,
+    y = 6,
+    width = 4,
+    height = 6
+}
 
 local loginBoxTextFieldsSizes = {
     username = {
@@ -359,6 +368,7 @@ local function handleLoginBoxFieldFocusOnMouseClick(xIn, yIn, mb, repeating)
     if not loginBoxEnabled then
         return
     end
+    -- FIXME: replace magic numbers
     if pointIntersectsQuad(xIn, yIn, loginBoxTextFieldsSizes.username.x, loginBoxTextFieldsSizes.username.y,
         loginBoxTextFieldsSizes.username.width,
         assets.get("font"):getAscent() + loginBoxTextFieldsSizes.username.margins) then
@@ -367,6 +377,18 @@ local function handleLoginBoxFieldFocusOnMouseClick(xIn, yIn, mb, repeating)
         loginBoxTextFieldsSizes.password.width,
         assets.get("font"):getAscent() + loginBoxTextFieldsSizes.password.margins) then
         activeLoginBoxField = "password"
+    end
+end
+
+local function handleSettingsBtnClick(xIn, yIn, mb, repeating)
+    if shouldHandleSettingsBtnClick == false then
+        return
+    end
+    -- FIXME: replace magic numbers
+    if pointIntersectsQuad(xIn, yIn, UITileSize / 2 * UIScale * (settingsBoxSize.x * 2 + 10 - 0.5),
+        UITileSize / 2 * UIScale * (settingsBoxSize.y * 2 + 4 - 0.1), 3 * UITileSize * UIScale, UITileSize * UIScale) then
+        settingsEnabled = true
+        shouldHandleLoginClick = false
     end
 end
 
@@ -410,25 +432,58 @@ function drawChatBox()
     -- TODO: Implement maximum chat message length
     local rowIndex = 0
     local maxRowWidth = 500
-    local firstRowY = y * tileSize * scale + 30 - ascent
+    local xts = x * tileSize * scale
+    local yts = y * tileSize * scale
+    local firstRowY = yts + 30 - ascent
     for _, messageText in chatboxMessageHistory:iter() do
         local msgWidth, listOfRows = font:getWrap(messageText, maxRowWidth)
         for k, v in ipairs(listOfRows) do
-            love.graphics.print(v, x * tileSize * scale + 30, firstRowY + ascent * rowIndex)
+            love.graphics.print(v, xts + 30, firstRowY + ascent * rowIndex)
             rowIndex = rowIndex + 1
         end
     end
-    tintedTextField(x * tileSize * scale + 30, y * tileSize * scale + 880, 450, 2)
+    tintedTextField(xts + 30, yts + 880, 450, 2)
     local a = ""
     if activeUIElemIndex == 2 then
         a = underscore
     end
-    love.graphics.print(clientChatboxMessage .. a, x * tileSize * scale + 30, y * tileSize * scale + 880)
-    -- TODO: Render send button (choose an icon)
+    love.graphics.print(clientChatboxMessage .. a, xts + 30, yts + 880)
+
+
+    -- render send button
+    -- TODO: Add send button functionality
+    -- love.graphics.draw(assets.get("resources/images/ui/smallIcons.png"), 1220, 100, 0, 3, 3) -- icons preview
+
+    tileAtlas.wrap("resources/images/ui/smallIcons.png", 12, 2):drawTile(xts + 475,
+    yts + 865, 0, 8, 64, 64)
+    love.graphics.rectangle("line", xts + 480, yts + 870, 64, 64)
+
+    -- TODO: Move
+    tileAtlas.wrap("resources/images/ui/smallIcons.png", 12, 2):drawTile(1830, 0, 10, 6, 64, 64)
+    love.graphics.rectangle("line", 1830, 10, 64, 64)
+    -- TODO: Set settings btn collision rect here!
+
     love.graphics.setColor(1, 1, 1, 1)
 end
 
-function drawLoginBox()
+local function tintScreen()
+    if tintDrawn == false then
+        love.graphics.setColor(0, 0, 0, 0.8)
+        love.graphics.rectangle("fill", 0, 0, unpack(resolutionScaledPos(mockResolution)))
+        love.graphics.setColor(1, 1, 1)
+        tintDrawn = true
+    end
+end
+
+local function drawSettings()
+    if not settingsEnable~d then return false end
+    tintScreen()
+    -- TODO: Params are not defined
+    tiledUIPanel("uiImage", tileSize, scale):draw(x, y, width, height)
+    return true
+end
+
+local function drawLoginBox()
     local tileSize, scale = UITileSize, UIScale
     local x, y, width, height = loginBoxSize.x, loginBoxSize.y, loginBoxSize.width, loginBoxSize.height
     local caret
@@ -443,9 +498,7 @@ function drawLoginBox()
         return
     end
 
-    love.graphics.setColor(0, 0, 0, 0.8)
-    love.graphics.rectangle("fill", 0, 0, unpack(resolutionScaledPos(mockResolution)))
-    love.graphics.setColor(1, 1, 1)
+    tintScreen()
 
     shouldHandleLoginClick = true
 
@@ -595,14 +648,16 @@ function game.load(args)
     love.window.setTitle("Backrooms v0.0.1 pre-dev")
     love.keyboard.setKeyRepeat(true)
     love.graphics.setFont(assets.get("font"))
-    playerAnimation = animations.newCharacterAnimation("character")
+    playerAnimation = animations.loadAnimation("character")
+    playerAnimation = animations.loadAnimation("fireCircles")
 
     -- init logic:
     -- FIXME: Fix rendering when scaling
     playerAreaCanvas = love.graphics.newCanvas(unpack(playerAreaDims))
     tempCanvas = love.graphics.newCanvas(32, 32)
     characterSpriteCanvas = love.graphics.newCanvas(32, 32)
-    playerAnimation:play(2, "idle", true)
+    -- playerAnimation:play(2, "idle", true)
+    playerAnimation:play(2, "circle", true)
 
     chatboxUIBox = uiBox.makeBox(chatboxDims[1], chatboxDims[2], "gradientShaderA", {}, 20)
     nicknamePickerUIBox = uiBox.makeBox(nicknamePickerBoxDims[1], nicknamePickerBoxDims[2], "gradientShaderA", {}, 20)
@@ -625,6 +680,7 @@ end
 function game.draw()
     -- draw background
     -- FIXME: Magic numbers
+    tintDrawn = false
     local backgroundQuad = love.graphics.newQuad(0, 0, 2560, 1440, 2560, 1440)
     love.graphics.draw(assets.get("backgroundImage"), backgroundQuad, 0, 0, 0, 1, 1, 0, 0)
 
@@ -719,6 +775,7 @@ function game.draw()
     -- tiledUIPanel("uiImage", tileSize, scale, {10, 4, 2, 2}):draw(x, y, width, height)
     -- TODO: Render setting button (choose an icon)
     drawLoginBox()
+    drawSettings()
 end
 
 function game.quit()
@@ -727,6 +784,7 @@ function game.quit()
 end
 
 function love.mousepressed(x, y, width, height)
+    handleSettingsBtnClick(x,y, width, height)
     handleLoginClick(x, y, width, height)
     handleLoginBoxFieldFocusOnMouseClick(x, y, width, height)
 end

@@ -20,17 +20,8 @@ function animations.updateAnimations(dt)
         end
     end
 end
-function animations.newCharacterAnimation(animName)
-    local self = {}
-    setmetatable(self, animations)
-    local aConf = assets.get("animations")[animName]
-    love.graphics.draw(assets.get(aConf.filepath))
-    self.animationNames = {}
-    for i, v in ipairs(aConf.animationNames) do
-        self.animationNames[v] = i
-    end
-    self.tileAtlas = tileAtlas.wrap(aConf.filepath, aConf.tileSize)
-    self.frameCounts = aConf.frameCounts
+
+local function newCharacterAnimation(self, aConf)
     self.offsets = {}
     self.widthInTiles = aConf.widthInTiles
     self.offsets[1] = 0
@@ -42,6 +33,37 @@ function animations.newCharacterAnimation(animName)
     self.progress = 0
     self.activeAnimation = 2
     return self
+end
+
+local function newContiguousAnimation(self, aConf)
+    self.offsets = {0}
+    local width, height = assets.get(self.tileAtlas.assetName):getDimensions()
+    self.widthInTiles = width / aConf.tileSize
+    return self
+end
+
+function animations.loadAnimation(animName)
+    local self = {}
+    setmetatable(self, animations)
+    local aConf = assets.get("animations")[animName]
+    assert(aConf, "Animation " .. animName .. " not found in animations.json!!")
+    assert(aConf.animationType)
+    -- love.graphics.draw(assets.get(aConf.filepath))
+    self.animationNames = {}
+    for i, v in ipairs(aConf.animationNames) do
+        self.animationNames[v] = i
+    end
+    self.tileAtlas = tileAtlas.wrap(aConf.filepath, aConf.tileSize)
+    self.frameCounts = aConf.frameCounts
+    if aConf.animationType == "oneAnimationPerRow" then
+        return newCharacterAnimation(self, aConf)
+    elseif aConf.animationType == "oneContiguousAnimation" then
+        -- TODO:
+        return newContiguousAnimation(self, aConf)
+        -- error("Not yet implemented!")
+    else
+        error("Not yet implemented!")
+    end
 end
 
 function animations:play(playbackDuration, animationName, isLooping)

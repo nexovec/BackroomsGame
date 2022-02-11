@@ -130,11 +130,6 @@ local function receiveEnetHandle(hostevent)
             return false
         end
         local authorName = userSession.username
-        -- FIXME: If userSession exists, authorName should be guaranteed to exist as well.
-        if not authorName then
-            print("A user " .. hostevent.peer .. " tried to write to chat without logging in.")
-            return false
-        end
         local msg = authorName .. ": " .. trimmedData
         print(msg)
         enetServer:broadcast("message:" .. msg)
