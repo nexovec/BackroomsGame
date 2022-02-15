@@ -21,7 +21,7 @@ function animations.updateAnimations(dt)
     end
 end
 
-local function newCharacterAnimation(self, aConf)
+local function newRowPaddedAnimation(self, aConf)
     self.offsets = {}
     self.widthInTiles = aConf.widthInTiles
     self.offsets[1] = 0
@@ -56,7 +56,7 @@ function animations.loadAnimation(animName)
     self.tileAtlas = tileAtlas.wrap(aConf.filepath, aConf.tileSize)
     self.frameCounts = aConf.frameCounts
     if aConf.animationType == "oneAnimationPerRow" then
-        return newCharacterAnimation(self, aConf)
+        return newRowPaddedAnimation(self, aConf)
     elseif aConf.animationType == "oneContiguousAnimation" then
         -- TODO:
         return newContiguousAnimation(self, aConf)

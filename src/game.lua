@@ -37,7 +37,10 @@ local clientChatboxMessage = ""
 local chatboxDims = {640, 1280}
 local chatboxUIBox
 
+local settingsEnabled = false
 local shouldHandleSettingsBtnClick = true
+local shouldHandleChatboxSendBtnClick = false
+local chatboxSendBtnDimensions
 local loginBoxEnabled
 local tintDrawn = false
 local loginBoxUsernameText = ""
@@ -52,7 +55,40 @@ local logMessageBox
 local activeUIElemIndex = 1
 local activeLoginBoxField = "nickname"
 
-local serverAddress = "192.168.0.234:6750"
+local UITileSize = 16
+local UIScale = 5
+local shouldHandleLoginClick = false
+local loginBoxDimensions = {
+    x = 4,
+    y = 4,
+    width = 8,
+    height = 3
+}
+local loginBoxBtnDimensions
+local settingsBoxDimensions = {
+    x = 6,
+    y = 6,
+    width = 4,
+    height = 6
+}
+local settingsBtnDimensions
+
+local loginBoxTextFieldsSizes = {
+    username = {
+        x = loginBoxDimensions.x * UITileSize * UIScale + 270,
+        y = loginBoxDimensions.y * UITileSize * UIScale + 60,
+        width = 300,
+        margins = 2
+    },
+    password = {
+        x = loginBoxDimensions.x * UITileSize * UIScale + 270,
+        y = loginBoxDimensions.y * UITileSize * UIScale + 110,
+        width = 300,
+        margins = 2
+    }
+}
+
+local serverAddress
 local connectionFails = 0
 local hasConnected = false
 
@@ -112,7 +148,6 @@ end
 local function disableLoginPrompt()
     loginBoxEnabled = false
     -- TODO: Enum for active elements
-    activeUIElemIndex = 2
 end
 
 local function receivedMessageHandle(hostevent)
@@ -315,47 +350,15 @@ local function tiledUIPanel(assetName, tileSize, scale, panelPos)
     return self
 end
 
-local UITileSize = 16
-local UIScale = 5
-local shouldHandleLoginClick = false
-local loginBoxSize = {
-    x = 4,
-    y = 4,
-    width = 8,
-    height = 3
-}
-local settingsBoxSize = {
-    x = 6,
-    y = 6,
-    width = 4,
-    height = 6
-}
-
-local loginBoxTextFieldsSizes = {
-    username = {
-        x = loginBoxSize.x * UITileSize * UIScale + 270,
-        y = loginBoxSize.y * UITileSize * UIScale + 60,
-        width = 300,
-        margins = 2
-    },
-    password = {
-        x = loginBoxSize.x * UITileSize * UIScale + 270,
-        y = loginBoxSize.y * UITileSize * UIScale + 110,
-        width = 300,
-        margins = 2
-    }
-}
-
 local function focusChat()
     if not loginBoxEnabled then
-        return
+        activeLoginBoxField = "nickname"
     end
-    activeLoginBoxField = "nickname"
+    activeUIElemIndex = 2
 end
 
 function loginClicked()
     attemptLogin(loginBoxUsernameText, loginBoxPasswordText)
-    activeLoginBoxField = "password"
     disableLoginPrompt()
     focusChat()
 end
@@ -380,13 +383,19 @@ local function handleLoginBoxFieldFocusOnMouseClick(xIn, yIn, mb, repeating)
     end
 end
 
-local function handleSettingsBtnClick(xIn, yIn, mb, repeating)
-    if shouldHandleSettingsBtnClick == false then
+local function handleChatSendBtnClick(x, y, width, height)
+    if not shouldHandleChatboxSendBtnClick then
         return
     end
-    -- FIXME: replace magic numbers
-    if pointIntersectsQuad(xIn, yIn, UITileSize / 2 * UIScale * (settingsBoxSize.x * 2 + 10 - 0.5),
-        UITileSize / 2 * UIScale * (settingsBoxSize.y * 2 + 4 - 0.1), 3 * UITileSize * UIScale, UITileSize * UIScale) then
+    -- TODO:
+end
+
+local function handleSettingsBtnClick(xIn, yIn, mb, repeating)
+    if not shouldHandleSettingsBtnClick then
+        return
+    end
+    if pointIntersectsQuad(xIn, yIn, settingsBtnDimensions.x, settingsBtnDimensions.y, settingsBtnDimensions.width,
+        settingsBtnDimensions.height) then
         settingsEnabled = true
         shouldHandleLoginClick = false
     end
@@ -396,8 +405,14 @@ local function handleLoginClick(xIn, yIn, mb, repeating)
     if not shouldHandleLoginClick then
         return
     end
-    if pointIntersectsQuad(xIn, yIn, UITileSize / 2 * UIScale * (loginBoxSize.x * 2 + 10 - 0.5),
-        UITileSize / 2 * UIScale * (loginBoxSize.y * 2 + 4 - 0.1), 3 * UITileSize * UIScale, UITileSize * UIScale) then
+    loginBoxBtnDimensions = {
+        x = UITileSize / 2 * UIScale * (loginBoxDimensions.x * 2 + 10 - 0.5),
+        y = UITileSize / 2 * UIScale * (loginBoxDimensions.y * 2 + 4 - 0.1),
+        width = 3 * UITileSize * UIScale,
+        height = UITileSize * UIScale
+    }
+    if pointIntersectsQuad(xIn, yIn, loginBoxBtnDimensions.x, loginBoxBtnDimensions.y, loginBoxBtnDimensions.width,
+        loginBoxBtnDimensions.height) then
         loginClicked()
         shouldHandleLoginClick = false
     end
@@ -449,18 +464,37 @@ function drawChatBox()
     end
     love.graphics.print(clientChatboxMessage .. a, xts + 30, yts + 880)
 
-
     -- render send button
     -- TODO: Add send button functionality
     -- love.graphics.draw(assets.get("resources/images/ui/smallIcons.png"), 1220, 100, 0, 3, 3) -- icons preview
 
-    tileAtlas.wrap("resources/images/ui/smallIcons.png", 12, 2):drawTile(xts + 475,
-    yts + 865, 0, 8, 64, 64)
+    -- TODO: move
+    chatboxSendBtnDimensions = {
+        x = xts + 475,
+        y = yts + 865,
+        width = 64,
+        height = 64
+    }
+    tileAtlas.wrap("resources/images/ui/smallIcons.png", 12, 2):drawTile(chatboxSendBtnDimensions.x,
+        chatboxSendBtnDimensions.y, 0, 8, chatboxSendBtnDimensions.width, chatboxSendBtnDimensions.height)
     love.graphics.rectangle("line", xts + 480, yts + 870, 64, 64)
 
     -- TODO: Move
     tileAtlas.wrap("resources/images/ui/smallIcons.png", 12, 2):drawTile(1830, 0, 10, 6, 64, 64)
-    love.graphics.rectangle("line", 1830, 10, 64, 64)
+    -- settingsBtnDimensions = {
+    --     x = UITileSize / 2 * UIScale * (settingsBoxSize.x * 2 + 10 - 0.5),
+    --     y = UITileSize / 2 * UIScale * (settingsBoxSize.y * 2 + 4 - 0.1),
+    --     width = 3 * UITileSize * UIScale,
+    --     height = UITileSize * UIScale
+    -- }
+    settingsBtnDimensions = {
+        x = 1830,
+        y = 10,
+        width = 64,
+        height = 64
+    }
+    love.graphics.rectangle("line", settingsBtnDimensions.x, settingsBtnDimensions.y, settingsBtnDimensions.width,
+        settingsBtnDimensions.height)
     -- TODO: Set settings btn collision rect here!
 
     love.graphics.setColor(1, 1, 1, 1)
@@ -476,16 +510,20 @@ local function tintScreen()
 end
 
 local function drawSettings()
-    if not settingsEnable~d then return false end
+    if not settingsEnabled then
+        return false
+    end
     tintScreen()
-    -- TODO: Params are not defined
-    tiledUIPanel("uiImage", tileSize, scale):draw(x, y, width, height)
+    -- TODO:
+    local x, y, width, height = 5, 4, 6, 3
+    tiledUIPanel("uiImage", UITileSize, UIScale):draw(x, y, width, height)
     return true
 end
 
 local function drawLoginBox()
     local tileSize, scale = UITileSize, UIScale
-    local x, y, width, height = loginBoxSize.x, loginBoxSize.y, loginBoxSize.width, loginBoxSize.height
+    local x, y, width, height = loginBoxDimensions.x, loginBoxDimensions.y, loginBoxDimensions.width,
+        loginBoxDimensions.height
     local caret
     if delta % 1 < 0.5 then
         caret = "_"
@@ -540,8 +578,9 @@ local slotIconsAtlas = tileAtlas.wrap("resources/images/slotIcons.png", 32, 6)
 
 function renderUITab(x, y, width, height, horizontalIconTileIndex, verticalIconTileIndex)
     tiledUIPanel("uiImage", UITileSize, UIScale, {10, 4, 2, 2}):draw(x, y, width, height)
-    slotIconsAtlas:drawTile((x + 0.1) * UITileSize * UIScale, (y + 0.15) * UITileSize * UIScale, horizontalIconTileIndex, verticalIconTileIndex,
-        (width - 0.5) * UITileSize * UIScale, (height - 0.5) * UITileSize * UIScale)
+    slotIconsAtlas:drawTile((x + 0.1) * UITileSize * UIScale, (y + 0.15) * UITileSize * UIScale,
+        horizontalIconTileIndex, verticalIconTileIndex, (width - 0.5) * UITileSize * UIScale,
+        (height - 0.5) * UITileSize * UIScale)
 end
 
 function renderUIPanel(x, y, width, height, shape)
@@ -645,6 +684,7 @@ local UIElemHandlers = {{
 function game.load(args)
     assert(type(args) == "table")
     options = args
+    serverAddress = assets.get("settings").serverAddress
     love.window.setTitle("Backrooms v0.0.1 pre-dev")
     love.keyboard.setKeyRepeat(true)
     love.graphics.setFont(assets.get("font"))
@@ -679,9 +719,9 @@ end
 
 function game.draw()
     -- draw background
-    -- FIXME: Magic numbers
     tintDrawn = false
-    local backgroundQuad = love.graphics.newQuad(0, 0, 2560, 1440, 2560, 1440)
+    local backgroundQuad = love.graphics.newQuad(0, 0, mockResolution[1], mockResolution[2], mockResolution[1],
+        mockResolution[2])
     love.graphics.draw(assets.get("backgroundImage"), backgroundQuad, 0, 0, 0, 1, 1, 0, 0)
 
     -- renderOldUI()
@@ -784,7 +824,8 @@ function game.quit()
 end
 
 function love.mousepressed(x, y, width, height)
-    handleSettingsBtnClick(x,y, width, height)
+    handleChatSendBtnClick(x, y, width, height)
+    handleSettingsBtnClick(x, y, width, height)
     handleLoginClick(x, y, width, height)
     handleLoginBoxFieldFocusOnMouseClick(x, y, width, height)
 end

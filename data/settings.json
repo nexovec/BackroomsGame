@@ -9,5 +9,6 @@
     "width":1920,
     "height":1080,
     "assetReloadUpdateFrequency":2,
-    "targetTPS": 60
+    "targetTPS": 60,
+    "serverAddress":"192.168.0.234:6750"
 }
