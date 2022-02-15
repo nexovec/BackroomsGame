@@ -1,9 +1,7 @@
 local uiBox = {}
 
-
 local types = require("std.types")
 local assets = require("assets")
-
 
 function uiBox:clear()
     -- stencil buffer
@@ -42,8 +40,8 @@ function uiBox:clear()
     -- local texture = love.graphics.newCanvas(width, height)
     -- local alphaTexture = love.graphics.newCanvas(aspect * 128, 128)
     -- alphaTexture:renderTo(function()
-        --     love.graphics.withShader(assets.uiBtnRoundingMask, function()
-            --         assets.uiBtnRoundingMask:send("rounding", 8)
+    --     love.graphics.withShader(assets.uiBtnRoundingMask, function()
+    --         assets.uiBtnRoundingMask:send("rounding", 8)
     --         love.graphics.rectangle("fill", 0, 0, width, height)
     --     end)
     -- end)
@@ -54,7 +52,6 @@ function uiBox:clear()
     --     bottom_right = {0.2, 0.2, 0.2, 1},
     --     bottom_left = {0.2, 0.2, 0.2, 1}
     -- })
-
 
     -- love.graphics.applyShader(self.textureCvs, assets.applyAlphaA, {alphaMask = alphaTexture}, {draw = texture})
     -- texture:release()

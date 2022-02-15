@@ -24,7 +24,7 @@ end
 function array:concat(tbl)
     assert(self, "Call with : instead of .", 2)
     assert(type(tbl) == "table" and tbl.type == "array")
-    for k,v in ipairs(tbl) do
+    for k, v in ipairs(tbl) do
         self:append(v)
     end
 end
@@ -63,7 +63,7 @@ function array:prettyPrintRecursive(passed)
     for k, v in pairs(self) do
         if type(v) == "table" then
             if passed:contains(self) == true then
-                print("<previous ".. tostring(self) .. " >")
+                print("<previous " .. tostring(self) .. " >")
             else
                 array.prettyPrintRecursive(v, passed)
             end
@@ -88,7 +88,7 @@ end
 -- WITH side-effects
 function array:extend(other)
     assert(other.type and other.type == "array")
-    for k,v in ipairs(other) do
+    for k, v in ipairs(other) do
         self:append(v)
     end
 end
@@ -106,7 +106,9 @@ end
 function array:indexOf(elem)
     assert(self, "Call with : instead of .", 2)
     for k, v in ipairs(self) do
-        if v == elem then return k end
+        if v == elem then
+            return k
+        end
     end
     return nil
 end
@@ -119,8 +121,12 @@ function array:filter(func)
     local new = {}
     for k, v in ipairs(self) do
         local res = func(v, k, self)
-        if res == true then new[#new + 1] = v
-        elseif res then else error("Filter function must return boolean", 2) end
+        if res == true then
+            new[#new + 1] = v
+        elseif res then
+        else
+            error("Filter function must return boolean", 2)
+        end
     end
     return array.wrap(new)
 end
@@ -155,7 +161,9 @@ end
 function array:squashed()
     local res = array.wrap()
     for i = 1, #self do
-        if self[i] ~= nil then res:append(self[i]) end
+        if self[i] ~= nil then
+            res:append(self[i])
+        end
     end
     return res
 end
@@ -164,7 +172,9 @@ end
 function array:rep(reps)
     assert(reps >= 1)
     local res = array.wrap()
-    if reps == 1 then return self:shallowCopy() end
+    if reps == 1 then
+        return self:shallowCopy()
+    end
 
     for i = 1, reps do
         res:extend(self)

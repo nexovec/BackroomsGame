@@ -1,7 +1,5 @@
 -- ! sets some globals
-
 -- overrides for lua built-ins
-
 -- local oldreq = require
 -- require = function(s)
 --     -- TODO: requireLibraryLocation() function
@@ -18,17 +16,20 @@
 --     return res
 -- end
 -- local oldreq = nil
-
 --- Throw an error if var is none of the specified types.
 ---@param var any
 ---@param ... string variable arguments
 ---@return nil
 function assertType(var, ...)
     local params = {...}
-    for k,v in ipairs(params) do
+    for k, v in ipairs(params) do
         assert(type(v) == "string", "Argument #" .. tostring(k) .. " has unexpected type " .. type(v), nil, nil)
-        if type(var) == v then return end
-        if type(var) == "userdata" and var.type() == v then return end
+        if type(var) == v then
+            return
+        end
+        if type(var) == "userdata" and var.type() == v then
+            return
+        end
     end
     error("Type assert failed", 2)
 end

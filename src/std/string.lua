@@ -1,10 +1,10 @@
-local string = setmetatable({}, {__index = string})
-
+local string = setmetatable({}, {
+    __index = string
+})
 
 local types = require("std.types")
 local utf8 = require("utf8")
 local array = require("std.array")
-
 
 function string.__call()
     error("Not yet implemented.")
@@ -14,7 +14,9 @@ function string.popped(str)
     return str
 end
 function string.join(tableOfStrings, separator)
-    if not separator then separator = " " end
+    if not separator then
+        separator = " "
+    end
     assert(type(tableOfStrings) == "table")
     return table.concat(tableOfStrings, separator)
 end

@@ -8,11 +8,9 @@ local string = require("std.string")
 local array = require("std.array")
 require("loveOverrides")
 
-
 local resources = map.wrap()
 local funcsToCallBasedOnFileExtension
 local deltaTime = 0
-
 
 -- helper functions
 
@@ -26,7 +24,9 @@ end
 local function reloadResource(k, path)
     -- reload assset
     local v = resources[k]
-    if v.asset and v.asset.release then v.asset:release() end
+    if v.asset and v.asset.release then
+        v.asset:release()
+    end
     -- TODO: Check if it is the same kind of file
     -- TODO: Fallback to the original file if new one isn't compatible or file doesn't exist.
     v.cachedFileLastModified = love.filesystem.getInfo(v.path).modtime
@@ -51,15 +51,17 @@ end
 local function registerResourcesFromJson(file)
     local resTable = decodeJsonFile(file)
     for k, v in pairs(resTable) do
-        optionallyRegisterResource(k,v)
+        optionallyRegisterResource(k, v)
     end
 end
 
 local function init(funcsToCallBasedOnFileExtensionArg)
     funcsToCallBasedOnFileExtension = funcsToCallBasedOnFileExtensionArg
-    setmetatable(funcsToCallBasedOnFileExtension, {__index = function(tbl, key)
-    assert(type(key) == "string", "You must index by a file extension", 2)
-    end})
+    setmetatable(funcsToCallBasedOnFileExtension, {
+        __index = function(tbl, key)
+            assert(type(key) == "string", "You must index by a file extension", 2)
+        end
+    })
     registerResourcesFromJson("data/assets.json")
 end
 
@@ -79,26 +81,29 @@ local function hotReloadAssets()
     end
 end
 
-
 -- API
 function assets.initOnServer()
-    init{
+    init {
         ["json"] = decodeJsonFile
     }
 end
 
 function assets.initOnClient()
-    init{
+    init {
         ["png"] = love.graphics.newArrayImage,
         ["glsl"] = love.graphics.newShader,
         ["json"] = decodeJsonFile,
-        ["ttf"] = function(font, fontSize) return love.graphics.newFont(font, fontSize or 48) end
+        ["ttf"] = function(font, fontSize)
+            return love.graphics.newFont(font, fontSize or 48)
+        end
     }
 end
 
 function assets.update(dt)
     deltaTime = deltaTime + dt
-    if deltaTime < assets.get("settings").assetReloadUpdateFrequency then return end
+    if deltaTime < assets.get("settings").assetReloadUpdateFrequency then
+        return
+    end
     deltaTime = 0
     registerResourcesFromJson("data/assets.json")
     hotReloadAssets()
@@ -118,7 +123,9 @@ function assets.get(filePathOrResourceName, ...)
         local list = string.split(filePathOrResourceName, ".")
         local fileExtension = array.wrap(list):pop()
         local func = funcsToCallBasedOnFileExtension[fileExtension]
-        if not func then error("Unknown file extension: " .. fileExtension, 2) end
+        if not func then
+            error("Unknown file extension: " .. fileExtension, 2)
+        end
         resources[filePathOrResourceName] = {
             path = filePathOrResourceName,
             func = func,
@@ -128,7 +135,7 @@ function assets.get(filePathOrResourceName, ...)
         return assets.get(filePathOrResourceName, ...)
     end
     local resource = resources[filePathOrResourceName]
-    assert(resource, "This resource doesn't exist",  2)
+    assert(resource, "This resource doesn't exist", 2)
 
     if not resource.asset then
         print("Loaded " .. resource.path)

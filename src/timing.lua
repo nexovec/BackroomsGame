@@ -6,7 +6,11 @@ local delayedCalls = {}
 function timing.delayCall(func, delayInSeconds)
     -- TODO: Test with callable metatables
     assert(isCallable)
-    delayedCalls[#delayedCalls + 1] = {startTime = love.timer.getTime(), delay = delayInSeconds, call = func}
+    delayedCalls[#delayedCalls + 1] = {
+        startTime = love.timer.getTime(),
+        delay = delayInSeconds,
+        call = func
+    }
 end
 function timing.update()
     -- TODO: Test

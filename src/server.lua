@@ -36,7 +36,8 @@ local function onUserLogin(peer, username, password)
 
     for k, v in pairs(userSessions) do
         if v.username == username then
-            print("A peer " .. tostring(peer) .. " requested a login with username " .. tostring(username) .. " already logged in by " .. tostring(k))
+            print("A peer " .. tostring(peer) .. " requested a login with username " .. tostring(username) ..
+                      " already logged in by " .. tostring(k))
             peer:send("status:logOut:User was already logged in.")
             return false
         end
@@ -93,7 +94,9 @@ local function attemptLogin(peer, username, password)
         if v.username == username then
             if v.password == password then
                 -- logged in
-                if onUserLogin(peer, username, password) == false then return false end
+                if onUserLogin(peer, username, password) == false then
+                    return false
+                end
                 enetServer:broadcast("message: User " .. username .. " just logged in.")
                 print(peer, "just logged in as ", username, "!")
                 return true

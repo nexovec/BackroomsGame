@@ -24,7 +24,7 @@ function map:prettyPrintRecursive(passed)
     if not self then
         return error('Table is nil!', 2)
     end
-    --TODO: typecheck against array
+    -- TODO: typecheck against array
     if type(self) ~= 'table' then
         error('This is not a table. type: ' .. type(self) .. ((" " .. (self.type and self.type())) or ""), 2)
     end
@@ -33,7 +33,7 @@ function map:prettyPrintRecursive(passed)
     for k, v in pairs(self) do
         if type(v) == "table" then
             if passed:contains(self) == true then
-                print("<previous ".. tostring(self) .. " >")
+                print("<previous " .. tostring(self) .. " >")
             else
                 map.prettyPrintRecursive(v, passed)
             end
@@ -60,7 +60,9 @@ end
 
 function map:indexOf(elem)
     for i, v in pairs(self) do
-        if v == elem then return i end
+        if v == elem then
+            return i
+        end
     end
     return nil
 end

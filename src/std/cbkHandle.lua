@@ -1,6 +1,5 @@
 local cbkHandle = {}
 
-
 local assert = require("std.assert")
 local types = require("std.types")
 local array = require("std.array")
@@ -20,7 +19,9 @@ function cbkHandle:fire(...)
 end
 
 function cbkHandle.wrap()
-    local res = {subscribers = array:wrap()}
+    local res = {
+        subscribers = array:wrap()
+    }
     return setmetatable(res, cbkHandle)
 end
 

@@ -1,16 +1,14 @@
 local network = {}
 
-
 local assert = require("std.assert")
 local string = require("std.string")
-
 
 function network.getNetworkMessagePrefix(data)
     assert(type(data) == "string", "The parameter must be string data", 2)
     local splitString = string.split(data, ":")
     if #splitString <= 1 then
-    -- TODO: Don't crash, just log this and return
-    -- error("This message has no prefix: " .. data, 2)
+        -- TODO: Don't crash, just log this and return
+        -- error("This message has no prefix: " .. data, 2)
         return nil, data
     end
     local prefix = splitString[1]
