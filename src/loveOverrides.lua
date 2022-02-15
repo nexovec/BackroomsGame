@@ -107,6 +107,6 @@ function love.requireDirectory(pathToDir, localRequires)
     local requirePaths = localRequires .. ";"
     if localRequires then requirePaths = requirePaths .. love.filesystem.getRequirePath() end
     -- TODO: Make sure .init.lua is in requirePath.
-    return wrapRequirePath(pathToDir, localRequires)
+    return love.wrapRequirePath(pathToDir, localRequires)
 end
 end

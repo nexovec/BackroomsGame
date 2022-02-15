@@ -31,7 +31,7 @@ local function newRowPaddedAnimation(self, aConf)
         end
     end
     self.progress = 0
-    self.activeAnimation = 2
+    self.activeSequence = 2
     return self
 end
 
@@ -49,9 +49,9 @@ function animations.loadAnimation(animName)
     assert(aConf, "Animation " .. animName .. " not found in animations.json!!")
     assert(aConf.animationType)
     -- love.graphics.draw(assets.get(aConf.filepath))
-    self.animationNames = {}
+    self.sequenceNames = {}
     for i, v in ipairs(aConf.animationNames) do
-        self.animationNames[v] = i
+        self.sequenceNames[v] = i
     end
     self.tileAtlas = tileAtlas.wrap(aConf.filepath, aConf.tileSize)
     self.frameCounts = aConf.frameCounts
@@ -66,14 +66,14 @@ function animations.loadAnimation(animName)
     end
 end
 
-function animations:play(playbackDuration, animationName, isLooping)
-    if animationName then
-        self.activeAnimation = self.animationNames[animationName]
+function animations:play(playbackDuration, sequenceName, isLooping)
+    if sequenceName then
+        self.activeSequence = self.sequenceNames[sequenceName]
     end
-    local frameCount = self.frameCounts[self.activeAnimation]
+    local frameCount = self.frameCounts[self.activeSequence]
     self.progress = 0
     local tweenRef = tween.new(playbackDuration, self, {
-        progress = 1 - 1 / self.frameCounts[self.activeAnimation]
+        progress = 1 - 1 / self.frameCounts[self.activeSequence]
     }, "linear")
     playingAnimations:append{
         animRef = self,
@@ -85,7 +85,7 @@ function animations:play(playbackDuration, animationName, isLooping)
 end
 
 function animations:draw(x, y, width, height)
-    local i = math.floor(self.offsets[self.activeAnimation] + self.frameCounts[self.activeAnimation] * self.progress)
+    local i = math.floor(self.offsets[self.activeSequence] + self.frameCounts[self.activeSequence] * self.progress)
     self.tileAtlas:drawTile(x or 0, y or 0, i % self.widthInTiles, math.floor(i / self.widthInTiles), width or 128,
         height or 128)
     -- TODO: Positions and scaling

@@ -17,7 +17,7 @@ local deltaTime = 0
 -- helper functions
 
 local function stubResourceHandle(path)
-    local fileExtension = array.wrap(string.split(v.path, ".")):pop()
+    local fileExtension = array.wrap(string.split(path, ".")):pop()
     print("Extension " .. fileExtension .. " cannot currently be loaded")
 end
 
@@ -132,6 +132,7 @@ function assets.get(filePathOrResourceName, ...)
 
     if not resource.asset then
         print("Loaded " .. resource.path)
+        ---@diagnostic disable-next-line: redundant-parameter
         resource.asset = resource.func(resource.path, ...)
     end
     return resource.asset

@@ -5,7 +5,6 @@ local game = {}
 local animations = require("animations")
 local enet = require("enet")
 local t = require("timing")
-local uiBox = require("uiBox")
 local assert = require("std.assert")
 local array = require("std.array")
 local map = require("std.map")
@@ -15,9 +14,13 @@ local tileAtlas = require("tileAtlas")
 local cbkHandle = require("std.cbkHandle")
 local assets = require("assets")
 
+-- for use with renderOldUI():
+-- local chatboxUIBox
+-- local nicknamePickerUIBox
+-- local logMessageBox
+
 -- variables
 local options
-local testTileSet
 
 local enetclient
 local serverpeer
@@ -35,7 +38,6 @@ local characterSpriteCanvas
 local chatboxMessageHistory = array.wrap()
 local clientChatboxMessage = ""
 local chatboxDims = {640, 1280}
-local chatboxUIBox
 
 local settingsEnabled = false
 local shouldHandleSettingsBtnClick = true
@@ -47,12 +49,10 @@ local loginBoxUsernameText = ""
 local loginBoxPasswordText = ""
 local loginBoxErrorText = ""
 local nicknamePickerBoxDims = {750, 300}
-local nicknamePickerUIBox
 
 local logMessageBoxDims = {1600, 400}
-local logMessageBox
 
-local activeUIElemIndex = 1
+local activeUIElemIndex = "loginBox"
 local activeLoginBoxField = "nickname"
 
 local UITileSize = 16
@@ -65,13 +65,18 @@ local loginBoxDimensions = {
     height = 3
 }
 local loginBoxBtnDimensions
-local settingsBoxDimensions = {
+local settingsBoxDimensionsInTiles = {
     x = 6,
     y = 6,
     width = 4,
     height = 6
 }
-local settingsBtnDimensions
+local settingsBtnDimensions = {
+    x = 1830,
+    y = 10,
+    width = 64,
+    height = 64
+}
 
 local loginBoxTextFieldsSizes = {
     username = {
@@ -139,7 +144,7 @@ end
 
 local function loginPrompt(msg)
     local msg = msg or ""
-    activeUIElemIndex = 1
+    activeUIElemIndex = "loginBox"
     activeNicknamePickerField = "nickname"
     loginBoxEnabled = true
     loginBoxErrorText = msg
@@ -223,6 +228,13 @@ end
 ---- rendering
 
 local function renderOldUI()
+    local uiBox = require("old.uiBox")
+    chatboxUIBox = chatboxUIBox or uiBox.makeBox(chatboxDims[1], chatboxDims[2], "gradientShaderA", {}, 20)
+    nicknamePickerUIBox = nicknamePickerUIBox or
+                              uiBox.makeBox(nicknamePickerBoxDims[1], nicknamePickerBoxDims[2], "gradientShaderA", {},
+            20)
+    logMessageBox = logMessageBox or
+                        uiBox.makeBox(logMessageBoxDims[1], logMessageBoxDims[2], "gradientShaderA", {}, 20)
     -- render log message box
     love.graphics.push("all")
     local logMessageBoxCanvas = logMessageBox.textureCvs
@@ -308,8 +320,12 @@ local function tiledUIPanel(assetName, tileSize, scale, panelPos)
         scale = scale,
         panelPos = panelPos or {0, 4, 10, 10}
     }
-    -- option is "flat" or "shadow"
+    -- TODO: option is "flat" or "shadow", corresponds to whether it is hovered over with mouse or not
     function self:draw(xPosInTiles, yPosInTiles, widthInTiles, heightInTiles, option)
+        if type(xPosInTiles) == "table" then
+            local dims, option = xPosInTiles, yPosInTiles
+            return self:draw(dims.x, dims.y, dims.width, dims.height, option)
+        end
         local scaledTileSize = self.tileSize * self.scale
         assert(xPosInTiles >= 0 and yPosInTiles >= 0 and widthInTiles > 0 and widthInTiles > 0)
         local atlas = tileAtlas.wrap(self.assetName, self.tileSize)
@@ -354,7 +370,7 @@ local function focusChat()
     if not loginBoxEnabled then
         activeLoginBoxField = "nickname"
     end
-    activeUIElemIndex = 2
+    activeUIElemIndex = "chatBox"
 end
 
 function loginClicked()
@@ -364,14 +380,16 @@ function loginClicked()
 end
 
 function pointIntersectsQuad(pX, pY, qX, qY, qW, qH)
+    if type(qX) == "table" then
+        return pointIntersectsQuad(pX, pY, qX.x, qX.y, qX.width, qX.height)
+    end
     return pX >= qX and pX < qX + qW and pY >= qY and pY < qY + qH
 end
 
-local function handleLoginBoxFieldFocusOnMouseClick(xIn, yIn, mb, repeating)
+local function handleLoginBoxFieldFocusOnMouseClick(xIn, yIn, mb, isTouch, repeating)
     if not loginBoxEnabled then
         return
     end
-    -- FIXME: replace magic numbers
     if pointIntersectsQuad(xIn, yIn, loginBoxTextFieldsSizes.username.x, loginBoxTextFieldsSizes.username.y,
         loginBoxTextFieldsSizes.username.width,
         assets.get("font"):getAscent() + loginBoxTextFieldsSizes.username.margins) then
@@ -383,25 +401,48 @@ local function handleLoginBoxFieldFocusOnMouseClick(xIn, yIn, mb, repeating)
     end
 end
 
-local function handleChatSendBtnClick(x, y, width, height)
+local function handleChatSendBtnClick(x, y, mb, isTouch, repeating)
     if not shouldHandleChatboxSendBtnClick then
         return
     end
     -- TODO:
 end
 
-local function handleSettingsBtnClick(xIn, yIn, mb, repeating)
+local function handleSettingsBtnClick(xIn, yIn, mb, isTouch, repeating)
     if not shouldHandleSettingsBtnClick then
         return
     end
     if pointIntersectsQuad(xIn, yIn, settingsBtnDimensions.x, settingsBtnDimensions.y, settingsBtnDimensions.width,
         settingsBtnDimensions.height) then
         settingsEnabled = true
-        shouldHandleLoginClick = false
+        if loginBoxEnabled then
+            shouldHandleLoginClick = false
+            activeUIElemIndex = -1
+        end
+        return true
     end
 end
 
-local function handleLoginClick(xIn, yIn, mb, repeating)
+-- optionally can take no parameters to omit checks
+local function handleSettingsClose(x, y, mb)
+    if not settingsEnabled then
+        return
+    end
+    local multiplier = UITileSize * UIScale
+    if not not x and
+        pointIntersectsQuad(x, y, settingsBoxDimensionsInTiles.x * multiplier,
+            settingsBoxDimensionsInTiles.y * multiplier, settingsBoxDimensionsInTiles.width * multiplier,
+            settingsBoxDimensionsInTiles.height * multiplier) then
+        return
+    end
+    settingsEnabled = false
+    if loginBoxEnabled then
+        shouldHandleLoginClick = true
+        activeUIElemIndex = "loginBox"
+    end
+end
+
+local function handleLoginClick(xIn, yIn, mb, isTouch, repeating)
     if not shouldHandleLoginClick then
         return
     end
@@ -425,11 +466,24 @@ local function tintedTextField(x, y, width, vertMargins)
     love.graphics.setColor(0, 0, 0, 1)
 end
 
--- TODO: Draw rectangle around image
+local function drawOutline(obj, color)
+    local color = color or {1, 0, 0, 1}
+    love.graphics.setColor(unpack(color))
+    if not not obj[1] and not not obj[2] then
+        -- TODO: obj is a pointdraw circle
+    elseif not not obj.x and not not obj.y and not not obj.width and obj.height then
+        -- TODO: obj is a rectangle (dimensions)
+    else
+        local typeText = obj.type or type(obj)
+        error("You can't draw an outline of " .. tostring(typeText), 2)
+    end
+    love.graphics.setColor(0, 0, 0, 1)
+end
 
 function drawChatBox()
     local tileSize, scale = 16, 5
     local x, y, width, height = 16.5, 1, 7, 12
+
     local underscore
     if delta % 1 < 0.5 then
         underscore = "_"
@@ -487,12 +541,6 @@ function drawChatBox()
     --     width = 3 * UITileSize * UIScale,
     --     height = UITileSize * UIScale
     -- }
-    settingsBtnDimensions = {
-        x = 1830,
-        y = 10,
-        width = 64,
-        height = 64
-    }
     love.graphics.rectangle("line", settingsBtnDimensions.x, settingsBtnDimensions.y, settingsBtnDimensions.width,
         settingsBtnDimensions.height)
     -- TODO: Set settings btn collision rect here!
@@ -514,9 +562,7 @@ local function drawSettings()
         return false
     end
     tintScreen()
-    -- TODO:
-    local x, y, width, height = 5, 4, 6, 3
-    tiledUIPanel("uiImage", UITileSize, UIScale):draw(x, y, width, height)
+    tiledUIPanel("uiImage", UITileSize, UIScale):draw(settingsBoxDimensionsInTiles)
     return true
 end
 
@@ -531,7 +577,7 @@ local function drawLoginBox()
         caret = ""
     end
     -- TODO: Don't flicker the login box if credentials are rejected. (fade-out ?)
-    -- render loginbox
+    -- render loginBox
     if not loginBoxEnabled then
         return
     end
@@ -663,21 +709,24 @@ function handleLoginBoxKp(key)
     end
 end
 
-local UIElemHandlers = {{
-    keypressed = handleLoginBoxKp,
-    textinput = function(t)
-        if activeLoginBoxField == "password" then
-            loginBoxPasswordText = loginBoxPasswordText .. t
-        else
-            loginBoxUsernameText = loginBoxUsernameText .. t
+local UIElemHandlers = {
+    loginBox = {
+        keypressed = handleLoginBoxKp,
+        textinput = function(t)
+            if activeLoginBoxField == "password" then
+                loginBoxPasswordText = loginBoxPasswordText .. t
+            else
+                loginBoxUsernameText = loginBoxUsernameText .. t
+            end
         end
-    end
-}, {
-    keypressed = handleChatKp,
-    textinput = function(t)
-        clientChatboxMessage = clientChatboxMessage .. t
-    end
-}}
+    },
+    chatBox = {
+        keypressed = handleChatKp,
+        textinput = function(t)
+            clientChatboxMessage = clientChatboxMessage .. t
+        end
+    }
+}
 
 --- API
 
@@ -698,10 +747,6 @@ function game.load(args)
     characterSpriteCanvas = love.graphics.newCanvas(32, 32)
     -- playerAnimation:play(2, "idle", true)
     playerAnimation:play(2, "circle", true)
-
-    chatboxUIBox = uiBox.makeBox(chatboxDims[1], chatboxDims[2], "gradientShaderA", {}, 20)
-    nicknamePickerUIBox = uiBox.makeBox(nicknamePickerBoxDims[1], nicknamePickerBoxDims[2], "gradientShaderA", {}, 20)
-    logMessageBox = uiBox.makeBox(logMessageBoxDims[1], logMessageBoxDims[2], "gradientShaderA", {}, 20)
 
     love.keyboard.setKeyRepeat(true)
 
@@ -823,17 +868,24 @@ function game.quit()
     serverpeer:disconnect_now()
 end
 
-function love.mousepressed(x, y, width, height)
-    handleChatSendBtnClick(x, y, width, height)
-    handleSettingsBtnClick(x, y, width, height)
-    handleLoginClick(x, y, width, height)
-    handleLoginBoxFieldFocusOnMouseClick(x, y, width, height)
+function love.mousepressed(x, y, mb, isTouch, presses)
+    handleChatSendBtnClick(x, y, mb, isTouch, presses)
+    if not handleSettingsBtnClick(x, y, mb, isTouch, presses) then
+        handleSettingsClose(x, y, mb)
+    end
+    handleLoginClick(x, y, mb, isTouch, presses)
+    handleLoginBoxFieldFocusOnMouseClick(x, y, mb, isTouch, presses)
 end
 
 function love.keypressed(key)
-    UIElemHandlers[activeUIElemIndex].keypressed(key)
+    if UIElemHandlers[activeUIElemIndex] then
+        UIElemHandlers[activeUIElemIndex].keypressed(key)
+    end
     if love.keyboard.isDown("f5") then
         love.event.quit("restart")
+    end
+    if love.keyboard.isDown("escape") then
+        handleSettingsClose()
     end
 end
 
