@@ -122,13 +122,16 @@ local function receiveEnetHandle(hostevent)
     local data = hostevent.data
     local prefix, trimmedData = network.getNetworkMessagePrefix(data)
     if prefix == "message" then
-        -- TODO: Maximum message length
+        if #trimmedData > assets.get("settings").maximumChatMessageLength then
+            -- TODO: Faulty request - message longer than the allowed limit, LOG.
+            return false
+        end
         -- broadcast message to everybody
         -- FIXME: userSession is not guaranteed to exist
         local userSession = userSessions[hostevent.peer]
         if not userSession then
             -- error("Invalid user session of peer " .. tostring(hostevent.peer))
-            -- TODO: log suspicious number of those
+            -- TODO: Log suspicious number of those
             hostevent.peer:send("status:logOut:Server restarted. Log in again.")
             return false
         end
@@ -167,7 +170,7 @@ local function onDisconnect(peer)
         onUserLogout(peer)
     end
     print("Address " .. tostring(peer) .. " has disconnected")
-    -- TODO: reset username
+    -- TODO: Reset username
     connectedPeers[connectedPeers:indexOf(peer)] = nil
 end
 

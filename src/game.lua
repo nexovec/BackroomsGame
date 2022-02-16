@@ -34,17 +34,24 @@ local playerAnimation
 
 local tempCanvas
 local characterSpriteCanvas
+local tintDrawn = false
 
-local chatboxMessageHistory = array.wrap()
-local clientChatboxMessage = ""
-local chatboxDims = {640, 1280}
-
-local settingsEnabled = false
-local shouldHandleSettingsBtnClick = true
-local shouldHandleChatboxSendBtnClick = false
 local chatboxSendBtnDimensions
 local loginBoxEnabled
-local tintDrawn = false
+local settingsEnabled = false
+local shouldHandleSettingsBtnClick = true
+local shouldHandleChatboxSendBtnClick = true
+
+local chatboxMessageHistory = array.wrap()
+local clientChatBoxMessage = ""
+local chatBoxDimensions = {
+    x = 16.5,
+    y = 1,
+    width = 7,
+    height = 12
+}
+-- local chatboxDims = {640, 1280}
+
 local loginBoxUsernameText = ""
 local loginBoxPasswordText = ""
 local loginBoxErrorText = ""
@@ -257,7 +264,7 @@ local function renderOldUI()
             love.graphics.print(messageText, 30, 10 - yDiff + yDiff * i)
         end
 
-        love.graphics.print(clientChatboxMessage, 30, 1210)
+        love.graphics.print(clientChatBoxMessage, 30, 1210)
     end)
 
     local chatboxScenePlacementQuad = love.graphics.newQuad(0, 0, chatboxDims[1], chatboxDims[2], chatboxDims[1],
@@ -405,7 +412,9 @@ local function handleChatSendBtnClick(x, y, mb, isTouch, repeating)
     if not shouldHandleChatboxSendBtnClick then
         return
     end
-    -- TODO:
+    if pointIntersectsQuad(x, y, chatboxSendBtnDimensions) then
+        handleChatKp("return")
+    end
 end
 
 local function handleSettingsBtnClick(xIn, yIn, mb, isTouch, repeating)
@@ -466,13 +475,26 @@ local function tintedTextField(x, y, width, vertMargins)
     love.graphics.setColor(0, 0, 0, 1)
 end
 
-local function drawOutline(obj, color)
+local function drawOutline(obj, color, ...)
+    if type(obj) == "number" then
+        local vargs = {...}
+        if #vargs <= 1 then
+            -- this is a point
+            return drawOutline({obj, color}, vargs[1])
+        elseif #vargs <= 3 then
+            -- this is a rectangle
+            return drawOutline({x = obj, y = color, width = vargs[1], height = vargs[2]}, vargs[3])
+        end
+    end
     local color = color or {1, 0, 0, 1}
     love.graphics.setColor(unpack(color))
     if not not obj[1] and not not obj[2] then
-        -- TODO: obj is a pointdraw circle
+        -- TODO: obj is a point. Draw circle!
+        -- xts + 480, yts + 870, 64, 64
+        error("Not yet implemented.")
     elseif not not obj.x and not not obj.y and not not obj.width and obj.height then
-        -- TODO: obj is a rectangle (dimensions)
+        -- TODO: obj is a rectangle (a dimensions object)
+        love.graphics.rectangle("line", obj.x, obj.y, obj.width, obj.height)
     else
         local typeText = obj.type or type(obj)
         error("You can't draw an outline of " .. tostring(typeText), 2)
@@ -481,9 +503,6 @@ local function drawOutline(obj, color)
 end
 
 function drawChatBox()
-    local tileSize, scale = 16, 5
-    local x, y, width, height = 16.5, 1, 7, 12
-
     local underscore
     if delta % 1 < 0.5 then
         underscore = "_"
@@ -494,15 +513,15 @@ function drawChatBox()
     local font = assets.get("font")
     local ascent = font:getAscent()
     local scrollDistance = math.max(#chatboxMessageHistory * ascent - 1000, 0)
-    renderUIPanel(x, y, width, height)
+    renderUIPanel(chatBoxDimensions.x, chatBoxDimensions.y, chatBoxDimensions.width, chatBoxDimensions.height)
     love.graphics.setColor(0, 0, 0, 1)
     -- TODO: Fade out top of the chat window
     -- TODO: Smooth chat scrolling
     -- TODO: Implement maximum chat message length
     local rowIndex = 0
     local maxRowWidth = 500
-    local xts = x * tileSize * scale
-    local yts = y * tileSize * scale
+    local xts = chatBoxDimensions.x * UITileSize * UIScale
+    local yts = chatBoxDimensions.y * UITileSize * UIScale
     local firstRowY = yts + 30 - ascent
     for _, messageText in chatboxMessageHistory:iter() do
         local msgWidth, listOfRows = font:getWrap(messageText, maxRowWidth)
@@ -516,7 +535,7 @@ function drawChatBox()
     if activeUIElemIndex == 2 then
         a = underscore
     end
-    love.graphics.print(clientChatboxMessage .. a, xts + 30, yts + 880)
+    love.graphics.print(clientChatBoxMessage .. a, xts + 30, yts + 880)
 
     -- render send button
     -- TODO: Add send button functionality
@@ -531,7 +550,7 @@ function drawChatBox()
     }
     tileAtlas.wrap("resources/images/ui/smallIcons.png", 12, 2):drawTile(chatboxSendBtnDimensions.x,
         chatboxSendBtnDimensions.y, 0, 8, chatboxSendBtnDimensions.width, chatboxSendBtnDimensions.height)
-    love.graphics.rectangle("line", xts + 480, yts + 870, 64, 64)
+    drawOutline(xts + 480, yts + 870, 64, 64)
 
     -- TODO: Move
     tileAtlas.wrap("resources/images/ui/smallIcons.png", 12, 2):drawTile(1830, 0, 10, 6, 64, 64)
@@ -541,8 +560,7 @@ function drawChatBox()
     --     width = 3 * UITileSize * UIScale,
     --     height = UITileSize * UIScale
     -- }
-    love.graphics.rectangle("line", settingsBtnDimensions.x, settingsBtnDimensions.y, settingsBtnDimensions.width,
-        settingsBtnDimensions.height)
+    drawOutline(settingsBtnDimensions)
     -- TODO: Set settings btn collision rect here!
 
     love.graphics.setColor(1, 1, 1, 1)
@@ -583,8 +601,6 @@ local function drawLoginBox()
     end
 
     tintScreen()
-
-    shouldHandleLoginClick = true
 
     tiledUIPanel("uiImage", tileSize, scale):draw(x, y, width, height)
     tiledUIPanel("uiImage", tileSize / 2, scale, {20, 20, 4, 4}):draw(x * 2 + 10 - 0.5, y * 2 + 4 - 0.1, 6, 2)
@@ -660,15 +676,26 @@ end
 function handleChatKp(key)
     -- chat handling
     if key == "return" then
-        print(serverpeer:state())
-        if serverpeer then
-            sendMessage("message", clientChatboxMessage)
+        if serverpeer and serverpeer:state() == "connected" then
+            local maxChatMessageLength = assets.get("settings").maximumChatMessageLength
+            if #clientChatBoxMessage == 0 or #clientChatBoxMessage > maxChatMessageLength then
+                return
+            end
+            sendMessage("message", clientChatBoxMessage)
         end
         -- TODO: Handle sends from the server
-        clientChatboxMessage = ""
+        clientChatBoxMessage = ""
     elseif key == "backspace" then
-        clientChatboxMessage = string.popped(clientChatboxMessage)
+        clientChatBoxMessage = string.popped(clientChatBoxMessage)
     end
+end
+
+local function handleChatTextInput(key)
+    local maxChatMessageLength = assets.get("settings").maximumChatMessageLength
+    if #clientChatBoxMessage > maxChatMessageLength then
+        return
+    end
+    clientChatBoxMessage = clientChatBoxMessage .. key
 end
 
 function handleLoginBoxKp(key)
@@ -709,24 +736,21 @@ function handleLoginBoxKp(key)
     end
 end
 
-local UIElemHandlers = {
-    loginBox = {
-        keypressed = handleLoginBoxKp,
-        textinput = function(t)
-            if activeLoginBoxField == "password" then
-                loginBoxPasswordText = loginBoxPasswordText .. t
-            else
-                loginBoxUsernameText = loginBoxUsernameText .. t
-            end
-        end
-    },
-    chatBox = {
-        keypressed = handleChatKp,
-        textinput = function(t)
-            clientChatboxMessage = clientChatboxMessage .. t
-        end
-    }
-}
+function handleLoginBoxTextInput(key)
+    if activeLoginBoxField == "password" then
+        loginBoxPasswordText = loginBoxPasswordText .. key
+    else
+        loginBoxUsernameText = loginBoxUsernameText .. key
+    end
+end
+
+local function handleDevConsoleKp(key)
+    -- TODO:
+end
+
+local function handleDevConsoleTextInput(key)
+    -- TODO:
+end
 
 --- API
 
@@ -742,6 +766,20 @@ function game.load(args)
 
     -- init logic:
     -- FIXME: Fix rendering when scaling
+    UIElemHandlers = {
+        loginBox = {
+            keypressed = handleLoginBoxKp,
+            textinput = handleLoginBoxTextInput
+        },
+        chatBox = {
+            keypressed = handleChatKp,
+            textinput = handleChatTextInput
+        },
+        devConsoleEnabled = {
+            keypressed = handleDevConsoleKp,
+            textinput = handleDevConsoleTextInput
+        }
+    }
     playerAreaCanvas = love.graphics.newCanvas(unpack(playerAreaDims))
     tempCanvas = love.graphics.newCanvas(32, 32)
     characterSpriteCanvas = love.graphics.newCanvas(32, 32)
@@ -758,6 +796,9 @@ function game.tick(deltaTime)
     t.update()
     animations.updateAnimations(deltaTime)
     assets.update(deltaTime)
+    if loginBoxEnabled then
+        shouldHandleLoginClick = true
+    end
     delta = delta + deltaTime
     handleEnetClient()
 end
@@ -881,11 +922,20 @@ function love.keypressed(key)
     if UIElemHandlers[activeUIElemIndex] then
         UIElemHandlers[activeUIElemIndex].keypressed(key)
     end
-    if love.keyboard.isDown("f5") then
+    if key == "f5" then
+        -- if love.keyboard.isDown("f5") then
         love.event.quit("restart")
     end
-    if love.keyboard.isDown("escape") then
+    if key == "escape" then
         handleSettingsClose()
+    end
+    if key == "`" then
+        if devConsoleEnabled then
+            devConsoleEnabled = true
+            activeUIElemIndex = "devConsole"
+        else
+            devConsoleEnabled = false
+        end
     end
 end
 
