@@ -37,10 +37,12 @@ local characterSpriteCanvas
 local tintDrawn = false
 
 local chatboxSendBtnDimensions
-local loginBoxEnabled
+local loginBoxEnabled = false
 local settingsEnabled = false
 local shouldHandleSettingsBtnClick = true
 local shouldHandleChatboxSendBtnClick = true
+
+local activeUIElemStack = array.wrap()
 
 local chatboxMessageHistory = array.wrap()
 local clientChatBoxMessage = ""
@@ -52,18 +54,21 @@ local chatBoxDimensions = {
 }
 -- local chatboxDims = {640, 1280}
 
+local devConsoleMessage = ""
+local devConsoleEnabled = false
+
 local loginBoxUsernameText = ""
 local loginBoxPasswordText = ""
 local loginBoxErrorText = ""
 local nicknamePickerBoxDims = {750, 300}
+local slotIconsAtlas = tileAtlas.wrap("resources/images/slotIcons.png", 32, 6)
 
 local logMessageBoxDims = {1600, 400}
-
-local activeUIElemIndex = "loginBox"
 local activeLoginBoxField = "nickname"
 
 local UITileSize = 16
 local UIScale = 5
+local UIElemHadlers
 local shouldHandleLoginClick = false
 local loginBoxDimensions = {
     x = 4,
@@ -149,17 +154,29 @@ local function attemptLogin(username, password)
     sendMessage("status", "logIn", username .. ":" .. password)
 end
 
-local function loginPrompt(msg)
+local function loginPromptToggle(msg)
     local msg = msg or ""
-    activeUIElemIndex = "loginBox"
+    loginBoxEnabled = not loginBoxEnabled
+    if not loginBoxEnabled then
+        loginBoxEnabled = false
+        activeUIElemStack:pop()
+        return
+    end
+    activeUIElemStack:append("loginBox")
+    -- TODO: Enum for active elements
     activeNicknamePickerField = "nickname"
-    loginBoxEnabled = true
     loginBoxErrorText = msg
 end
 
-local function disableLoginPrompt()
-    loginBoxEnabled = false
-    -- TODO: Enum for active elements
+local function devConsoleTogglePrompt()
+    devConsoleEnabled = not devConsoleEnabled
+    if devConsoleEnabled then
+        activeUIElemStack:append("devConsole")
+        -- TODO: Initialize dev console
+    else
+        activeUIElemStack:pop()
+        -- TODO: clean up after dev console
+    end
 end
 
 local function receivedMessageHandle(hostevent)
@@ -174,9 +191,10 @@ local function receivedMessageHandle(hostevent)
     elseif prefix == "status" then
         local prefix, trimmedMessage = network.getNetworkMessagePrefix(trimmedMessage)
         if prefix == "logOut" then
-            loginPrompt(trimmedMessage)
+            if not loginBoxEnabled then
+                loginPromptToggle(trimmedMessage)
+            end
             -- server tells you to disconnect
-            -- TODO:
         elseif prefix == "connected" then
             -- TODO:
         else
@@ -228,6 +246,14 @@ local function handleEnetClient()
         serverpeer = enetclient:connect(serverAddress)
     end
     hostevent = nil
+end
+
+local function executeDevConsoleCommand(cmd)
+    if string.startsWith("macro") then
+        -- TODO:
+        print("MACRO COMMAND! Hooraaay!")
+        error("Not yet implemented!")
+    end
 end
 
 --- UI
@@ -377,12 +403,12 @@ local function focusChat()
     if not loginBoxEnabled then
         activeLoginBoxField = "nickname"
     end
-    activeUIElemIndex = "chatBox"
+    activeUIElemStack:append("chatBox")
 end
 
 function loginClicked()
     attemptLogin(loginBoxUsernameText, loginBoxPasswordText)
-    disableLoginPrompt()
+    loginPromptToggle()
     focusChat()
 end
 
@@ -426,7 +452,7 @@ local function handleSettingsBtnClick(xIn, yIn, mb, isTouch, repeating)
         settingsEnabled = true
         if loginBoxEnabled then
             shouldHandleLoginClick = false
-            activeUIElemIndex = -1
+            activeUIElemStack:append("settings")
         end
         return true
     end
@@ -447,7 +473,7 @@ local function handleSettingsClose(x, y, mb)
     settingsEnabled = false
     if loginBoxEnabled then
         shouldHandleLoginClick = true
-        activeUIElemIndex = "loginBox"
+        activeUIElemStack:pop()
     end
 end
 
@@ -483,7 +509,12 @@ local function drawOutline(obj, color, ...)
             return drawOutline({obj, color}, vargs[1])
         elseif #vargs <= 3 then
             -- this is a rectangle
-            return drawOutline({x = obj, y = color, width = vargs[1], height = vargs[2]}, vargs[3])
+            return drawOutline({
+                x = obj,
+                y = color,
+                width = vargs[1],
+                height = vargs[2]
+            }, vargs[3])
         end
     end
     local color = color or {1, 0, 0, 1}
@@ -509,7 +540,7 @@ function drawChatBox()
     else
         underscore = ""
     end
-
+    
     local font = assets.get("font")
     local ascent = font:getAscent()
     local scrollDistance = math.max(#chatboxMessageHistory * ascent - 1000, 0)
@@ -532,15 +563,15 @@ function drawChatBox()
     end
     tintedTextField(xts + 30, yts + 880, 450, 2)
     local a = ""
-    if activeUIElemIndex == 2 then
+    if activeUIElemStack:last() == "chatBox" then
         a = underscore
     end
     love.graphics.print(clientChatBoxMessage .. a, xts + 30, yts + 880)
-
+    
     -- render send button
     -- TODO: Add send button functionality
     -- love.graphics.draw(assets.get("resources/images/ui/smallIcons.png"), 1220, 100, 0, 3, 3) -- icons preview
-
+    
     -- TODO: move
     chatboxSendBtnDimensions = {
         x = xts + 475,
@@ -550,125 +581,49 @@ function drawChatBox()
     }
     tileAtlas.wrap("resources/images/ui/smallIcons.png", 12, 2):drawTile(chatboxSendBtnDimensions.x,
         chatboxSendBtnDimensions.y, 0, 8, chatboxSendBtnDimensions.width, chatboxSendBtnDimensions.height)
-    drawOutline(xts + 480, yts + 870, 64, 64)
+        drawOutline(xts + 480, yts + 870, 64, 64)
+        
+        -- TODO: Move
+        tileAtlas.wrap("resources/images/ui/smallIcons.png", 12, 2):drawTile(1830, 0, 10, 6, 64, 64)
+        -- settingsBtnDimensions = {
+            --     x = UITileSize / 2 * UIScale * (settingsBoxSize.x * 2 + 10 - 0.5),
+            --     y = UITileSize / 2 * UIScale * (settingsBoxSize.y * 2 + 4 - 0.1),
+            --     width = 3 * UITileSize * UIScale,
+            --     height = UITileSize * UIScale
+            -- }
+            drawOutline(settingsBtnDimensions)
+            -- TODO: Set settings btn collision rect here!
+            
+            love.graphics.setColor(1, 1, 1, 1)
+        end
 
-    -- TODO: Move
-    tileAtlas.wrap("resources/images/ui/smallIcons.png", 12, 2):drawTile(1830, 0, 10, 6, 64, 64)
-    -- settingsBtnDimensions = {
-    --     x = UITileSize / 2 * UIScale * (settingsBoxSize.x * 2 + 10 - 0.5),
-    --     y = UITileSize / 2 * UIScale * (settingsBoxSize.y * 2 + 4 - 0.1),
-    --     width = 3 * UITileSize * UIScale,
-    --     height = UITileSize * UIScale
-    -- }
-    drawOutline(settingsBtnDimensions)
-    -- TODO: Set settings btn collision rect here!
-
-    love.graphics.setColor(1, 1, 1, 1)
-end
-
-local function tintScreen()
-    if tintDrawn == false then
-        love.graphics.setColor(0, 0, 0, 0.8)
+        local function tintScreen()
+            if tintDrawn == false then
+                love.graphics.setColor(0, 0, 0, 0.8)
         love.graphics.rectangle("fill", 0, 0, unpack(resolutionScaledPos(mockResolution)))
         love.graphics.setColor(1, 1, 1)
         tintDrawn = true
     end
 end
 
-local function drawSettings()
-    if not settingsEnabled then
-        return false
-    end
-    tintScreen()
-    tiledUIPanel("uiImage", UITileSize, UIScale):draw(settingsBoxDimensionsInTiles)
-    return true
-end
-
-local function drawLoginBox()
-    local tileSize, scale = UITileSize, UIScale
-    local x, y, width, height = loginBoxDimensions.x, loginBoxDimensions.y, loginBoxDimensions.width,
-        loginBoxDimensions.height
-    local caret
-    if delta % 1 < 0.5 then
-        caret = "_"
-    else
-        caret = ""
-    end
-    -- TODO: Don't flicker the login box if credentials are rejected. (fade-out ?)
-    -- render loginBox
-    if not loginBoxEnabled then
-        return
-    end
-
-    tintScreen()
-
-    tiledUIPanel("uiImage", tileSize, scale):draw(x, y, width, height)
-    tiledUIPanel("uiImage", tileSize / 2, scale, {20, 20, 4, 4}):draw(x * 2 + 10 - 0.5, y * 2 + 4 - 0.1, 6, 2)
-    love.graphics.setColor(0, 0, 0, 1)
-    -- TODO: Disable after logging in.
-    love.graphics.print("login", (x + 5.8) * tileSize * scale, (y + 2.1) * tileSize * scale)
-    love.graphics.print("username:", x * tileSize * scale + 50, y * tileSize * scale + 60)
-    usernameTextFieldSizes = loginBoxTextFieldsSizes.username
-    tintedTextField(usernameTextFieldSizes.x, usernameTextFieldSizes.y, usernameTextFieldSizes.width,
-        usernameTextFieldSizes.margins)
-    local usernameCaret = ""
-    if activeLoginBoxField == "nickname" then
-        usernameCaret = caret
-    end
-    love.graphics.print(loginBoxUsernameText .. usernameCaret, x * tileSize * scale + 270, y * tileSize * scale + 60)
-    love.graphics.print("password:", x * tileSize * scale + 50, y * tileSize * scale + 110)
-    love.graphics.setColor(0, 0, 0, 0.1)
-
-    local passwordTextFieldSizes = loginBoxTextFieldsSizes.password
-    tintedTextField(passwordTextFieldSizes.x, passwordTextFieldSizes.y, passwordTextFieldSizes.width,
-        passwordTextFieldSizes.margins)
-    love.graphics.setColor(0, 0, 0, 1)
-    local pwdCaret = ""
-    if activeLoginBoxField == "password" then
-        pwdCaret = caret
-    end
-    love.graphics.print(string.rep("*", #loginBoxPasswordText) .. pwdCaret, x * tileSize * scale + 270,
-        y * tileSize * scale + 110)
-    love.graphics.setColor(0.8, 0.3, 0.3, 1)
-    love.graphics.setFont(assets.get("resources/fonts/JPfallback.ttf", 24))
-    love.graphics.printf(loginBoxErrorText, x * tileSize * scale + 32, y * tileSize * scale + 170, 300, "left")
-    love.graphics.setFont(assets.get("font"))
-    love.graphics.setColor(1, 1, 1, 1)
-end
-
-local slotIconsAtlas = tileAtlas.wrap("resources/images/slotIcons.png", 32, 6)
-
 function renderUITab(x, y, width, height, horizontalIconTileIndex, verticalIconTileIndex)
     tiledUIPanel("uiImage", UITileSize, UIScale, {10, 4, 2, 2}):draw(x, y, width, height)
     slotIconsAtlas:drawTile((x + 0.1) * UITileSize * UIScale, (y + 0.15) * UITileSize * UIScale,
-        horizontalIconTileIndex, verticalIconTileIndex, (width - 0.5) * UITileSize * UIScale,
-        (height - 0.5) * UITileSize * UIScale)
+    horizontalIconTileIndex, verticalIconTileIndex, (width - 0.5) * UITileSize * UIScale,
+    (height - 0.5) * UITileSize * UIScale)
 end
 
 function renderUIPanel(x, y, width, height, shape)
     tiledUIPanel("uiImage", UITileSize, UIScale, shape):draw(x, y, width, height)
 end
 
-function renderNewUI()
-    local tileSize = UITileSize
-    local scale = UIScale
-
-    -- equipment view
-    -- inventory tabs
-    renderUITab(8, 0, 2, 2, 2, 1)
-    renderUITab(10, 0, 2, 2, 7, 1)
-    renderUITab(12, 0, 2, 2, 8, 1)
-
-    -- panel
-    renderUIPanel(7, 1.5 - 0.1, 9, 7, {0, 14, 10, 10})
-
-    -- character view
-    renderUIPanel(0.5, 0.5, 8, 8)
-    -- drawGrid(tileSize * scale, {1, 0, 1, 1})
-
-    -- render logbox
-    renderUIPanel(1, 9, 15, 4)
-    drawChatBox()
+local function drawEquipmentSlot(x, y, width, height, iconX, iconY)
+    if type(x) == "table" then
+        return drawEquipmentSlot(x.x, x.y, x.width, x.height, y, width)
+    end
+    tiledUIPanel("uiImage", UITileSize, UIScale, {10, 6, 2, 2}):draw(x, y, width, height)
+    slotIconsAtlas:drawTile((x + 0.1) * UITileSize * UIScale, (y + 0.15) * UITileSize * UIScale, iconX, iconY,
+        (width - 0.5) * UITileSize * UIScale, (height - 0.5) * UITileSize * UIScale)
 end
 
 ---- handling input
@@ -745,10 +700,22 @@ function handleLoginBoxTextInput(key)
 end
 
 local function handleDevConsoleKp(key)
-    -- TODO:
+    if not devConsoleEnabled then
+        return
+    end
+    if key == "return" then
+        if #devConsoleMessage ~= 0 then
+            executeDevConsoleCommand(devConsoleMessage)
+        end
+        devConsoleMessage = ""
+    end
 end
 
 local function handleDevConsoleTextInput(key)
+    if not devConsoleEnabled then
+        return
+    end
+    devConsoleMessage = devConsoleMessage .. key
     -- TODO:
 end
 
@@ -762,7 +729,8 @@ function game.load(args)
     love.keyboard.setKeyRepeat(true)
     love.graphics.setFont(assets.get("font"))
     playerAnimation = animations.loadAnimation("character")
-    playerAnimation = animations.loadAnimation("fireCircles")
+    -- TODO: Resample fireCircles.png:
+    -- playerAnimation = animations.loadAnimation("fireCircles")
 
     -- init logic:
     -- FIXME: Fix rendering when scaling
@@ -775,21 +743,22 @@ function game.load(args)
             keypressed = handleChatKp,
             textinput = handleChatTextInput
         },
-        devConsoleEnabled = {
+        devConsole = {
             keypressed = handleDevConsoleKp,
             textinput = handleDevConsoleTextInput
         }
     }
+    activeUIElemStack:append("chatboxMessageHistory")
+    loginPromptToggle()
     playerAreaCanvas = love.graphics.newCanvas(unpack(playerAreaDims))
     tempCanvas = love.graphics.newCanvas(32, 32)
     characterSpriteCanvas = love.graphics.newCanvas(32, 32)
-    -- playerAnimation:play(2, "idle", true)
-    playerAnimation:play(2, "circle", true)
+    playerAnimation:play(2, "idle", true)
+    -- playerAnimation:play(2, "circle", true)
 
     love.keyboard.setKeyRepeat(true)
 
     beginClient()
-    loginPrompt()
 end
 
 function game.tick(deltaTime)
@@ -811,11 +780,25 @@ function game.draw()
     love.graphics.draw(assets.get("backgroundImage"), backgroundQuad, 0, 0, 0, 1, 1, 0, 0)
 
     -- renderOldUI()
-    renderNewUI()
-    -- draw scene
-    local tileSize = 16
-    local scale = 5
 
+    -- equipment view
+    -- inventory tabs
+    renderUITab(8, 0, 2, 2, 2, 1)
+    renderUITab(10, 0, 2, 2, 7, 1)
+    renderUITab(12, 0, 2, 2, 8, 1)
+
+    -- panel
+    renderUIPanel(7, 1.5 - 0.1, 9, 7, {0, 14, 10, 10})
+
+    -- character view
+    renderUIPanel(0.5, 0.5, 8, 8)
+    -- drawGrid(tileSize * scale, {1, 0, 1, 1})
+
+    -- render logbox
+    renderUIPanel(1, 9, 15, 4)
+    drawChatBox()
+
+    -- draw scene
     playerAreaCanvas:renderTo(function()
         love.graphics.clear(1.0, 1.0, 1.0)
         love.graphics.withShader(assets.get("testShaderA"), function()
@@ -838,12 +821,11 @@ function game.draw()
     end)
     local playfieldScenePlacementQuad = love.graphics.newQuad(0, 0, unpack(playerAreaDims:rep(2)))
     -- FIXME: Magic numbers
-    local pos = scale * tileSize * (0.5 - (8 - 720 / (tileSize * scale)))
+    local pos = UIScale * UITileSize * (0.5 - (8 - 720 / (UITileSize * UIScale)))
     resolutionScaledDraw(playerAreaCanvas, playfieldScenePlacementQuad, pos, pos)
 
     -- render character silhouette
     -- FIXME: Fix rendering when scaling
-    -- TODO: Use stencil (like src/uiBox.lua:15)
     characterSpriteCanvas:renderTo(function()
         love.graphics.clear()
         characterSpriteCanvas:setFilter("linear", "linear", 4)
@@ -871,37 +853,71 @@ function game.draw()
     local scale = 5
 
     -- equipment view
-    local x, y, width, height = 9 - 0.2, 4, 2, 2
-    -- love.graphics.draw(itemBoxCanvas, love.graphics.newQuad(0, 0, width, height, width, height), x * tileSize * scale, y * tileSize * scale)
-    tiledUIPanel("uiImage", tileSize, scale, {10, 6, 2, 2}):draw(x, y, width, height)
-    slotIconsAtlas:drawTile((x + 0.1) * tileSize * scale, (y + 0.15) * tileSize * scale, 3, 1,
-        (width - 0.5) * tileSize * scale, (height - 0.5) * tileSize * scale)
-
-    local x, y, width, height = 9 - 0.2, 6, 2, 2
-    tiledUIPanel("uiImage", tileSize, scale, {10, 6, 2, 2}):draw(x, y, width, height)
-    slotIconsAtlas:drawTile((x + 0.1) * tileSize * scale, (y + 0.15) * tileSize * scale, 3, 1,
-        (width - 0.5) * tileSize * scale, (height - 0.5) * tileSize * scale)
-
-    local x, y, width, height = 13, 2, 2, 2
-    tiledUIPanel("uiImage", tileSize, scale, {10, 6, 2, 2}):draw(x, y, width, height)
-    slotIconsAtlas:drawTile((x + 0.1) * tileSize * scale, (y + 0.15) * tileSize * scale, 1, 0,
-        (width - 0.5) * tileSize * scale, (height - 0.5) * tileSize * scale)
-
-    local x, y, width, height = 13.5, 4, 2, 2
-    tiledUIPanel("uiImage", tileSize, scale, {10, 6, 2, 2}):draw(x, y, width, height)
-    slotIconsAtlas:drawTile((x + 0.1) * tileSize * scale, (y + 0.15) * tileSize * scale, 0, 0,
-        (width - 0.5) * tileSize * scale, (height - 0.5) * tileSize * scale)
-
-    local x, y, width, height = 13, 6, 2, 2
-    tiledUIPanel("uiImage", tileSize, scale, {10, 6, 2, 2}):draw(x, y, width, height)
-    slotIconsAtlas:drawTile((x + 0.1) * tileSize * scale, (y + 0.15) * tileSize * scale, 7, 0,
-        (width - 0.5) * tileSize * scale, (height - 0.5) * tileSize * scale)
+    drawEquipmentSlot(9 - 0.2, 4, 2, 2, 3, 1)
+    drawEquipmentSlot(9 - 0.2, 6, 2, 2, 3, 1)
+    drawEquipmentSlot(13, 2, 2, 2, 1, 0)
+    drawEquipmentSlot(13.5, 4, 2, 2, 0, 0)
+    drawEquipmentSlot(13, 6, 2, 2, 7, 0)
 
     -- local x, y, width, height = 11.8, 6, 2, 2
     -- tiledUIPanel("uiImage", tileSize, scale, {10, 4, 2, 2}):draw(x, y, width, height)
-    -- TODO: Render setting button (choose an icon)
-    drawLoginBox()
-    drawSettings()
+    local x, y = loginBoxDimensions.x, loginBoxDimensions.y
+    local caret
+    if delta % 1 < 0.5 then
+        caret = "_"
+    else
+        caret = ""
+    end
+    -- TODO: Don't flicker the login box if credentials are rejected. (fade-out ?)
+    -- render loginBox
+    if loginBoxEnabled then
+        tintScreen()
+
+        tiledUIPanel("uiImage", UITileSize, UIScale):draw(loginBoxDimensions)
+        tiledUIPanel("uiImage", UITileSize / 2, UIScale, {20, 20, 4, 4}):draw(x * 2 + 10 - 0.5, y * 2 + 4 - 0.1, 6, 2)
+        love.graphics.setColor(0, 0, 0, 1)
+        -- TODO: Disable after logging in.
+        love.graphics.print("login", (x + 5.8) * UITileSize * UIScale, (y + 2.1) * UITileSize * UIScale)
+        love.graphics.print("username:", x * UITileSize * UIScale + 50, y * UITileSize * UIScale + 60)
+        usernameTextFieldSizes = loginBoxTextFieldsSizes.username
+        tintedTextField(usernameTextFieldSizes.x, usernameTextFieldSizes.y, usernameTextFieldSizes.width,
+            usernameTextFieldSizes.margins)
+        local usernameCaret = ""
+        if activeLoginBoxField == "nickname" then
+            usernameCaret = caret
+        end
+        love.graphics.print(loginBoxUsernameText .. usernameCaret, x * UITileSize * UIScale + 270,
+            y * UITileSize * UIScale + 60)
+        love.graphics.print("password:", x * UITileSize * UIScale + 50, y * UITileSize * UIScale + 110)
+        love.graphics.setColor(0, 0, 0, 0.1)
+
+        local passwordTextFieldSizes = loginBoxTextFieldsSizes.password
+        tintedTextField(passwordTextFieldSizes.x, passwordTextFieldSizes.y, passwordTextFieldSizes.width,
+            passwordTextFieldSizes.margins)
+        love.graphics.setColor(0, 0, 0, 1)
+        local pwdCaret = ""
+        if activeLoginBoxField == "password" then
+            pwdCaret = caret
+        end
+        love.graphics.print(string.rep("*", #loginBoxPasswordText) .. pwdCaret, x * UITileSize * UIScale + 270,
+            y * UITileSize * UIScale + 110)
+        love.graphics.setColor(0.8, 0.3, 0.3, 1)
+        love.graphics.setFont(assets.get("resources/fonts/JPfallback.ttf", 24))
+        love.graphics.printf(loginBoxErrorText, x * UITileSize * UIScale + 32, y * UITileSize * UIScale + 170, 300,
+            "left")
+        love.graphics.setFont(assets.get("font"))
+        love.graphics.setColor(1, 1, 1, 1)
+        if settingsEnabled then
+            tintScreen()
+            tiledUIPanel("uiImage", UITileSize, UIScale):draw(settingsBoxDimensionsInTiles)
+        end
+    end
+
+    -- draw dev devConsole
+    if devConsoleEnabled then
+        tintScreen()
+        love.graphics.print(devConsoleMessage)
+    end
 end
 
 function game.quit()
@@ -919,9 +935,6 @@ function love.mousepressed(x, y, mb, isTouch, presses)
 end
 
 function love.keypressed(key)
-    if UIElemHandlers[activeUIElemIndex] then
-        UIElemHandlers[activeUIElemIndex].keypressed(key)
-    end
     if key == "f5" then
         -- if love.keyboard.isDown("f5") then
         love.event.quit("restart")
@@ -930,17 +943,16 @@ function love.keypressed(key)
         handleSettingsClose()
     end
     if key == "`" then
-        if devConsoleEnabled then
-            devConsoleEnabled = true
-            activeUIElemIndex = "devConsole"
-        else
-            devConsoleEnabled = false
-        end
+        devConsoleTogglePrompt()
+        return
+    end
+    if not not UIElemHandlers[activeUIElemStack:last()] then
+        UIElemHandlers[activeUIElemStack:last()].keypressed(key)
     end
 end
 
-function love.textinput(t)
-    UIElemHandlers[activeUIElemIndex].textinput(t)
+function love.textinput(key)
+    UIElemHandlers[activeUIElemStack:last()].textinput(key)
 end
 
 return game

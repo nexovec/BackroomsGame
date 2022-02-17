@@ -16,11 +16,17 @@ function array:shallowCopy()
     return new
 end
 
+
 function array:append(elem)
     assert(self, "Call with : instead of .", 2)
     self[#self + 1] = elem
     return self
 end
+
+function array:push(elem)
+    self:append(elem)
+end
+
 function array:concat(tbl)
     assert(self, "Call with : instead of .", 2)
     assert(type(tbl) == "table" and tbl.type == "array")
@@ -73,6 +79,10 @@ function array:prettyPrintRecursive(passed)
         end
     end
     print('-----------')
+end
+
+function array:last()
+    return self[#self]
 end
 
 function array:contains(elem)
