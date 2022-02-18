@@ -5,9 +5,9 @@ local std = require("std")
 local json = require("std.json")
 local assets = require("assets")
 local types = require("std.types")
+local map = require("std.map")
 local game
 local server
-
 
 -- variables
 local timeLastLogged = nil
@@ -19,6 +19,31 @@ local options = {}
 
 local reportedFPS = 0
 
+-- TODO: Move macro handling to a separate file
+local currentFrame = 0
+local currentMacro
+local isRecordingMacro
+
+local function addMacroEvent(type, contents)
+    currentMacro.put(love.timer.getTime(), {
+        frame = currentFrame,
+        type = type,
+        contents = contents
+    })
+end
+
+function startRecordingPlayerInputs()
+    currentMacro = currentMacro or map.wrap()
+    isRecordingMacro = true
+end
+
+function stopRecordingPlayerInputs()
+    local result = currentMacro
+    print(json.encode(result))
+    currentMacro = nil
+    isRecordingMacro = false
+    return result
+end
 
 function love.load(args)
     -- TODO: Untested platform warnings, compatibility checks
@@ -28,7 +53,9 @@ function love.load(args)
     if options.isServer then
         server = require("server")
         assets.initOnServer()
-        if server == nil then print("You can't launch as a server because I yeeted the server files, precisely so you can't do this.") end
+        if server == nil then
+            print("You can't launch as a server because I yeeted the server files, precisely so you can't do this.")
+        end
         server.load()
     else
         require("loveOverrides")
@@ -59,6 +86,7 @@ deltaTime = 0
 
 function love.update(dt)
     profile.start()
+    currentFrame = currentFrame + 1
     ticks = ticks + 1
 
     if options.isServer then
@@ -85,7 +113,7 @@ function love.update(dt)
         timeLastLoggedFPS = timeLastLoggedFPS + 1.0
     end
     if (assets.get("settings").logging.shouldPerformanceLog and love.timer.getTime() - timeLastLogged >
-    assets.get("settings").logging.performanceLogPeriodInSeconds) then
+        assets.get("settings").logging.performanceLogPeriodInSeconds) then
         print(profile.report(10))
         profile.reset()
         timeLastLogged = love.timer.getTime()
@@ -112,4 +140,25 @@ function love.quit()
     else
         types.optionalCall(server.quit)
     end
+end
+
+function love.keypressed(...)
+    if isRecordingMacro then
+        addMacroEvent("keypressed", ...)
+    end
+    game.keypressed(...)
+end
+
+function love.textinput(...)
+    if isRecordingMacro then
+        addMacroEvent("textinput", ...)
+    end
+    game.textinput(...)
+end
+
+function love.mousepressed(...)
+    if isRecordingMacro then
+        addMacroEvent("mousepressed", ...)
+    end
+    game.mousepressed(...)
 end

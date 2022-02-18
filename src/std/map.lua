@@ -45,6 +45,14 @@ function map:prettyPrintRecursive(passed)
     print('-----------')
 end
 
+function map:put(key, val)
+    self[key] = val
+end
+
+function map:get(key)
+    return self[key]
+end
+
 function map:contains(elem)
     for k, v in pairs(self) do
         if v == elem then

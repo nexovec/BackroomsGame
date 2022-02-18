@@ -925,7 +925,7 @@ function game.quit()
     serverpeer:disconnect_now()
 end
 
-function love.mousepressed(x, y, mb, isTouch, presses)
+function game.mousepressed(x, y, mb, isTouch, presses)
     handleChatSendBtnClick(x, y, mb, isTouch, presses)
     if not handleSettingsBtnClick(x, y, mb, isTouch, presses) then
         handleSettingsClose(x, y, mb)
@@ -934,7 +934,7 @@ function love.mousepressed(x, y, mb, isTouch, presses)
     handleLoginBoxFieldFocusOnMouseClick(x, y, mb, isTouch, presses)
 end
 
-function love.keypressed(key)
+function game.keypressed(key)
     if key == "f5" then
         -- if love.keyboard.isDown("f5") then
         love.event.quit("restart")
@@ -951,7 +951,7 @@ function love.keypressed(key)
     end
 end
 
-function love.textinput(key)
+function game.textinput(key)
     UIElemHandlers[activeUIElemStack:last()].textinput(key)
 end
 
