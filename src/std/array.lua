@@ -16,7 +16,6 @@ function array:shallowCopy()
     return new
 end
 
-
 function array:append(elem)
     assert(self, "Call with : instead of .", 2)
     self[#self + 1] = elem
@@ -107,8 +106,8 @@ function array:reverse()
     -- TODO: Test
     local len = #self
     local res = array.wrap()
-    for i = len, 1, -1 do
-        res:append(self[i])
+    for i = 0, len - 1 do
+        res:append(self[len - i])
     end
     return res
 end

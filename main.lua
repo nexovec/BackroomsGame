@@ -134,7 +134,6 @@ function love.draw()
 end
 
 function love.quit()
-    -- TODO: Track unused requires(optionally detect unused things in types.makeType)
     if game then
         types.optionalCall(game.quit)
     else

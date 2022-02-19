@@ -36,9 +36,13 @@ local tempCanvas
 local characterSpriteCanvas
 local tintDrawn = false
 
-local chatboxSendBtnDimensions
+local UITileSize = 16
+local UIScale = 5
+local UIElemHadlers
+
 local loginBoxEnabled = false
 local settingsEnabled = false
+
 local shouldHandleSettingsBtnClick = true
 local shouldHandleChatboxSendBtnClick = true
 
@@ -46,16 +50,30 @@ local activeUIElemStack = array.wrap()
 
 local chatboxMessageHistory = array.wrap()
 local clientChatBoxMessage = ""
+
 local chatBoxDimensions = {
     x = 16.5,
     y = 1,
     width = 7,
     height = 12
 }
+local chatMessagesBoundingBox = {
+    x = chatBoxDimensions.x * UITileSize * UIScale,
+    y = chatBoxDimensions.y * UITileSize * UIScale,
+    width = 500,
+    height = 1000
+}
+local chatboxSendBtnDimensions = {
+    x = chatMessagesBoundingBox.x + 475,
+    y = chatMessagesBoundingBox.y + 865,
+    width = 64,
+    height = 64
+}
 -- local chatboxDims = {640, 1280}
 
 local devConsoleMessage = ""
 local devConsoleEnabled = false
+local devConsoleMessageHistory = array.wrap()
 
 local loginBoxUsernameText = ""
 local loginBoxPasswordText = ""
@@ -66,9 +84,6 @@ local slotIconsAtlas = tileAtlas.wrap("resources/images/slotIcons.png", 32, 6)
 local logMessageBoxDims = {1600, 400}
 local activeLoginBoxField = "nickname"
 
-local UITileSize = 16
-local UIScale = 5
-local UIElemHadlers
 local shouldHandleLoginClick = false
 local loginBoxDimensions = {
     x = 4,
@@ -249,10 +264,12 @@ local function handleEnetClient()
 end
 
 local function executeDevConsoleCommand(cmd)
-    if string.startsWith("macro") then
+    if string.startsWith(cmd, "macro") then
         -- TODO:
         print("MACRO COMMAND! Hooraaay!")
         error("Not yet implemented!")
+    else
+        devConsoleMessageHistory:append("Unknown command:\t" .. cmd)
     end
 end
 
@@ -494,11 +511,13 @@ local function handleLoginClick(xIn, yIn, mb, isTouch, repeating)
     end
 end
 
-local function tintedTextField(x, y, width, vertMargins)
+local function tintedTextField(x, y, width, vertMargins, color)
     local ascent = assets.get("font"):getAscent()
-    love.graphics.setColor(0, 0, 0, 0.1)
+    local oldColor = {love.graphics.getColor()}
+    local color = color or {0, 0, 0, 0.1}
+    love.graphics.setColor(color)
     love.graphics.rectangle("fill", x, y, width, ascent + 2 * vertMargins)
-    love.graphics.setColor(0, 0, 0, 1)
+    love.graphics.setColor(unpack(oldColor))
 end
 
 local function drawOutline(obj, color, ...)
@@ -532,76 +551,53 @@ local function drawOutline(obj, color, ...)
     end
     love.graphics.setColor(0, 0, 0, 1)
 end
+local function drawMessageList(messages, boundingBox, startFromBottom)
+    local font = assets.get("font")
+    local ascent = font:getAscent()
+    local rowIndex = 0
+    local maxRowWidth = boundingBox.width
+    if startFromBottom then
+        local firstRowYOffset = boundingBox.y + boundingBox.height - 30 - ascent
+        for _, messageText in array.wrap(messages):reverse():iter() do
+            local msgWidth, listOfRows = font:getWrap(messageText, maxRowWidth)
+            for k, v in ipairs(listOfRows) do
+                love.graphics.print(v, boundingBox.x + 30, firstRowYOffset - ascent * rowIndex)
+                rowIndex = rowIndex + 1
+            end
+        end
+    else
+        local firstRowYOffset = boundingBox.y + 30 - ascent
+        -- local scrollDistance = math.max(#chatboxMessageHistory * ascent - 1000, 0)
+        for _, messageText in ipairs(messages) do
+            local msgWidth, listOfRows = font:getWrap(messageText, maxRowWidth)
+            for k, v in array.wrap(listOfRows):iter() do
+                love.graphics.print(v, boundingBox.x + 30, firstRowYOffset + ascent * rowIndex)
+                rowIndex = rowIndex + 1
+            end
+        end
+    end
+end
 
-function drawChatBox()
+local function drawTextInputField(x, y, hasCaret, text)
+    local text = text or ""
     local underscore
     if delta % 1 < 0.5 then
         underscore = "_"
     else
         underscore = ""
     end
-    
-    local font = assets.get("font")
-    local ascent = font:getAscent()
-    local scrollDistance = math.max(#chatboxMessageHistory * ascent - 1000, 0)
-    renderUIPanel(chatBoxDimensions.x, chatBoxDimensions.y, chatBoxDimensions.width, chatBoxDimensions.height)
-    love.graphics.setColor(0, 0, 0, 1)
-    -- TODO: Fade out top of the chat window
-    -- TODO: Smooth chat scrolling
-    -- TODO: Implement maximum chat message length
-    local rowIndex = 0
-    local maxRowWidth = 500
-    local xts = chatBoxDimensions.x * UITileSize * UIScale
-    local yts = chatBoxDimensions.y * UITileSize * UIScale
-    local firstRowY = yts + 30 - ascent
-    for _, messageText in chatboxMessageHistory:iter() do
-        local msgWidth, listOfRows = font:getWrap(messageText, maxRowWidth)
-        for k, v in ipairs(listOfRows) do
-            love.graphics.print(v, xts + 30, firstRowY + ascent * rowIndex)
-            rowIndex = rowIndex + 1
-        end
+    if hasCaret then
+        text = text .. underscore
     end
-    tintedTextField(xts + 30, yts + 880, 450, 2)
-    local a = ""
-    if activeUIElemStack:last() == "chatBox" then
-        a = underscore
-    end
-    love.graphics.print(clientChatBoxMessage .. a, xts + 30, yts + 880)
-    
-    -- render send button
-    -- TODO: Add send button functionality
-    -- love.graphics.draw(assets.get("resources/images/ui/smallIcons.png"), 1220, 100, 0, 3, 3) -- icons preview
-    
-    -- TODO: move
-    chatboxSendBtnDimensions = {
-        x = xts + 475,
-        y = yts + 865,
-        width = 64,
-        height = 64
-    }
-    tileAtlas.wrap("resources/images/ui/smallIcons.png", 12, 2):drawTile(chatboxSendBtnDimensions.x,
-        chatboxSendBtnDimensions.y, 0, 8, chatboxSendBtnDimensions.width, chatboxSendBtnDimensions.height)
-        drawOutline(xts + 480, yts + 870, 64, 64)
-        
-        -- TODO: Move
-        tileAtlas.wrap("resources/images/ui/smallIcons.png", 12, 2):drawTile(1830, 0, 10, 6, 64, 64)
-        -- settingsBtnDimensions = {
-            --     x = UITileSize / 2 * UIScale * (settingsBoxSize.x * 2 + 10 - 0.5),
-            --     y = UITileSize / 2 * UIScale * (settingsBoxSize.y * 2 + 4 - 0.1),
-            --     width = 3 * UITileSize * UIScale,
-            --     height = UITileSize * UIScale
-            -- }
-            drawOutline(settingsBtnDimensions)
-            -- TODO: Set settings btn collision rect here!
-            
-            love.graphics.setColor(1, 1, 1, 1)
-        end
+    love.graphics.print(text, x, y)
+end
 
-        local function tintScreen()
-            if tintDrawn == false then
-                love.graphics.setColor(0, 0, 0, 0.8)
+local function tintScreen()
+    if tintDrawn == false then
+        local oldColor = {love.graphics.getColor()}
+        love.graphics.setColor(0, 0, 0, 0.8)
         love.graphics.rectangle("fill", 0, 0, unpack(resolutionScaledPos(mockResolution)))
-        love.graphics.setColor(1, 1, 1)
+        love.graphics.setColor(unpack(oldColor))
         tintDrawn = true
     end
 end
@@ -609,8 +605,8 @@ end
 function renderUITab(x, y, width, height, horizontalIconTileIndex, verticalIconTileIndex)
     tiledUIPanel("uiImage", UITileSize, UIScale, {10, 4, 2, 2}):draw(x, y, width, height)
     slotIconsAtlas:drawTile((x + 0.1) * UITileSize * UIScale, (y + 0.15) * UITileSize * UIScale,
-    horizontalIconTileIndex, verticalIconTileIndex, (width - 0.5) * UITileSize * UIScale,
-    (height - 0.5) * UITileSize * UIScale)
+        horizontalIconTileIndex, verticalIconTileIndex, (width - 0.5) * UITileSize * UIScale,
+        (height - 0.5) * UITileSize * UIScale)
 end
 
 function renderUIPanel(x, y, width, height, shape)
@@ -705,9 +701,12 @@ local function handleDevConsoleKp(key)
     end
     if key == "return" then
         if #devConsoleMessage ~= 0 then
+            devConsoleMessageHistory:append(devConsoleMessage)
             executeDevConsoleCommand(devConsoleMessage)
         end
         devConsoleMessage = ""
+    elseif key == "backspace" then
+        devConsoleMessage = string.popped(devConsoleMessage)
     end
 end
 
@@ -796,7 +795,33 @@ function game.draw()
 
     -- render logbox
     renderUIPanel(1, 9, 15, 4)
-    drawChatBox()
+    renderUIPanel(chatBoxDimensions.x, chatBoxDimensions.y, chatBoxDimensions.width, chatBoxDimensions.height)
+    love.graphics.setColor(0, 0, 0, 1)
+    -- TODO: Fade out top of the chat window
+    -- TODO: Smooth chat scrolling
+    -- TODO: Implement maximum chat message length
+
+    -- render chatbox
+    drawMessageList(chatboxMessageHistory, chatMessagesBoundingBox)
+    local chatboxTextFieldPos = {
+        x = chatMessagesBoundingBox.x + 30,
+        y = chatMessagesBoundingBox.y + 880
+    }
+    tintedTextField(chatboxTextFieldPos.x, chatboxTextFieldPos.y, 450, 2)
+    local hasCaret = false
+    if activeUIElemStack:last() == "chatBox" then
+        hasCaret = true
+    end
+    drawTextInputField(chatboxTextFieldPos.x, chatboxTextFieldPos.y, hasCaret, clientChatBoxMessage)
+
+    -- render send button
+    -- love.graphics.draw(assets.get("resources/images/ui/smallIcons.png"), 1220, 100, 0, 3, 3) -- icons preview
+    tileAtlas.wrap("resources/images/ui/smallIcons.png", 12, 2):drawTile(chatboxSendBtnDimensions.x,
+        chatboxSendBtnDimensions.y, 0, 8, chatboxSendBtnDimensions.width, chatboxSendBtnDimensions.height)
+    drawOutline(chatMessagesBoundingBox.x + 480, chatMessagesBoundingBox.y + 870, 64, 64)
+    tileAtlas.wrap("resources/images/ui/smallIcons.png", 12, 2):drawTile(1830, 0, 10, 6, 64, 64)
+    drawOutline(settingsBtnDimensions)
+    love.graphics.setColor(1, 1, 1, 1)
 
     -- draw scene
     playerAreaCanvas:renderTo(function()
@@ -820,7 +845,6 @@ function game.draw()
         playerAnimation:draw(0, 0, 720, 720)
     end)
     local playfieldScenePlacementQuad = love.graphics.newQuad(0, 0, unpack(playerAreaDims:rep(2)))
-    -- FIXME: Magic numbers
     local pos = UIScale * UITileSize * (0.5 - (8 - 720 / (UITileSize * UIScale)))
     resolutionScaledDraw(playerAreaCanvas, playfieldScenePlacementQuad, pos, pos)
 
@@ -861,22 +885,23 @@ function game.draw()
 
     -- local x, y, width, height = 11.8, 6, 2, 2
     -- tiledUIPanel("uiImage", tileSize, scale, {10, 4, 2, 2}):draw(x, y, width, height)
-    local x, y = loginBoxDimensions.x, loginBoxDimensions.y
+    -- TODO: Don't flicker the login box if credentials are rejected. (fade-out ?)
+    -- render loginBox
     local caret
     if delta % 1 < 0.5 then
         caret = "_"
     else
         caret = ""
     end
-    -- TODO: Don't flicker the login box if credentials are rejected. (fade-out ?)
-    -- render loginBox
     if loginBoxEnabled then
-        tintScreen()
+        local x, y = loginBoxDimensions.x, loginBoxDimensions.y
+        if not devConsoleEnabled then
+            tintScreen()
+        end
 
         tiledUIPanel("uiImage", UITileSize, UIScale):draw(loginBoxDimensions)
         tiledUIPanel("uiImage", UITileSize / 2, UIScale, {20, 20, 4, 4}):draw(x * 2 + 10 - 0.5, y * 2 + 4 - 0.1, 6, 2)
         love.graphics.setColor(0, 0, 0, 1)
-        -- TODO: Disable after logging in.
         love.graphics.print("login", (x + 5.8) * UITileSize * UIScale, (y + 2.1) * UITileSize * UIScale)
         love.graphics.print("username:", x * UITileSize * UIScale + 50, y * UITileSize * UIScale + 60)
         usernameTextFieldSizes = loginBoxTextFieldsSizes.username
@@ -886,11 +911,12 @@ function game.draw()
         if activeLoginBoxField == "nickname" then
             usernameCaret = caret
         end
+        love.graphics.setColor(0, 0, 0, 1)
         love.graphics.print(loginBoxUsernameText .. usernameCaret, x * UITileSize * UIScale + 270,
             y * UITileSize * UIScale + 60)
         love.graphics.print("password:", x * UITileSize * UIScale + 50, y * UITileSize * UIScale + 110)
-        love.graphics.setColor(0, 0, 0, 0.1)
 
+        love.graphics.setColor(0, 0, 0, 0.1)
         local passwordTextFieldSizes = loginBoxTextFieldsSizes.password
         tintedTextField(passwordTextFieldSizes.x, passwordTextFieldSizes.y, passwordTextFieldSizes.width,
             passwordTextFieldSizes.margins)
@@ -905,18 +931,38 @@ function game.draw()
         love.graphics.setFont(assets.get("resources/fonts/JPfallback.ttf", 24))
         love.graphics.printf(loginBoxErrorText, x * UITileSize * UIScale + 32, y * UITileSize * UIScale + 170, 300,
             "left")
-        love.graphics.setFont(assets.get("font"))
         love.graphics.setColor(1, 1, 1, 1)
-        if settingsEnabled then
-            tintScreen()
-            tiledUIPanel("uiImage", UITileSize, UIScale):draw(settingsBoxDimensionsInTiles)
-        end
+        love.graphics.setFont(assets.get("font"))
+    end
+
+    if settingsEnabled then
+        tintScreen()
+        tiledUIPanel("uiImage", UITileSize, UIScale):draw(settingsBoxDimensionsInTiles)
+        love.graphics.setColor(0, 0, 0, 1)
+        love.graphics.print("UI Style", (settingsBoxDimensionsInTiles.x + 0.5) * UITileSize * UIScale,
+            (settingsBoxDimensionsInTiles.y + 0.5) * UITileSize * UIScale)
+        love.graphics.print("Log Out", (settingsBoxDimensionsInTiles.x + 0.5) * UITileSize * UIScale,
+            (settingsBoxDimensionsInTiles.y + 0.5) * UITileSize * UIScale + 50)
+        love.graphics.print("Exit", (settingsBoxDimensionsInTiles.x + 0.5) * UITileSize * UIScale,
+            (settingsBoxDimensionsInTiles.y + 0.5) * UITileSize * UIScale + 100)
+        love.graphics.setColor(1, 1, 1, 1)
     end
 
     -- draw dev devConsole
     if devConsoleEnabled then
         tintScreen()
-        love.graphics.print(devConsoleMessage)
+        local x, y = 30, 1000
+        -- local x, y = 0, 0
+        tintedTextField(x, y, 1600, 2, {0.8, 0.8, 0.8, 0.1})
+        drawTextInputField(x, y, true, devConsoleMessage)
+        drawMessageList(devConsoleMessageHistory, {
+            x = 10,
+            y = 0,
+            width = 1870,
+            height = 1020
+        }, true)
+        -- love.graphics.setColor(0, 0, 0, 1)
+        -- love.graphics.setColor(1, 1, 1, 1)
     end
 end
 
@@ -952,6 +998,7 @@ function game.keypressed(key)
 end
 
 function game.textinput(key)
+    if key == "`" then return end
     UIElemHandlers[activeUIElemStack:last()].textinput(key)
 end
 

@@ -24,13 +24,25 @@ function string.join(tableOfStrings, separator)
 end
 
 function string.startsWith(str, startingLetters)
-    --TODO: Test
+    -- TODO: Test
+    local comparedCodes = array.wrap()
     for p, c in utf8.codes(startingLetters) do
         -- NOTE: will likely produce false positives in non-ASCII
         -- TODO: Detect escape characters
-        if str[p] ~= utf8.char(c) then
+        comparedCodes:append(c)
+    end
+    local i = 0
+    for p, c in utf8.codes(str) do
+        i = i + 1
+        if i > #comparedCodes then
+            return true
+        end
+        if c ~= comparedCodes[i] then
             return false
         end
+    end
+    if i < #comparedCodes then
+        return false
     end
     return true
 end
