@@ -265,9 +265,27 @@ end
 
 local function executeDevConsoleCommand(cmd)
     if string.startsWith(cmd, "macro") then
-        -- TODO:
-        print("MACRO COMMAND! Hooraaay!")
-        error("Not yet implemented!")
+        local macroArgAction = string.sub(cmd, #"macro" + 1, #cmd)
+        if macroArgAction == " record" then
+            local macroName = string.sub(macroArgAction, #" record" + 1, #macroArgAction)
+            -- TODO:
+            if not startRecordingPlayerInputs() then
+                devConsoleMessageHistory:append(
+                    "You are already recording a macro, use macro stop|pause to stop/pause/unpause this macro.")
+            end
+        elseif macroArgAction == " pause" then
+            if not pauseRecordingPlayerInputs() then
+                devConsoleMessageHistory:append("Can't pause, no macro is being recorded")
+            end
+        elseif macroArgAction == " stop" then
+            devConsoleMessageHistory:append(stopRecordingPlayerInputs())
+        elseif macroArgAction == " list" then
+            error("Not yet implemented!")
+        elseif macroArgAction == " play" then
+            error("Not yet implemented!")
+        else
+            devConsoleMessageHistory:append("Usage: macro record|play|pause|list")
+        end
     else
         devConsoleMessageHistory:append("Unknown command:\t" .. cmd)
     end
@@ -276,62 +294,6 @@ end
 --- UI
 
 ---- rendering
-
-local function renderOldUI()
-    local uiBox = require("old.uiBox")
-    chatboxUIBox = chatboxUIBox or uiBox.makeBox(chatboxDims[1], chatboxDims[2], "gradientShaderA", {}, 20)
-    nicknamePickerUIBox = nicknamePickerUIBox or
-                              uiBox.makeBox(nicknamePickerBoxDims[1], nicknamePickerBoxDims[2], "gradientShaderA", {},
-            20)
-    logMessageBox = logMessageBox or
-                        uiBox.makeBox(logMessageBoxDims[1], logMessageBoxDims[2], "gradientShaderA", {}, 20)
-    -- render log message box
-    love.graphics.push("all")
-    local logMessageBoxCanvas = logMessageBox.textureCvs
-    logMessageBox:clear()
-    logMessageBoxCanvas:renderTo(function()
-        love.graphics.print("This will show your log.", 30, 30)
-    end)
-    local logMessageBoxScenePlacementQuad = love.graphics.newQuad(0, 0, logMessageBoxDims[1], logMessageBoxDims[2],
-        logMessageBoxDims[1], logMessageBoxDims[2])
-    -- love.graphics.draw(logMessageBoxCanvas, logMessageBoxScenePlacementQuad, 100, 950, 0, 1, 1, 0, 0, 0, 0)
-    resolutionScaledDraw(logMessageBoxCanvas, logMessageBoxScenePlacementQuad, 100, 950)
-
-    -- render messages
-    local chatboxCanvas = chatboxUIBox.textureCvs
-    chatboxUIBox:clear()
-    chatboxCanvas:renderTo(function()
-        local yDiff = 40
-
-        for i, messageText in ipairs(chatboxMessageHistory) do
-            love.graphics.print(messageText, 30, 10 - yDiff + yDiff * i)
-        end
-
-        love.graphics.print(clientChatBoxMessage, 30, 1210)
-    end)
-
-    local chatboxScenePlacementQuad = love.graphics.newQuad(0, 0, chatboxDims[1], chatboxDims[2], chatboxDims[1],
-        chatboxDims[2])
-    resolutionScaledDraw(chatboxCanvas, chatboxScenePlacementQuad, 1800, 100)
-
-    -- render log-in box
-    if loginBoxEnabled then
-        local nicknamePickerCanvas = nicknamePickerUIBox.textureCvs
-        nicknamePickerUIBox:clear()
-        nicknamePickerCanvas:renderTo(function()
-            -- love.graphics.setColor(0.65, 0.15, 0.15, 1)
-            local descX, fieldX, row1y, row2y = 50, 250, 80, 150
-            love.graphics.print("name:", descX, row1y)
-            love.graphics.print(loginBoxUsernameText, fieldX, row1y)
-            love.graphics.print("password:", descX, row2y)
-            love.graphics.print(string.rep("*", #loginBoxPasswordText), fieldX, row2y)
-        end)
-        local chatboxScenePlacementQuad = love.graphics.newQuad(0, 0, nicknamePickerBoxDims[1],
-            nicknamePickerBoxDims[2], nicknamePickerBoxDims[1], nicknamePickerBoxDims[2])
-        resolutionScaledDraw(nicknamePickerCanvas, chatboxScenePlacementQuad, 550, 550)
-    end
-    love.graphics.pop()
-end
 
 local function drawGrid(tileSize, color)
     if color then
@@ -536,6 +498,7 @@ local function drawOutline(obj, color, ...)
             }, vargs[3])
         end
     end
+    local oldColor = {love.graphics.getColor()}
     local color = color or {1, 0, 0, 1}
     love.graphics.setColor(unpack(color))
     if not not obj[1] and not not obj[2] then
@@ -549,8 +512,9 @@ local function drawOutline(obj, color, ...)
         local typeText = obj.type or type(obj)
         error("You can't draw an outline of " .. tostring(typeText), 2)
     end
-    love.graphics.setColor(0, 0, 0, 1)
+    love.graphics.setColor(unpack(oldColor))
 end
+
 local function drawMessageList(messages, boundingBox, startFromBottom)
     local font = assets.get("font")
     local ascent = font:getAscent()
@@ -998,8 +962,14 @@ function game.keypressed(key)
 end
 
 function game.textinput(key)
-    if key == "`" then return end
+    if key == "`" then
+        return
+    end
     UIElemHandlers[activeUIElemStack:last()].textinput(key)
+end
+
+function game.mousemoved(x, y, dx, dy, istouch)
+    -- TODO: Hover animation for buttons
 end
 
 return game

@@ -21,28 +21,46 @@ local reportedFPS = 0
 
 -- TODO: Move macro handling to a separate file
 local currentFrame = 0
+local currentMacroName
 local currentMacro
 local isRecordingMacro
+local recordedMacroes = map.wrap()
 
 local function addMacroEvent(type, contents)
-    currentMacro.put(love.timer.getTime(), {
+    currentMacro[tostring(love.timer.getTime())] = {
         frame = currentFrame,
-        type = type,
+        mType = type,
         contents = contents
-    })
+    }
 end
 
-function startRecordingPlayerInputs()
+function startRecordingPlayerInputs(macroName)
+    if currentMacro then
+        return false
+    end
     currentMacro = currentMacro or map.wrap()
+    currentMacroName = macroName
     isRecordingMacro = true
+    return true
+end
+
+function pauseRecordingPlayerInputs()
+    if not currentMacro then
+        return false
+    end
+    isRecordingMacro = not isRecordingMacro
+    return true
 end
 
 function stopRecordingPlayerInputs()
-    local result = currentMacro
-    print(json.encode(result))
+    local currentMacroName = currentMacroName or ("macro " .. tostring(#recordedMacroes + 1))
+    recordedMacroes[#currentMacroName + 1] = currentMacro
+    -- print(json.encode(currentMacro))
     currentMacro = nil
+    local temp = currentMacroName
+    currentMacroName = nil
     isRecordingMacro = false
-    return result
+    return "Macro stored as " .. temp
 end
 
 function love.load(args)
@@ -134,6 +152,19 @@ function love.draw()
 end
 
 function love.quit()
+    -- TODO: Serialize recorded macroes
+    local fileName = assets.get("settings").macroSaveFile
+    local storedMacroes = love.filesystem.read("macro.json")
+    if not storedMacroes then
+        storedMacroes = "{}"
+    end
+    local macroes = map.wrap(json.decode(storedMacroes))
+    local newMacroFileContents = json.encode(macroes:extend(macroes))
+    -- FIXME:
+    local s, m = love.filesystem.write(fileName, newMacroFileContents, #newMacroFileContents)
+    if not s then
+        error(m)
+    end
     if game then
         types.optionalCall(game.quit)
     else
@@ -160,4 +191,11 @@ function love.mousepressed(...)
         addMacroEvent("mousepressed", ...)
     end
     game.mousepressed(...)
+end
+
+function love.mousemoved(...)
+    if isRecordingMacro then
+        addMacroEvent("mousemoved", ...)
+    end
+    game.mousemoved(...)
 end

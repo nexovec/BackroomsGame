@@ -75,6 +75,13 @@ function map:indexOf(elem)
     return nil
 end
 
+function map:extend(other)
+    for k, v in pairs(other) do
+        self[k] = v
+    end
+    return self
+end
+
 function map:invert()
     local res = {}
     for k, v in pairs(self) do
