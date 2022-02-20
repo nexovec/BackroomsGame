@@ -6,6 +6,8 @@ local json = require("std.json")
 local assets = require("assets")
 local types = require("std.types")
 local map = require("std.map")
+local array = require("std.array")
+local utf8 = require("utf8")
 local game
 local server
 
@@ -21,14 +23,22 @@ local reportedFPS = 0
 
 -- TODO: Move macro handling to a separate file
 local currentFrame = 0
+local recordedMacroesCount = 0
 local currentMacroName
 local currentMacro
 local isRecordingMacro
 local recordedMacroes = map.wrap()
 
 local function addMacroEvent(type, contents)
-    currentMacro[tostring(love.timer.getTime())] = {
-        frame = currentFrame,
+    -- map.prettyPrint({
+    --     frame = currentFrame,
+    --     mType = type,
+    --     contents = contents
+    -- })
+    local currentFrame = tostring(currentFrame)
+    currentMacro[currentFrame] = currentMacro[currentFrame] or {}
+    currentMacro[currentFrame][#currentMacro[currentFrame] + 1] = {
+        timestamp = tostring(love.timer.getTime()),
         mType = type,
         contents = contents
     }
@@ -38,7 +48,7 @@ function startRecordingPlayerInputs(macroName)
     if currentMacro then
         return false
     end
-    currentMacro = currentMacro or map.wrap()
+    currentMacro = {}
     currentMacroName = macroName
     isRecordingMacro = true
     return true
@@ -53,9 +63,18 @@ function pauseRecordingPlayerInputs()
 end
 
 function stopRecordingPlayerInputs()
-    local currentMacroName = currentMacroName or ("macro " .. tostring(#recordedMacroes + 1))
-    recordedMacroes[#currentMacroName + 1] = currentMacro
-    -- print(json.encode(currentMacro))
+    -- TODO: Recursive count instead (map:subnodeCount)
+    recordedMacroesCount = recordedMacroesCount + 1
+    local currentMacroName = currentMacroName or ("macro" .. tostring(recordedMacroesCount))
+    recordedMacroes[currentMacroName] = currentMacro
+    -- TODO: Redirect the save folder
+    -- TODO: Use ticks as keys, encode ordered
+    -- TODO: Use custom ordered iterator
+    local macroJsonToWrite = json.encode(currentMacro)
+    local s, m = love.filesystem.write(currentMacroName .. ".json", macroJsonToWrite, #macroJsonToWrite)
+    if not s then
+        error(m)
+    end
     currentMacro = nil
     local temp = currentMacroName
     currentMacroName = nil
@@ -152,19 +171,6 @@ function love.draw()
 end
 
 function love.quit()
-    -- TODO: Serialize recorded macroes
-    local fileName = assets.get("settings").macroSaveFile
-    local storedMacroes = love.filesystem.read("macro.json")
-    if not storedMacroes then
-        storedMacroes = "{}"
-    end
-    local macroes = map.wrap(json.decode(storedMacroes))
-    local newMacroFileContents = json.encode(macroes:extend(macroes))
-    -- FIXME:
-    local s, m = love.filesystem.write(fileName, newMacroFileContents, #newMacroFileContents)
-    if not s then
-        error(m)
-    end
     if game then
         types.optionalCall(game.quit)
     else

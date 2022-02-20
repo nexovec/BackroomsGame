@@ -20,7 +20,8 @@ end
 
 function map:prettyPrintRecursive(passed)
     local passed = passed or array.wrap()
-    passed:append(self)
+    -- TODO:
+    -- passed:append(self)
     if not self then
         return error('Table is nil!', 2)
     end
