@@ -32,9 +32,10 @@ local function addMacroEvent(type, contents)
     --     mType = type,
     --     contents = contents
     -- })
+    assert(currentMacro)
     local currentFrame = tostring(currentFrame)
-    currentMacro[currentFrame] = currentMacro[currentFrame] or {}
-    currentMacro[currentFrame][#currentMacro[currentFrame] + 1] = {
+    currentMacro:append {
+        frame = currentFrame,
         timestamp = tostring(love.timer.getTime()),
         mType = type,
         contents = contents
@@ -45,7 +46,7 @@ function startRecordingPlayerInputs(macroName)
     if currentMacro then
         return false
     end
-    currentMacro = {}
+    currentMacro = array.wrap()
     currentMacroName = macroName
     isRecordingMacro = true
     return true

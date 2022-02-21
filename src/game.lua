@@ -192,10 +192,8 @@ local function devConsoleTogglePrompt()
     devConsoleEnabled = not devConsoleEnabled
     if devConsoleEnabled then
         activeUIElemStack:append("devConsole")
-        -- TODO: Initialize dev console
     else
         activeUIElemStack:pop()
-        -- TODO: clean up after dev console
     end
 end
 
@@ -367,6 +365,20 @@ local function executeDevConsoleCommand(cmd)
             end
             devConsoleMessageHistory:append(string.join(macroNames, ", "))
         elseif subCommand == "play" then
+            local macroName = macroDevCommandArgs:dequeue()
+            if not macroName then
+                return devConsoleMessageHistory:append("Usage: macro play <name of macro>")
+            end
+            -- local macros = map.wrap(love.filesystem.getDirectoryItems(workingDir))
+            local fileContents, success = love.filesystem.read(workingDir .. "/" .. macroName .. ".json")
+            if not fileContents then
+                return devConsoleMessageHistory:append("Couldn't read macro file!")
+            end
+            local playedMacro = json.decode(fileContents)
+            -- TODO: Subtract start frame from macro events
+            -- TODO: Play them
+            -- TODO: Play them faster
+            -- TODO: CLI option --test that runs predetermined macroes
             return devConsoleMessageHistory:append("Not yet implemented!")
             -- local macroName = macroDevCommandArgs:dequeue()
         else
