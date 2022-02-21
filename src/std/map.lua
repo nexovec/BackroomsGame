@@ -76,6 +76,14 @@ function map:indexOf(elem)
     return nil
 end
 
+function map:length()
+    local i = 0
+    for k, v in pairs(self) do
+        i = i + 1
+    end
+    return i
+end
+
 function map:extend(other)
     for k, v in pairs(other) do
         self[k] = v

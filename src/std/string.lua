@@ -23,6 +23,10 @@ function string.join(tableOfStrings, separator)
     return table.concat(tableOfStrings, separator)
 end
 
+function string.extension(str)
+    return "." .. string.split(str, ".")[-1]
+end
+
 function string.startsWith(str, startingLetters)
     -- TODO: Test
     local comparedCodes = array.wrap()

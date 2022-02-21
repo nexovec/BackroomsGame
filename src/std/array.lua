@@ -156,6 +156,30 @@ function array:iter()
     return ipairs(self)
 end
 
+-- Returns a sub-array from min to max, inclusive
+function array:sub(min, max)
+    assert(not not min or not not max)
+    assert(not min or min > 0)
+    assert(not max or max <= #self)
+    if not max then
+        max = #self
+    end
+    if not min then
+        min = #self
+    end
+    local res = array.wrap()
+    for i = min, max do
+        res:append(self[i])
+    end
+    return res
+end
+
+function array:dequeue()
+    local res = self[1]
+    table.remove(self, 1)
+    return res
+end
+
 function array:inverse()
     assert(self, "Call with : instead of .", 2)
     local res = {}

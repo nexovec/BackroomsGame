@@ -8,6 +8,7 @@ local t = require("timing")
 local assert = require("std.assert")
 local array = require("std.array")
 local map = require("std.map")
+local json = require("std.json")
 local string = require("std.string")
 local network = require("network")
 local tileAtlas = require("tileAtlas")
@@ -265,23 +266,55 @@ end
 
 local function executeDevConsoleCommand(cmd)
     if string.startsWith(cmd, "macro") then
-        local macroArgAction = string.sub(cmd, #"macro" + 1, #cmd)
-        if macroArgAction == " record" then
-            local macroName = string.sub(macroArgAction, #" record" + 1, #macroArgAction)
-            -- TODO:
+        local macroDevCommandArgsText = string.sub(cmd, #"macro" + 1, #cmd)
+        local macroDevCommandArgs = string.split(macroDevCommandArgsText, " "):sub(2, nil)
+        local subCommand = macroDevCommandArgs:dequeue()
+        if subCommand == "record" then
             if not startRecordingPlayerInputs() then
                 devConsoleMessageHistory:append(
                     "You are already recording a macro, use macro stop|pause to stop/pause/unpause this macro.")
+                return
             end
-        elseif macroArgAction == " pause" then
+            devConsoleMessageHistory:append("You are recording a macro...")
+        elseif subCommand == "pause" then
             if not pauseRecordingPlayerInputs() then
                 devConsoleMessageHistory:append("Can't pause, no macro is being recorded")
             end
-        elseif macroArgAction == " stop" then
-            devConsoleMessageHistory:append(stopRecordingPlayerInputs())
-        elseif macroArgAction == " list" then
-            error("Not yet implemented!")
-        elseif macroArgAction == " play" then
+        elseif subCommand == "stop" then
+            local macroName, currentMacro = stopRecordingPlayerInputs()
+            local macroJsonToWrite = json.encode(currentMacro)
+            local s, m = love.filesystem.write(macroName .. ".json", macroJsonToWrite, #macroJsonToWrite)
+            if not s then
+                error(m)
+            end
+            devConsoleMessageHistory:append("Macro stored in " .. macroName .. ".json")
+        elseif subCommand == "list" then
+            -- TODO: Use settings.pathToMacros
+            local workingDir = love.filesystem.getSaveDirectory()
+            -- FIXME: Always returns an empty list
+            local macros = map.wrap(love.filesystem.getDirectoryItems(workingDir))
+            if macros:length() == 0 then
+                devConsoleMessageHistory:append("There are no recorded macros.")
+                return
+            end
+            local macroNames = array.wrap()
+            for k, v in pairs(macros) do
+                print(k, v)
+                if not love.filesystem.getInfo(v).type == "file" then
+                    error("Macro " .. v .. " is not a file")
+                end
+                if not string.extension(v) == ".json" then
+                    error("Macro " .. v .. " is not a json file")
+                end
+                macroNames:append(v)
+            end
+            macroNames:map(function(macroName, key)
+                if key ~= 1 then
+                    macroName = ", " .. macroName
+                end
+                devConsoleMessageHistory:append(macroName)
+            end)
+        elseif subCommand == "play" then
             error("Not yet implemented!")
         else
             devConsoleMessageHistory:append("Usage: macro record|play|pause|list")

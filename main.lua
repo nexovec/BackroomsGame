@@ -70,16 +70,12 @@ function stopRecordingPlayerInputs()
     -- TODO: Redirect the save folder
     -- TODO: Use ticks as keys, encode ordered
     -- TODO: Use custom ordered iterator
-    local macroJsonToWrite = json.encode(currentMacro)
-    local s, m = love.filesystem.write(currentMacroName .. ".json", macroJsonToWrite, #macroJsonToWrite)
-    if not s then
-        error(m)
-    end
+    local tempMacro = currentMacro
+    local tempName = currentMacroName
     currentMacro = nil
-    local temp = currentMacroName
     currentMacroName = nil
     isRecordingMacro = false
-    return "Macro stored as " .. temp
+    return tempName, tempMacro
 end
 
 function love.load(args)

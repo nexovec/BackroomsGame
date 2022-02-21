@@ -1,16 +1,16 @@
 {
-    "logging":
-    {
-        "shouldPerformanceLog": false,
-        //
-        "performanceLogPeriodInSeconds": 30,
-        "shouldLogFPS": true
-    },
-    "width":1920,
-    "height":1080,
-    "assetReloadUpdateFrequency":2,
-    "targetTPS": 60,
-    "serverAddress":"192.168.0.234:6750",
-    "maximumChatMessageLength":64,
-    "macroSaveFile":"macros.json"
+  "logging": {
+    "shouldPerformanceLog": false,
+    //
+    "performanceLogPeriodInSeconds": 30,
+    "shouldLogFPS": true
+  },
+  "width": 1920,
+  "height": 1080,
+  "assetReloadUpdateFrequency": 2,
+  "targetTPS": 60,
+  "serverAddress": "192.168.0.234:6750",
+  "maximumChatMessageLength": 64,
+  "macroSaveFile": "macros.json",
+  "pathToMacros": "macros"
 }
