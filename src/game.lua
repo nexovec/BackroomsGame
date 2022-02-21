@@ -75,9 +75,10 @@ local chatboxSendBtnDimensions = {
 local devConsoleMessage = ""
 local devConsoleEnabled = false
 local devConsoleMessageHistory = array.wrap()
+local devConsoleHistoryPointer
 
 local currentMacroName = nil
-local recordedMacroesCount = 0
+local recordedMacroesCount = 1
 
 local loginBoxUsernameText = ""
 local loginBoxPasswordText = ""
@@ -268,11 +269,13 @@ local function handleEnetClient()
 end
 
 local function executeDevConsoleCommand(cmd)
-    local macroDevCommandArgs = string.split(cmd, " ")
+    local macroDevCommandArgs = string.split(cmd, " ") -- :std.array
     local command = macroDevCommandArgs:dequeue()
     if command == "macro" then
         local subCommand = macroDevCommandArgs:dequeue()
         if subCommand == "record" then
+            local arg1 = macroDevCommandArgs:dequeue()
+            currentMacroName = arg1 or ("macro" .. tostring(recordedMacroesCount))
             if not startRecordingPlayerInputs() then
                 devConsoleMessageHistory:append(
                     "You are already recording a macro, use macro stop|pause to stop/pause/unpause this macro.")
@@ -285,20 +288,21 @@ local function executeDevConsoleCommand(cmd)
             end
         elseif subCommand == "stop" then
             local currentMacro = stopRecordingPlayerInputs()
-            local currentMacroName = "macros/" .. currentMacroName
-            if not currentMacroName then
+            local path = "macros/" .. currentMacroName
+            if not path then
                 -- TODO: Don't overwrite macro1.json if it is already stored
                 recordedMacroesCount = recordedMacroesCount + 1
-                currentMacroName = "macros/" .. "macro" .. tostring(recordedMacroesCount)
+                path = "macros/" .. currentMacroName
             end
             local macroJsonToWrite = json.encode(currentMacro)
-            local s, m = love.filesystem.write(currentMacroName .. ".json", macroJsonToWrite, #macroJsonToWrite)
+            local s, m = love.filesystem.write(path .. ".json", macroJsonToWrite, #macroJsonToWrite)
             if not s then
-                error(m)
+                devConsoleMessageHistory:append("Couldn't save macro: " .. m)
             end
-            devConsoleMessageHistory:append("Macro stored in " .. currentMacroName .. ".json")
+            devConsoleMessageHistory:append("Macro " .. currentMacroName .. " stored in " .. path .. ".json")
+        elseif subCommand == "cancel" then
+            devConsoleMessageHistory:append("Not yet implemented.")
         elseif subCommand == "list" then
-            -- TODO: Debug
             -- TODO: Use settings.pathToMacros
             local workingDir = "macros"
             love.filesystem.createDirectory("macros")
@@ -311,18 +315,20 @@ local function executeDevConsoleCommand(cmd)
             local macroNames = array.wrap()
             for k, v in pairs(macros) do
                 local path = "macros/" .. v
-                print(path)
                 if not love.filesystem.getInfo(path, "file") then
-                    error("Macro " .. path .. " is not a file")
+                    return devConsoleMessageHistory:append("Macro " .. path .. " is not a file")
                 end
                 if not string.extension(v) == ".json" then
-                    error("Macro " .. path .. " is not a json file")
+                    return devConsoleMessageHistory:append("Macro " .. path .. " is not a json file")
                 end
-                macroNames:append(path)
+                local macroNameSplit = string.split(v, ".")
+                local macroNameWithNoExt = string.join(macroNameSplit:sub(1, #macroNameSplit - 1), ".")
+                macroNames:append(macroNameWithNoExt)
             end
             devConsoleMessageHistory:append(string.join(macroNames, ", "))
         elseif subCommand == "play" then
-            error("Not yet implemented!")
+            return devConsoleMessageHistory:append("Not yet implemented!")
+            -- local macroName = macroDevCommandArgs:dequeue()
         else
             devConsoleMessageHistory:append("Usage: macro record|play|pause|list")
         end
@@ -706,11 +712,31 @@ local function handleDevConsoleKp(key)
     if key == "return" then
         if #devConsoleMessage ~= 0 then
             devConsoleMessageHistory:append(devConsoleMessage)
+            devConsoleHistoryPointer = nil
             executeDevConsoleCommand(devConsoleMessage)
         end
         devConsoleMessage = ""
     elseif key == "backspace" then
         devConsoleMessage = string.popped(devConsoleMessage)
+    elseif key == "up" then
+        if not devConsoleHistoryPointer then
+            devConsoleHistoryPointer = #devConsoleMessageHistory
+        else
+            devConsoleHistoryPointer = math.max(devConsoleHistoryPointer - 1, 1)
+        end
+        devConsoleMessage = devConsoleMessageHistory[devConsoleHistoryPointer]
+    elseif key == "down" then
+        if not devConsoleHistoryPointer then
+            return
+        end
+        devConsoleHistoryPointer = devConsoleHistoryPointer + 1
+        if devConsoleHistoryPointer > #devConsoleMessageHistory then
+            devConsoleHistoryPointer = nil
+            -- TODO: Retain history
+            devConsoleMessage = ""
+            return
+        end
+        devConsoleMessage = devConsoleMessageHistory[devConsoleHistoryPointer]
     end
 end
 

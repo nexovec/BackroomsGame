@@ -179,6 +179,7 @@ function array:sub(min, max)
 end
 
 function array:dequeue()
+    if #self == 0 then return nil end
     local res = self[1]
     table.remove(self, 1)
     return res
