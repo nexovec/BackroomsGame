@@ -88,11 +88,7 @@ local function encode_table(val, stack)
 
     else
         -- Treat as an object
-        local iterator = pairs
-        if val.iter then
-            iterator = val.iter
-        end
-        for k, v in iterator(val) do
+        for k, v in pairs(val) do
             if type(k) ~= "string" then
                 error("invalid table: mixed or invalid key types")
             end

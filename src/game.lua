@@ -272,10 +272,9 @@ local function executeDevConsoleCommand(cmd)
     local macroDevCommandArgs = string.split(cmd, " ") -- :std.array
     local command = macroDevCommandArgs:dequeue()
     if command == "macro" then
+        local workingDir = "macros"
         local subCommand = macroDevCommandArgs:dequeue()
         if subCommand == "record" then
-            local arg1 = macroDevCommandArgs:dequeue()
-            currentMacroName = arg1 or ("macro" .. tostring(recordedMacroesCount))
             if not startRecordingPlayerInputs() then
                 devConsoleMessageHistory:append(
                     "You are already recording a macro, use macro stop|pause to stop/pause/unpause this macro.")
@@ -287,25 +286,66 @@ local function executeDevConsoleCommand(cmd)
                 devConsoleMessageHistory:append("Can't pause, no macro is being recorded")
             end
         elseif subCommand == "stop" then
-            local currentMacro = stopRecordingPlayerInputs()
-            local path = "macros/" .. currentMacroName
+            local arg1 = macroDevCommandArgs:dequeue()
+            local currentMacro, success = stopRecordingPlayerInputs()
+            if not success then
+                devConsoleMessageHistory:append("Can't use this command, because no macro is being recorded.")
+                return
+            end
+            if not currentMacroName then
+                currentMacroName = arg1 or ("macro" .. tostring(recordedMacroesCount))
+            end
+            local path = workingDir .. "/" .. currentMacroName
+            if not love.filesystem.createDirectory(workingDir) then
+                error("Can't create the macro folder")
+            end
             if not path then
                 -- TODO: Don't overwrite macro1.json if it is already stored
-                recordedMacroesCount = recordedMacroesCount + 1
-                path = "macros/" .. currentMacroName
+                path = workingDir .. "/" .. currentMacroName
             end
+            -- TODO: Wait for luaJIT 5.2
+            -- -- an iterator that outputs sorted keys (keys must be convertible to a number)
+            -- local function iterator(invariantState, index)
+            --     -- TODO: Test
+            --     -- NOTE: Very slow
+            --     print("iterator is running")
+            --     local sortedKeys = map.wrap(invariantState):keys():sorted()
+            --     if not index then
+            --         index = sortedKeys[1]
+            --     end
+            --     local indexOfTheKey = sortedKeys:indexOf(index)
+            --     if indexOfTheKey == invariantState:length() then
+            --         return nil
+            --     end
+            --     local keyAfterThatKey = sortedKeys[indexOfTheKey + 1]
+            --     print(keyAfterThatKey)
+            --     return keyAfterThatKey, invariantState[keyAfterThatKey]
+            --     -- return tostring(sortedKeys[index]), invariantState[sortedKeys[index]]
+            -- end
+            -- local tblWithIterator = setmetatable(currentMacro, {
+            --     __pairs = function(a)
+            --         print("pairs is running")
+            --         return iterator, a, nil
+            --     end
+            -- })
+            -- pairs(tblWithIterator)
+            -- local macroJsonToWrite = json.encode(tblWithIterator)
             local macroJsonToWrite = json.encode(currentMacro)
             local s, m = love.filesystem.write(path .. ".json", macroJsonToWrite, #macroJsonToWrite)
             if not s then
                 devConsoleMessageHistory:append("Couldn't save macro: " .. m)
+                return
             end
+            recordedMacroesCount = recordedMacroesCount + 1
             devConsoleMessageHistory:append("Macro " .. currentMacroName .. " stored in " .. path .. ".json")
+            currentMacroName = nil
         elseif subCommand == "cancel" then
             devConsoleMessageHistory:append("Not yet implemented.")
         elseif subCommand == "list" then
             -- TODO: Use settings.pathToMacros
-            local workingDir = "macros"
-            love.filesystem.createDirectory("macros")
+            if not love.filesystem.createDirectory(workingDir) then
+                error("Can't create the macro folder")
+            end
             assert(love.filesystem.getInfo(workingDir).type == "directory")
             local macros = map.wrap(love.filesystem.getDirectoryItems(workingDir))
             if macros:length() == 0 then

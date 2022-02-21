@@ -64,10 +64,14 @@ function stopRecordingPlayerInputs()
     -- TODO: Redirect the save folder
     -- TODO: Use ticks as keys, encode ordered
     -- TODO: Use custom ordered iterator
+    local success = false
+    if isRecordingMacro then
+        success = true
+    end
     local tempMacro = currentMacro
     currentMacro = nil
     isRecordingMacro = false
-    return tempMacro
+    return tempMacro, success
 end
 
 function love.load(args)

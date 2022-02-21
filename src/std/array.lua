@@ -9,11 +9,19 @@ local types = require("std.types")
 function array:shallowCopy()
     assert(self, "Call with : instead of .", 2)
     -- assert(type(a) == "table", "This can only be used on tables")
-    local new = {}
+    local new = array.wrap()
     for k, v in ipairs(self) do
         new[k] = v
     end
     return new
+end
+
+function array:deepCopy()
+    error("Not yet implemented")
+end
+
+function array:clone()
+    return self:shallowCopy()
 end
 
 function array:append(elem)
@@ -156,8 +164,27 @@ function array:iter()
     return ipairs(self)
 end
 
+-- sort from small to big
 function array:sorted()
-    error("Not yet implemented.")
+    -- TODO: Test
+    -- error("Not yet implemented.")
+    local res = array.wrap()
+    if #self == 0 then
+        return array.wrap()
+    end
+    local holder = self:clone()
+
+    for i, v in ipairs(self) do
+        local min, minI = holder[1], 1
+        for ii, vv in ipairs(holder) do
+            if vv < min then
+                min, minI = holder[ii], ii
+            end
+        end
+        res:append(min)
+        holder:remove(minI)
+    end
+    return res
 end
 
 -- Returns a sub-array from min to max, inclusive
@@ -179,7 +206,9 @@ function array:sub(min, max)
 end
 
 function array:dequeue()
-    if #self == 0 then return nil end
+    if #self == 0 then
+        return nil
+    end
     local res = self[1]
     table.remove(self, 1)
     return res
@@ -221,7 +250,7 @@ function array:rep(reps)
 end
 
 function array:remove(k)
-    table.remove(k)
+    table.remove(self, k)
 end
 
 function array.wrap(obj)

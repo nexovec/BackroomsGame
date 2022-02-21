@@ -99,6 +99,23 @@ function map:invert()
     end
     return res
 end
+
+function map:keys()
+    local res = array.wrap()
+    for k, v in pairs(self) do
+        res:append(k)
+    end
+    return res
+end
+
+function map:clone()
+    local res = map.wrap()
+    for k, v in ipairs(self) do
+        res[k] = v
+    end
+    return res
+end
+
 function map.wrap(obj)
     if type(obj) == "nil" then
         local emptyTable = {}
