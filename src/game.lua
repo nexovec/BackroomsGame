@@ -76,6 +76,9 @@ local devConsoleMessage = ""
 local devConsoleEnabled = false
 local devConsoleMessageHistory = array.wrap()
 
+local currentMacroName = nil
+local recordedMacroesCount = 0
+
 local loginBoxUsernameText = ""
 local loginBoxPasswordText = ""
 local loginBoxErrorText = ""
@@ -265,9 +268,9 @@ local function handleEnetClient()
 end
 
 local function executeDevConsoleCommand(cmd)
-    if string.startsWith(cmd, "macro") then
-        local macroDevCommandArgsText = string.sub(cmd, #"macro" + 1, #cmd)
-        local macroDevCommandArgs = string.split(macroDevCommandArgsText, " "):sub(2, nil)
+    local macroDevCommandArgs = string.split(cmd, " ")
+    local command = macroDevCommandArgs:dequeue()
+    if command == "macro" then
         local subCommand = macroDevCommandArgs:dequeue()
         if subCommand == "record" then
             if not startRecordingPlayerInputs() then
@@ -281,17 +284,25 @@ local function executeDevConsoleCommand(cmd)
                 devConsoleMessageHistory:append("Can't pause, no macro is being recorded")
             end
         elseif subCommand == "stop" then
-            local macroName, currentMacro = stopRecordingPlayerInputs()
+            local currentMacro = stopRecordingPlayerInputs()
+            local currentMacroName = "macros/" .. currentMacroName
+            if not currentMacroName then
+                -- TODO: Don't overwrite macro1.json if it is already stored
+                recordedMacroesCount = recordedMacroesCount + 1
+                currentMacroName = "macros/" .. "macro" .. tostring(recordedMacroesCount)
+            end
             local macroJsonToWrite = json.encode(currentMacro)
-            local s, m = love.filesystem.write(macroName .. ".json", macroJsonToWrite, #macroJsonToWrite)
+            local s, m = love.filesystem.write(currentMacroName .. ".json", macroJsonToWrite, #macroJsonToWrite)
             if not s then
                 error(m)
             end
-            devConsoleMessageHistory:append("Macro stored in " .. macroName .. ".json")
+            devConsoleMessageHistory:append("Macro stored in " .. currentMacroName .. ".json")
         elseif subCommand == "list" then
+            -- TODO: Debug
             -- TODO: Use settings.pathToMacros
-            local workingDir = love.filesystem.getSaveDirectory()
-            -- FIXME: Always returns an empty list
+            local workingDir = "macros"
+            love.filesystem.createDirectory("macros")
+            assert(love.filesystem.getInfo(workingDir).type == "directory")
             local macros = map.wrap(love.filesystem.getDirectoryItems(workingDir))
             if macros:length() == 0 then
                 devConsoleMessageHistory:append("There are no recorded macros.")
@@ -299,28 +310,24 @@ local function executeDevConsoleCommand(cmd)
             end
             local macroNames = array.wrap()
             for k, v in pairs(macros) do
-                print(k, v)
-                if not love.filesystem.getInfo(v).type == "file" then
-                    error("Macro " .. v .. " is not a file")
+                local path = "macros/" .. v
+                print(path)
+                if not love.filesystem.getInfo(path, "file") then
+                    error("Macro " .. path .. " is not a file")
                 end
                 if not string.extension(v) == ".json" then
-                    error("Macro " .. v .. " is not a json file")
+                    error("Macro " .. path .. " is not a json file")
                 end
-                macroNames:append(v)
+                macroNames:append(path)
             end
-            macroNames:map(function(macroName, key)
-                if key ~= 1 then
-                    macroName = ", " .. macroName
-                end
-                devConsoleMessageHistory:append(macroName)
-            end)
+            devConsoleMessageHistory:append(string.join(macroNames, ", "))
         elseif subCommand == "play" then
             error("Not yet implemented!")
         else
             devConsoleMessageHistory:append("Usage: macro record|play|pause|list")
         end
     else
-        devConsoleMessageHistory:append("Unknown command:\t" .. cmd)
+        devConsoleMessageHistory:append("Unknown command:\t" .. command)
     end
 end
 
@@ -418,13 +425,13 @@ local function focusChat()
     activeUIElemStack:append("chatBox")
 end
 
-function loginClicked()
+local function loginClicked()
     attemptLogin(loginBoxUsernameText, loginBoxPasswordText)
     loginPromptToggle()
     focusChat()
 end
 
-function pointIntersectsQuad(pX, pY, qX, qY, qW, qH)
+local function pointIntersectsQuad(pX, pY, qX, qY, qW, qH)
     if type(qX) == "table" then
         return pointIntersectsQuad(pX, pY, qX.x, qX.y, qX.width, qX.height)
     end
@@ -599,14 +606,14 @@ local function tintScreen()
     end
 end
 
-function renderUITab(x, y, width, height, horizontalIconTileIndex, verticalIconTileIndex)
+local function renderUITab(x, y, width, height, horizontalIconTileIndex, verticalIconTileIndex)
     tiledUIPanel("uiImage", UITileSize, UIScale, {10, 4, 2, 2}):draw(x, y, width, height)
     slotIconsAtlas:drawTile((x + 0.1) * UITileSize * UIScale, (y + 0.15) * UITileSize * UIScale,
         horizontalIconTileIndex, verticalIconTileIndex, (width - 0.5) * UITileSize * UIScale,
         (height - 0.5) * UITileSize * UIScale)
 end
 
-function renderUIPanel(x, y, width, height, shape)
+local function renderUIPanel(x, y, width, height, shape)
     tiledUIPanel("uiImage", UITileSize, UIScale, shape):draw(x, y, width, height)
 end
 
@@ -621,7 +628,7 @@ end
 
 ---- handling input
 
-function handleChatKp(key)
+local function handleChatKp(key)
     -- chat handling
     if key == "return" then
         if serverpeer and serverpeer:state() == "connected" then
@@ -646,7 +653,7 @@ local function handleChatTextInput(key)
     clientChatBoxMessage = clientChatBoxMessage .. key
 end
 
-function handleLoginBoxKp(key)
+local function handleLoginBoxKp(key)
 
     local function switchFields()
         if activeLoginBoxField == "nickname" then
@@ -684,7 +691,7 @@ function handleLoginBoxKp(key)
     end
 end
 
-function handleLoginBoxTextInput(key)
+local function handleLoginBoxTextInput(key)
     if activeLoginBoxField == "password" then
         loginBoxPasswordText = loginBoxPasswordText .. key
     else

@@ -23,11 +23,8 @@ local reportedFPS = 0
 
 -- TODO: Move macro handling to a separate file
 local currentFrame = 0
-local recordedMacroesCount = 0
-local currentMacroName
 local currentMacro
 local isRecordingMacro
-local recordedMacroes = map.wrap()
 
 local function addMacroEvent(type, contents)
     -- map.prettyPrint({
@@ -64,18 +61,13 @@ end
 
 function stopRecordingPlayerInputs()
     -- TODO: Recursive count instead (map:subnodeCount)
-    recordedMacroesCount = recordedMacroesCount + 1
-    local currentMacroName = currentMacroName or ("macro" .. tostring(recordedMacroesCount))
-    recordedMacroes[currentMacroName] = currentMacro
     -- TODO: Redirect the save folder
     -- TODO: Use ticks as keys, encode ordered
     -- TODO: Use custom ordered iterator
     local tempMacro = currentMacro
-    local tempName = currentMacroName
     currentMacro = nil
-    currentMacroName = nil
     isRecordingMacro = false
-    return tempName, tempMacro
+    return tempMacro
 end
 
 function love.load(args)

@@ -156,6 +156,10 @@ function array:iter()
     return ipairs(self)
 end
 
+function array:sorted()
+    error("Not yet implemented.")
+end
+
 -- Returns a sub-array from min to max, inclusive
 function array:sub(min, max)
     assert(not not min or not not max)

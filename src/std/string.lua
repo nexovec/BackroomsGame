@@ -24,7 +24,8 @@ function string.join(tableOfStrings, separator)
 end
 
 function string.extension(str)
-    return "." .. string.split(str, ".")[-1]
+    local res = string.split(str, ".")
+    return "." .. res[#res]
 end
 
 function string.startsWith(str, startingLetters)
