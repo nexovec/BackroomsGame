@@ -13,7 +13,7 @@ local server
 
 -- variables
 local timeLastLogged = nil
-local delta = 0
+local deltaTime = 0
 
 local timeLastLoggedFPS = nil
 local ticks = 0
@@ -30,13 +30,7 @@ local isRecordingMacro
 local currentlyPlayedMacro
 
 local function addMacroEvent(type, contents)
-    -- map.prettyPrint({
-    --     frame = currentFrame,
-    --     mType = type,
-    --     contents = contents
-    -- })
     assert(currentMacro)
-    local currentFrame = tostring(currentFrame)
     currentMacro:append{
         frame = currentFrame - macroStartFrame,
         timestamp = tostring(love.timer.getTime()),
@@ -122,37 +116,21 @@ function love.load(args)
     timeLastLogged = love.timer.getTime()
 end
 
-deltaTime = 0
-
 function playedMacroDispatchEvents()
+    if currentlyPlayedMacro:length() == 0 then
+        playedMacroStartFrame = nil
+        currentlyPlayedMacro = nil
+        return
+    end
     for k, v in currentlyPlayedMacro:iter() do
         if v.frame >= currentFrame - playedMacroStartFrame then
             -- FIXME: This is exploitable
-            -- TODO: Fix
-            print(v.mType, v.contents)
+            -- TODO: Dispatch multiple during the same tick.
             love.event.push(v.mType, v.contents)
             table.remove(currentlyPlayedMacro, k)
             return
         end
     end
-
-    -- TODO: Do this instead:
-    -- local toBePlayed = map.wrap()
-    -- for k, v in currentlyPlayedMacro:iter() do
-    --     if v.frame >= currentFrame - playedMacroStartFrame then
-    --         -- FIXME: This is exploitable
-    --         -- TODO: Fix
-    --         print(v.mType, v.contents)
-    --         toBePlayed[k] = v
-    --         -- game[v.mType](v.contents)
-    --         return
-    --     end
-    -- end
-    -- for k, v in toBePlayed:iter() do
-    --     love.event.push(v.mType, v.contents)
-    --     table.remove(currentlyPlayedMacro, k)
-
-    -- end
 end
 
 function love.update(dt)
@@ -170,13 +148,13 @@ function love.update(dt)
         else
             msPerTick = 1 / targetTPS
             deltaTime = deltaTime + dt
-            if deltaTime >= msPerTick then
+            while deltaTime >= msPerTick do
                 if not not currentlyPlayedMacro then
                     playedMacroDispatchEvents()
                 end
                 -- shouldRender = true
                 game.tick(deltaTime)
-                deltaTime = 0
+                deltaTime = deltaTime - msPerTick
             end
         end
     end

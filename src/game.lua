@@ -379,7 +379,7 @@ local function executeDevConsoleCommand(cmd)
             if not fileContents then
                 return devConsoleMessageHistory:append("Couldn't read macro file: " .. tostring(success))
             end
-            playedMacro = array.wrap(json.decode(fileContents))
+            playedMacro = map.wrap(json.decode(fileContents))
             startPlayingMacro(playedMacro)
             -- TODO: Play them
             -- TODO: Play them faster
