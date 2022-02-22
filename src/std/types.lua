@@ -70,6 +70,8 @@ function types.checked(var, typeName, errorLevel, errHandle)
     end
     if type(var) == typeName then
         return var
+    elseif type(var) == "userdata" and var.type == typeName then
+        return var
     else
         if errHandle then
             error("Not yet implemented.")

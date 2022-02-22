@@ -22,9 +22,12 @@ local options = {}
 local reportedFPS = 0
 
 -- TODO: Move macro handling to a separate file
+local macroStartFrame = nil
+local playedMacroStartFrame = nil
 local currentFrame = 0
 local currentMacro
 local isRecordingMacro
+local currentlyPlayedMacro
 
 local function addMacroEvent(type, contents)
     -- map.prettyPrint({
@@ -34,8 +37,8 @@ local function addMacroEvent(type, contents)
     -- })
     assert(currentMacro)
     local currentFrame = tostring(currentFrame)
-    currentMacro:append {
-        frame = currentFrame,
+    currentMacro:append{
+        frame = currentFrame - macroStartFrame,
         timestamp = tostring(love.timer.getTime()),
         mType = type,
         contents = contents
@@ -46,6 +49,7 @@ function startRecordingPlayerInputs(macroName)
     if currentMacro then
         return false
     end
+    macroStartFrame = currentFrame
     currentMacro = array.wrap()
     currentMacroName = macroName
     isRecordingMacro = true
@@ -60,6 +64,11 @@ function pauseRecordingPlayerInputs()
     return true
 end
 
+function startPlayingMacro(macro)
+    playedMacroStartFrame = currentFrame
+    currentlyPlayedMacro = macro
+end
+
 function stopRecordingPlayerInputs()
     -- TODO: Recursive count instead (map:subnodeCount)
     -- TODO: Redirect the save folder
@@ -70,6 +79,7 @@ function stopRecordingPlayerInputs()
         success = true
     end
     local tempMacro = currentMacro
+    macroStartFrame = nil
     currentMacro = nil
     isRecordingMacro = false
     return tempMacro, success
@@ -114,6 +124,37 @@ end
 
 deltaTime = 0
 
+function playedMacroDispatchEvents()
+    for k, v in currentlyPlayedMacro:iter() do
+        if v.frame >= currentFrame - playedMacroStartFrame then
+            -- FIXME: This is exploitable
+            -- TODO: Fix
+            print(v.mType, v.contents)
+            love.event.push(v.mType, v.contents)
+            table.remove(currentlyPlayedMacro, k)
+            return
+        end
+    end
+
+    -- TODO: Do this instead:
+    -- local toBePlayed = map.wrap()
+    -- for k, v in currentlyPlayedMacro:iter() do
+    --     if v.frame >= currentFrame - playedMacroStartFrame then
+    --         -- FIXME: This is exploitable
+    --         -- TODO: Fix
+    --         print(v.mType, v.contents)
+    --         toBePlayed[k] = v
+    --         -- game[v.mType](v.contents)
+    --         return
+    --     end
+    -- end
+    -- for k, v in toBePlayed:iter() do
+    --     love.event.push(v.mType, v.contents)
+    --     table.remove(currentlyPlayedMacro, k)
+
+    -- end
+end
+
 function love.update(dt)
     profile.start()
     currentFrame = currentFrame + 1
@@ -124,11 +165,15 @@ function love.update(dt)
     else
         targetTPS = assets.get("settings").targetTPS
         if not targetTPS then
+            -- TODO: Use macros here
             game.tick(dt)
         else
             msPerTick = 1 / targetTPS
             deltaTime = deltaTime + dt
             if deltaTime >= msPerTick then
+                if not not currentlyPlayedMacro then
+                    playedMacroDispatchEvents()
+                end
                 -- shouldRender = true
                 game.tick(deltaTime)
                 deltaTime = 0

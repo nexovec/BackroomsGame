@@ -74,6 +74,7 @@ local chatboxSendBtnDimensions = {
 
 local devConsoleMessage = ""
 local devConsoleEnabled = false
+local playedMacro
 local devConsoleMessageHistory = array.wrap()
 local devConsoleHistoryPointer
 
@@ -200,6 +201,7 @@ end
 local function receivedMessageHandle(hostevent)
     local data = hostevent.data
     local prefix, trimmedMessage = network.getNetworkMessagePrefix(data)
+    -- TODO: Remove ping ponging
     if prefix == "pingpong" then
         t.delayCall(function()
             sendMessage("pingpong", "ping!")
@@ -270,14 +272,14 @@ local function executeDevConsoleCommand(cmd)
     local macroDevCommandArgs = string.split(cmd, " ") -- :std.array
     local command = macroDevCommandArgs:dequeue()
     if command == "macro" then
-        local workingDir = "macros"
+        local macrosDir = "macros"
         local subCommand = macroDevCommandArgs:dequeue()
         if subCommand == "record" then
             if not startRecordingPlayerInputs() then
                 devConsoleMessageHistory:append(
                     "You are already recording a macro, use macro stop|pause to stop/pause/unpause this macro.")
-                return
             end
+            currentMacroName = macroDevCommandArgs:dequeue()
             devConsoleMessageHistory:append("You are recording a macro...")
         elseif subCommand == "pause" then
             if not pauseRecordingPlayerInputs() then
@@ -293,13 +295,13 @@ local function executeDevConsoleCommand(cmd)
             if not currentMacroName then
                 currentMacroName = arg1 or ("macro" .. tostring(recordedMacroesCount))
             end
-            local path = workingDir .. "/" .. currentMacroName
-            if not love.filesystem.createDirectory(workingDir) then
+            local path = macrosDir .. "/" .. currentMacroName
+            if not love.filesystem.createDirectory(macrosDir) then
                 error("Can't create the macro folder")
             end
             if not path then
                 -- TODO: Don't overwrite macro1.json if it is already stored
-                path = workingDir .. "/" .. currentMacroName
+                path = macrosDir .. "/" .. currentMacroName
             end
             -- TODO: Wait for luaJIT 5.2
             -- -- an iterator that outputs sorted keys (keys must be convertible to a number)
@@ -341,11 +343,11 @@ local function executeDevConsoleCommand(cmd)
             devConsoleMessageHistory:append("Not yet implemented.")
         elseif subCommand == "list" then
             -- TODO: Use settings.pathToMacros
-            if not love.filesystem.createDirectory(workingDir) then
+            if not love.filesystem.createDirectory(macrosDir) then
                 error("Can't create the macro folder")
             end
-            assert(love.filesystem.getInfo(workingDir).type == "directory")
-            local macros = map.wrap(love.filesystem.getDirectoryItems(workingDir))
+            assert(love.filesystem.getInfo(macrosDir).type == "directory")
+            local macros = map.wrap(love.filesystem.getDirectoryItems(macrosDir))
             if macros:length() == 0 then
                 devConsoleMessageHistory:append("There are no recorded macros.")
                 return
@@ -364,25 +366,27 @@ local function executeDevConsoleCommand(cmd)
                 macroNames:append(macroNameWithNoExt)
             end
             devConsoleMessageHistory:append(string.join(macroNames, ", "))
+        elseif subCommand == "open" then
+            love.system.openURL(love.filesystem.getSaveDirectory() .. "/" .. macrosDir)
+            return devConsoleMessageHistory:append("Opening the macros folder")
         elseif subCommand == "play" then
             local macroName = macroDevCommandArgs:dequeue()
             if not macroName then
                 return devConsoleMessageHistory:append("Usage: macro play <name of macro>")
             end
             -- local macros = map.wrap(love.filesystem.getDirectoryItems(workingDir))
-            local fileContents, success = love.filesystem.read(workingDir .. "/" .. macroName .. ".json")
+            local fileContents, success = love.filesystem.read(macrosDir .. "/" .. macroName .. ".json")
             if not fileContents then
-                return devConsoleMessageHistory:append("Couldn't read macro file!")
+                return devConsoleMessageHistory:append("Couldn't read macro file: " .. tostring(success))
             end
-            local playedMacro = json.decode(fileContents)
-            -- TODO: Subtract start frame from macro events
+            playedMacro = array.wrap(json.decode(fileContents))
+            startPlayingMacro(playedMacro)
             -- TODO: Play them
             -- TODO: Play them faster
             -- TODO: CLI option --test that runs predetermined macroes
-            return devConsoleMessageHistory:append("Not yet implemented!")
-            -- local macroName = macroDevCommandArgs:dequeue()
+            return devConsoleMessageHistory:append("Playing a macro with " .. tostring(#playedMacro) .. " events")
         else
-            devConsoleMessageHistory:append("Usage: macro record|play|pause|list")
+            devConsoleMessageHistory:append("Usage: macro record|stop|play|pause|list|open")
         end
     else
         devConsoleMessageHistory:append("Unknown command:\t" .. command)
@@ -508,6 +512,23 @@ local function handleLoginBoxFieldFocusOnMouseClick(xIn, yIn, mb, isTouch, repea
         loginBoxTextFieldsSizes.password.width,
         assets.get("font"):getAscent() + loginBoxTextFieldsSizes.password.margins) then
         activeLoginBoxField = "password"
+    end
+end
+
+local function handleChatKp(key)
+    -- chat handling
+    if key == "return" then
+        if serverpeer and serverpeer:state() == "connected" then
+            local maxChatMessageLength = assets.get("settings").maximumChatMessageLength
+            if #clientChatBoxMessage == 0 or #clientChatBoxMessage > maxChatMessageLength then
+                return
+            end
+            sendMessage("message", clientChatBoxMessage)
+        end
+        -- TODO: Handle sends from the server
+        clientChatBoxMessage = ""
+    elseif key == "backspace" then
+        clientChatBoxMessage = string.popped(clientChatBoxMessage)
     end
 end
 
@@ -685,23 +706,6 @@ local function drawEquipmentSlot(x, y, width, height, iconX, iconY)
 end
 
 ---- handling input
-
-local function handleChatKp(key)
-    -- chat handling
-    if key == "return" then
-        if serverpeer and serverpeer:state() == "connected" then
-            local maxChatMessageLength = assets.get("settings").maximumChatMessageLength
-            if #clientChatBoxMessage == 0 or #clientChatBoxMessage > maxChatMessageLength then
-                return
-            end
-            sendMessage("message", clientChatBoxMessage)
-        end
-        -- TODO: Handle sends from the server
-        clientChatBoxMessage = ""
-    elseif key == "backspace" then
-        clientChatBoxMessage = string.popped(clientChatBoxMessage)
-    end
-end
 
 local function handleChatTextInput(key)
     local maxChatMessageLength = assets.get("settings").maximumChatMessageLength
@@ -943,13 +947,14 @@ function game.draw()
 
     tempCanvas:setFilter("linear", "linear", 4)
     local maskShader = assets.get("resources/shaders/masks/maskFromTexture.glsl")
-    tempCanvas:renderTo(function()
+    local function useMaskShaderToDrawCharacter()
         love.graphics.withShader(maskShader, function()
             love.graphics.clear()
             maskShader:send("Tex", characterSpriteCanvas)
             love.graphics.draw(characterSpriteCanvas, love.graphics.newQuad(0, 0, 24, 32, 24, 32), 0, 0)
         end)
-    end)
+    end
+    tempCanvas:renderTo(useMaskShaderToDrawCharacter)
 
     local quad = love.graphics.newQuad(0, 0, 800, 800, 800, 800)
     resolutionScaledDraw(tempCanvas, quad, 1040, 80)
