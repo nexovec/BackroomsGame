@@ -25,7 +25,7 @@ function map:prettyPrintRecursive(passed)
     if not self then
         return error('Table is nil!', 2)
     end
-    -- TODO: typecheck against array
+    -- TODO: Typecheck against array
     if type(self) ~= 'table' then
         error('This is not a table. type: ' .. type(self) .. ((" " .. (self.type and self.type())) or ""), 2)
     end

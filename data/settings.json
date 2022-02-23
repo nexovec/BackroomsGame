@@ -5,12 +5,12 @@
     "performanceLogPeriodInSeconds": 30,
     "shouldLogFPS": true
   },
-  "width": 1920,
-  "height": 1080,
   "assetReloadUpdateFrequency": 2,
   "targetTPS": 60,
   "serverAddress": "192.168.0.234:6750",
   "maximumChatMessageLength": 32,
   "macroSaveFile": "macros.json",
-  "pathToMacros": "macros"
+  "pathToMacros": "macros",
+  "mockResolution": [2560, 1440],
+  "realResolution": [1920, 1080]
 }

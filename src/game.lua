@@ -1,46 +1,40 @@
--- FIXME: Add the fire lading circles image (downscaled, so the repo size doesn't go through the roof)
 local game = {}
+-- FIXME: Add the fire lading circles image (downscaled, so the repo size doesn't go through the roof)
 
 -- requires
-local animations = require("animations")
 local enet = require("enet")
-local t = require("timing")
 local assert = require("std.assert")
 local array = require("std.array")
 local map = require("std.map")
 local json = require("std.json")
 local string = require("std.string")
 local ref = require("std.ref")
+local t = require("timing")
+local animations = require("animations")
 local network = require("network")
 local tileAtlas = require("tileAtlas")
-local cbkHandle = require("std.cbkHandle")
 local assets = require("assets")
-
--- for use with renderOldUI():
--- local chatboxUIBox
--- local nicknamePickerUIBox
--- local logMessageBox
+local drawing = require("drawing")
 
 -- variables
-local options
+local scaled = drawing.resolutionScaledPos -- function alias
 
-local enetclient
-local serverpeer
+local enetclient = nil
+local serverpeer = nil
 
-local mockResolution = {2560, 1440}
-
-local playerAreaCanvas
+local playerAreaCanvas = nil
 local playerAreaDims = array.wrap {720, 720}
 
-local playerAnimation
+local playerAnimation = nil
 
-local tempCanvas
-local characterSpriteCanvas
+local tempCanvas = nil
+local characterSpriteCanvas = nil
 local tintDrawn = false
 
 local UITileSize = 16
 local UIScale = 5
-local UIElemHadlers
+-- local UIScale = 5 * 1.33
+local UIElemHadlers = nil
 
 local loginBoxEnabled = false
 local settingsEnabled = false
@@ -73,11 +67,10 @@ local chatboxSendBtnDimensions = {
     width = 64,
     height = 64
 }
--- local chatboxDims = {640, 1280}
 
 local devConsoleMessageRef = ref.wrap("")
 local devConsoleEnabled = false
-local playedMacro
+local playedMacro = nil
 local devConsoleMessageHistory = array.wrap()
 local devConsoleHistoryPointer = ref.wrap()
 
@@ -100,7 +93,7 @@ local loginBoxDimensions = {
     width = 8,
     height = 3
 }
-local loginBoxBtnDimensions
+local loginBoxBtnDimensions = nil
 local settingsBoxDimensionsInTiles = {
     x = 6,
     y = 6,
@@ -129,32 +122,11 @@ local loginBoxTextFieldsSizes = {
     }
 }
 
-local serverAddress
+local serverAddress = nil
 local connectionFails = 0
 local hasConnected = false
 
 local delta = 0
-
--- helper functions
-
---- Corrects position for resolutionChanges
----@param pos table Of the form {width, height}
-local function resolutionScaledPos(pos)
-    return {(assets.get("settings").width / mockResolution[1]) * pos[1],
-            (assets.get("settings").height / mockResolution[2]) * pos[2]}
-end
-local function resolutionScaledDraw(image, quad, x, y)
-    local correctX, correctY = unpack(resolutionScaledPos {x, y})
-    local viewX, viewY, width, height = quad:getViewport()
-    local scaleX, scaleY = quad:getTextureDimensions()
-    local cviewX, cviewY = unpack(resolutionScaledPos {viewX, viewY})
-    local cwidth, cheight = unpack(resolutionScaledPos {width, height})
-    local cscaleX, cscaleY = unpack(resolutionScaledPos {scaleX, scaleY})
-    local correctQuad = love.graphics.newQuad(cviewX, cviewY, cwidth, cheight, cscaleX, cscaleY)
-    love.graphics.draw(image, correctQuad, correctX, correctY)
-end
-
--- TODO: Make function that ensures no additional globals are defined
 
 --- NETWORKING:
 
@@ -231,9 +203,6 @@ end
 
 local function handleEnetClient()
     local hostevent = enetclient:service()
-    -- FIXME: When pc sleeps
-    --     AL lib: (EE) ALCwasapiPlayback_mixerProc: WaitForSingleObjectEx error: 0x102
-    -- Error: src/game.lua:113: Error during service
     if serverpeer:state() == "disconnected" then
         connectionFails = connectionFails + 1
         if connectionFails < 6 and hasConnected then
@@ -306,33 +275,6 @@ local function executeDevConsoleCommand(cmd)
                 -- TODO: Don't overwrite macro1.json if it is already stored
                 path = macrosDir .. "/" .. currentMacroName
             end
-            -- TODO: Wait for luaJIT 5.2
-            -- -- an iterator that outputs sorted keys (keys must be convertible to a number)
-            -- local function iterator(invariantState, index)
-            --     -- TODO: Test
-            --     -- NOTE: Very slow
-            --     print("iterator is running")
-            --     local sortedKeys = map.wrap(invariantState):keys():sorted()
-            --     if not index then
-            --         index = sortedKeys[1]
-            --     end
-            --     local indexOfTheKey = sortedKeys:indexOf(index)
-            --     if indexOfTheKey == invariantState:length() then
-            --         return nil
-            --     end
-            --     local keyAfterThatKey = sortedKeys[indexOfTheKey + 1]
-            --     print(keyAfterThatKey)
-            --     return keyAfterThatKey, invariantState[keyAfterThatKey]
-            --     -- return tostring(sortedKeys[index]), invariantState[sortedKeys[index]]
-            -- end
-            -- local tblWithIterator = setmetatable(currentMacro, {
-            --     __pairs = function(a)
-            --         print("pairs is running")
-            --         return iterator, a, nil
-            --     end
-            -- })
-            -- pairs(tblWithIterator)
-            -- local macroJsonToWrite = json.encode(tblWithIterator)
             local macroJsonToWrite = json.encode(currentMacro)
             local s, m = love.filesystem.write(path .. ".json", macroJsonToWrite, #macroJsonToWrite)
             if not s then
@@ -394,102 +336,6 @@ local function executeDevConsoleCommand(cmd)
     else
         devConsoleMessageHistory:append("Unknown command:\t" .. command)
     end
-end
-
---- UI
-
----- rendering
-
-local function drawGrid(tileSize, color)
-    if color then
-        love.graphics.setColor(unpack(color))
-    end
-    for i = 1, math.floor(mockResolution[2] / tileSize) do
-        local pos1 = {0, i * tileSize}
-        local pos2 = {mockResolution[1], i * tileSize}
-        -- TODO: Investigate: This should probably be corrected like this:
-        -- local cPos1 = resolutionScaledPos(pos1)
-        -- local cPos2 = resolutionScaledPos(pos2)
-        local cPos1 = pos1
-        local cPos2 = pos2
-        love.graphics.line(cPos1[1], cPos1[2], cPos2[1], cPos2[2])
-    end
-    for i = 1, math.floor(mockResolution[1] / tileSize) do
-        local pos1 = {i * tileSize, 0}
-        local pos2 = {i * tileSize, mockResolution[2]}
-        -- local cPos1 = resolutionScaledPos(pos1)
-        -- local cPos2 = resolutionScaledPos(pos2)
-        local cPos1 = pos1
-        local cPos2 = pos2
-        love.graphics.line(cPos1[1], cPos1[2], cPos2[1], cPos2[2])
-    end
-    if color then
-        love.graphics.setColor(1, 1, 1, 1)
-    end
-end
-
-local function tiledUIPanel(assetName, tileSize, scale, panelPos)
-    assert(not panelPos or #panelPos == 4, "Invalid panelPos argument", 2)
-    -- assert(type(panelPos) == "nil" and panelPos[1] and panelPos[4], "Invlid panelPos", 2)
-    local self = {
-        assetName = assetName,
-        tileSize = tileSize,
-        scale = scale,
-        panelPos = panelPos or {0, 4, 10, 10}
-    }
-    -- TODO: option is "flat" or "shadow", corresponds to whether it is hovered over with mouse or not
-    function self:draw(xPosInTiles, yPosInTiles, widthInTiles, heightInTiles, option)
-        if type(xPosInTiles) == "table" then
-            local dims, option = xPosInTiles, yPosInTiles
-            return self:draw(dims.x, dims.y, dims.width, dims.height, option)
-        end
-        local scaledTileSize = self.tileSize * self.scale
-        assert(xPosInTiles >= 0 and yPosInTiles >= 0 and widthInTiles > 0 and widthInTiles > 0)
-        local atlas = tileAtlas.wrap(self.assetName, self.tileSize)
-        local startingX, startingY, panelWInTiles, panelHInTiles = self.panelPos[1], self.panelPos[2], self.panelPos[3],
-            self.panelPos[4]
-        for xI = 0, widthInTiles - 1 do
-            for yI = 0, heightInTiles - 1 do
-                -- assigns which tile gets rendered at this position(at scaledTileSize * posInTiles + index)
-                local tileX, tileY
-                if yI == 0 then
-                    tileY = startingY
-                end
-                if xI == 0 then
-                    tileX = startingX
-                end
-                if yI == heightInTiles - 1 then
-                    tileY = startingY + panelHInTiles - 1
-                end
-                if xI == widthInTiles - 1 then
-                    tileX = startingX + panelWInTiles - 1
-                end
-                if not tileX then
-                    tileX = startingX + 1
-                    -- TODO: Thin the edge folds of paper ui
-                    -- tileX = startingX + 1 + xI % (panelWInTiles - 2)
-                end
-                if not tileY then
-                    tileY = startingY + 1
-                    -- tileY = startingY + 1 + yI % (panelHInTiles - 2)
-                end
-                atlas:drawTile((xPosInTiles + xI) * self.tileSize * self.scale,
-                    (yPosInTiles + yI) * self.tileSize * self.scale, tileX, tileY, self.scale * self.tileSize,
-                    self.scale * self.tileSize)
-            end
-        end
-    end
-
-    return self
-end
-
-
-local function moveHistoryDown()
-    -- TODO:
-end
-
-local function moveHistoryUp()
-    -- TODO:
 end
 
 local function handleMessageHistoryRewindKp(key, refToHistoryPointer, history, messageRef)
@@ -573,7 +419,8 @@ local function handleChatKp(key)
     elseif key == "backspace" then
         clientChatBoxMessageRef.val = string.popped(clientChatBoxMessageRef.val)
     else
-        handleMessageHistoryRewindKp(key, chatboxHistoryPointerRef, localPlayerChatMessageHistory, clientChatBoxMessageRef)
+        handleMessageHistoryRewindKp(key, chatboxHistoryPointerRef, localPlayerChatMessageHistory,
+            clientChatBoxMessageRef)
     end
 end
 
@@ -588,7 +435,6 @@ end
 
 ---@return boolean returns whether the settings are active.
 local function toggleSettings()
-    -- TODO: Turn settings off
     if settingsEnabled then
         settingsEnabled = false
         if loginBoxEnabled then
@@ -734,28 +580,29 @@ local function tintScreen()
     if tintDrawn == false then
         local oldColor = {love.graphics.getColor()}
         love.graphics.setColor(0, 0, 0, 0.8)
-        love.graphics.rectangle("fill", 0, 0, unpack(resolutionScaledPos(mockResolution)))
+        local realResolution = assets.get("settings").realResolution
+        love.graphics.rectangle("fill", 0, 0, unpack(realResolution))
         love.graphics.setColor(unpack(oldColor))
         tintDrawn = true
     end
 end
 
 local function renderUITab(x, y, width, height, horizontalIconTileIndex, verticalIconTileIndex)
-    tiledUIPanel("uiImage", UITileSize, UIScale, {10, 4, 2, 2}):draw(x, y, width, height)
+    drawing.tiledUIPanel("uiImage", UITileSize, UIScale, {10, 4, 2, 2}):draw(x, y, width, height)
     slotIconsAtlas:drawTile((x + 0.1) * UITileSize * UIScale, (y + 0.15) * UITileSize * UIScale,
         horizontalIconTileIndex, verticalIconTileIndex, (width - 0.5) * UITileSize * UIScale,
         (height - 0.5) * UITileSize * UIScale)
 end
 
 local function renderUIPanel(x, y, width, height, shape)
-    tiledUIPanel("uiImage", UITileSize, UIScale, shape):draw(x, y, width, height)
+    drawing.tiledUIPanel("uiImage", UITileSize, UIScale, shape):draw(x, y, width, height)
 end
 
 local function drawEquipmentSlot(x, y, width, height, iconX, iconY)
     if type(x) == "table" then
         return drawEquipmentSlot(x.x, x.y, x.width, x.height, y, width)
     end
-    tiledUIPanel("uiImage", UITileSize, UIScale, {10, 6, 2, 2}):draw(x, y, width, height)
+    drawing.tiledUIPanel("uiImage", UITileSize, UIScale, {10, 6, 2, 2}):draw(x, y, width, height)
     slotIconsAtlas:drawTile((x + 0.1) * UITileSize * UIScale, (y + 0.15) * UITileSize * UIScale, iconX, iconY,
         (width - 0.5) * UITileSize * UIScale, (height - 0.5) * UITileSize * UIScale)
 end
@@ -846,7 +693,7 @@ end
 
 function game.load(args)
     assert(type(args) == "table")
-    options = args
+    love.window.setMode(assets.get("settings").realResolution[1], assets.get("settings").realResolution[2])
     serverAddress = assets.get("settings").serverAddress
     love.window.setTitle("Backrooms v0.0.1 pre-dev")
     love.keyboard.setKeyRepeat(true)
@@ -869,6 +716,12 @@ function game.load(args)
         devConsole = {
             keypressed = handleDevConsoleKp,
             textinput = handleDevConsoleTextInput
+        },
+        settings = {
+            keypressed = function()
+            end,
+            textinput = function()
+            end
         }
     }
     activeUIElemStack:append("chatboxMessageHistory")
@@ -898,6 +751,7 @@ end
 function game.draw()
     -- draw background
     tintDrawn = false
+    local mockResolution = assets.get("settings").mockResolution
     local backgroundQuad = love.graphics.newQuad(0, 0, mockResolution[1], mockResolution[2], mockResolution[1],
         mockResolution[2])
     love.graphics.draw(assets.get("backgroundImage"), backgroundQuad, 0, 0, 0, 1, 1, 0, 0)
@@ -939,11 +793,11 @@ function game.draw()
     drawTextInputField(chatboxTextFieldPos.x, chatboxTextFieldPos.y, hasCaret, clientChatBoxMessageRef.val)
 
     -- render send button
-    -- love.graphics.draw(assets.get("resources/images/ui/smallIcons.png"), 1220, 100, 0, 3, 3) -- icons preview
+    love.graphics.draw(assets.get("resources/images/ui/smallIcons.png"), 1220, 100, 0, 3, 3) -- icons preview
     tileAtlas.wrap("resources/images/ui/smallIcons.png", 12, 2):drawTile(chatboxSendBtnDimensions.x,
         chatboxSendBtnDimensions.y, 0, 8, chatboxSendBtnDimensions.width, chatboxSendBtnDimensions.height)
     drawOutline(chatMessagesBoundingBox.x + 480, chatMessagesBoundingBox.y + 870, 64, 64)
-    tileAtlas.wrap("resources/images/ui/smallIcons.png", 12, 2):drawTile(1830, 0, 10, 6, 64, 64)
+    tileAtlas.wrap("resources/images/ui/smallIcons.png", 12, 2):drawTile(1830, 0, 2, 4, 64, 64)
     drawOutline(settingsBtnDimensions)
     love.graphics.setColor(1, 1, 1, 1)
 
@@ -970,7 +824,7 @@ function game.draw()
     end)
     local playfieldScenePlacementQuad = love.graphics.newQuad(0, 0, unpack(playerAreaDims:rep(2)))
     local pos = UIScale * UITileSize * (0.5 - (8 - 720 / (UITileSize * UIScale)))
-    resolutionScaledDraw(playerAreaCanvas, playfieldScenePlacementQuad, pos, pos)
+    drawing.resolutionScaledDraw(playerAreaCanvas, playfieldScenePlacementQuad, pos, pos)
 
     -- render character silhouette
     -- FIXME: Fix rendering when scaling
@@ -995,11 +849,7 @@ function game.draw()
     tempCanvas:renderTo(useMaskShaderToDrawCharacter)
 
     local quad = love.graphics.newQuad(0, 0, 800, 800, 800, 800)
-    resolutionScaledDraw(tempCanvas, quad, 1040, 80)
-
-    -- draw equipment slots.
-    local tileSize = 16
-    local scale = 5
+    drawing.resolutionScaledDraw(tempCanvas, quad, 1040, 80)
 
     -- equipment view
     drawEquipmentSlot(9 - 0.2, 4, 2, 2, 3, 1)
@@ -1024,8 +874,9 @@ function game.draw()
             tintScreen()
         end
 
-        tiledUIPanel("uiImage", UITileSize, UIScale):draw(loginBoxDimensions)
-        tiledUIPanel("uiImage", UITileSize / 2, UIScale, {20, 20, 4, 4}):draw(x * 2 + 10 - 0.5, y * 2 + 4 - 0.1, 6, 2)
+        drawing.tiledUIPanel("uiImage", UITileSize, UIScale):draw(loginBoxDimensions)
+        drawing.tiledUIPanel("uiImage", UITileSize / 2, UIScale, {20, 20, 4, 4}):draw(x * 2 + 10 - 0.5, y * 2 + 4 - 0.1,
+            6, 2)
         love.graphics.setColor(0, 0, 0, 1)
         love.graphics.print("login", (x + 5.8) * UITileSize * UIScale, (y + 2.1) * UITileSize * UIScale)
         love.graphics.print("username:", x * UITileSize * UIScale + 50, y * UITileSize * UIScale + 60)
@@ -1062,7 +913,7 @@ function game.draw()
 
     if settingsEnabled then
         tintScreen()
-        tiledUIPanel("uiImage", UITileSize, UIScale):draw(settingsBoxDimensionsInTiles)
+        drawing.tiledUIPanel("uiImage", UITileSize, UIScale):draw(settingsBoxDimensionsInTiles)
         love.graphics.setColor(0, 0, 0, 1)
         love.graphics.print("UI Style", (settingsBoxDimensionsInTiles.x + 0.5) * UITileSize * UIScale,
             (settingsBoxDimensionsInTiles.y + 0.5) * UITileSize * UIScale)
@@ -1077,7 +928,6 @@ function game.draw()
     if devConsoleEnabled then
         tintScreen()
         local x, y = 30, 1000
-        -- local x, y = 0, 0
         tintedTextField(x, y, 1600, 2, {0.8, 0.8, 0.8, 0.1})
         drawTextInputField(x, y, true, devConsoleMessageRef.val)
         drawMessageList(devConsoleMessageHistory, {
@@ -1086,8 +936,6 @@ function game.draw()
             width = 1870,
             height = 1020
         }, true)
-        -- love.graphics.setColor(0, 0, 0, 1)
-        -- love.graphics.setColor(1, 1, 1, 1)
     end
 end
 
@@ -1107,7 +955,6 @@ end
 
 function game.keypressed(key)
     if key == "f5" then
-        -- if love.keyboard.isDown("f5") then
         love.event.quit("restart")
     end
     if key == "escape" then
