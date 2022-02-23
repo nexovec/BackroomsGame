@@ -161,7 +161,6 @@ function love.update(dt)
     end
 
     if assets.get("settings").logging.shouldLogFPS and love.timer.getTime() - timeLastLoggedFPS > 1 then
-        -- print(ticks .. "\t:\t" .. collectgarbage("count"))
         reportedFPS = ticks
         ticks = 0
         timeLastLoggedFPS = timeLastLoggedFPS + 1.0

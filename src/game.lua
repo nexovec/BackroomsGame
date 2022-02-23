@@ -10,6 +10,7 @@ local array = require("std.array")
 local map = require("std.map")
 local json = require("std.json")
 local string = require("std.string")
+local ref = require("std.ref")
 local network = require("network")
 local tileAtlas = require("tileAtlas")
 local cbkHandle = require("std.cbkHandle")
@@ -76,7 +77,7 @@ local devConsoleMessage = ""
 local devConsoleEnabled = false
 local playedMacro
 local devConsoleMessageHistory = array.wrap()
-local devConsoleHistoryPointer
+local devConsoleHistoryPointer = ref.wrap()
 
 local currentMacroName = nil
 local recordedMacroesCount = 1
@@ -541,18 +542,31 @@ local function handleChatSendBtnClick(x, y, mb, isTouch, repeating)
     end
 end
 
+---@return boolean returns whether the settings are active.
+local function toggleSettings()
+    -- TODO: Turn settings off
+    if settingsEnabled then
+        settingsEnabled = false
+        if loginBoxEnabled then
+            shouldHandleLoginClick = true
+        end
+        activeUIElemStack:pop()
+        return false
+    end
+    settingsEnabled = true
+    if loginBoxEnabled then
+        shouldHandleLoginClick = false
+    end
+    activeUIElemStack:append("settings")
+    return true
+end
+
 local function handleSettingsBtnClick(xIn, yIn, mb, isTouch, repeating)
     if not shouldHandleSettingsBtnClick then
         return
     end
-    if pointIntersectsQuad(xIn, yIn, settingsBtnDimensions.x, settingsBtnDimensions.y, settingsBtnDimensions.width,
-        settingsBtnDimensions.height) then
-        settingsEnabled = true
-        if loginBoxEnabled then
-            shouldHandleLoginClick = false
-            activeUIElemStack:append("settings")
-        end
-        return true
+    if pointIntersectsQuad(xIn, yIn, settingsBtnDimensions) then
+        return toggleSettings()
     end
 end
 
@@ -567,11 +581,8 @@ local function handleSettingsClose(x, y, mb)
             settingsBoxDimensionsInTiles.y * multiplier, settingsBoxDimensionsInTiles.width * multiplier,
             settingsBoxDimensionsInTiles.height * multiplier) then
         return
-    end
-    settingsEnabled = false
-    if loginBoxEnabled then
-        shouldHandleLoginClick = true
-        activeUIElemStack:pop()
+    else
+        toggleSettings()
     end
 end
 
@@ -761,6 +772,40 @@ local function handleLoginBoxTextInput(key)
     end
 end
 
+local function moveHistoryDown()
+    -- TODO:
+end
+
+local function moveHistoryUp()
+    -- TODO:
+end
+
+local function handleHistoryMovementKp(key, refToHistoryPointer, history)
+    if key == "up" then
+        if #history == 0 then
+            return
+        end
+        if not refToHistoryPointer.val then
+            refToHistoryPointer.val = #history
+        else
+            refToHistoryPointer.val = math.max(refToHistoryPointer.val - 1, 1)
+        end
+        devConsoleMessage = history[refToHistoryPointer.val]
+    elseif key == "down" then
+        if not refToHistoryPointer.val then
+            return
+        end
+        refToHistoryPointer.val = refToHistoryPointer.val + 1
+        if refToHistoryPointer.val > #history then
+            refToHistoryPointer.val = nil
+            -- TODO: Retain history
+            devConsoleMessage = ""
+            return
+        end
+        devConsoleMessage = history[refToHistoryPointer.val]
+    end
+end
+
 local function handleDevConsoleKp(key)
     if not devConsoleEnabled then
         return
@@ -768,31 +813,14 @@ local function handleDevConsoleKp(key)
     if key == "return" then
         if #devConsoleMessage ~= 0 then
             devConsoleMessageHistory:append(devConsoleMessage)
-            devConsoleHistoryPointer = nil
+            devConsoleHistoryPointer.val = nil
             executeDevConsoleCommand(devConsoleMessage)
         end
         devConsoleMessage = ""
     elseif key == "backspace" then
         devConsoleMessage = string.popped(devConsoleMessage)
-    elseif key == "up" then
-        if not devConsoleHistoryPointer then
-            devConsoleHistoryPointer = #devConsoleMessageHistory
-        else
-            devConsoleHistoryPointer = math.max(devConsoleHistoryPointer - 1, 1)
-        end
-        devConsoleMessage = devConsoleMessageHistory[devConsoleHistoryPointer]
-    elseif key == "down" then
-        if not devConsoleHistoryPointer then
-            return
-        end
-        devConsoleHistoryPointer = devConsoleHistoryPointer + 1
-        if devConsoleHistoryPointer > #devConsoleMessageHistory then
-            devConsoleHistoryPointer = nil
-            -- TODO: Retain history
-            devConsoleMessage = ""
-            return
-        end
-        devConsoleMessage = devConsoleMessageHistory[devConsoleHistoryPointer]
+    else
+        handleHistoryMovementKp(key, devConsoleHistoryPointer, devConsoleMessageHistory)
     end
 end
 
@@ -800,8 +828,8 @@ local function handleDevConsoleTextInput(key)
     if not devConsoleEnabled then
         return
     end
+    assert(devConsoleMessage, devConsoleHistoryPointer.val, 2)
     devConsoleMessage = devConsoleMessage .. key
-    -- TODO:
 end
 
 --- API

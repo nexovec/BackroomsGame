@@ -225,7 +225,7 @@ function server.load()
         registerAccount(v)
     end
     -- DEBUG:
-    -- registerAccount({username = "nexovec", password = "heslo"})
+    -- registerAccount({username = "nexovec", password = "pwd"})
 end
 
 function server.update(dt)
