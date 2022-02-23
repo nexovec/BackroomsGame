@@ -51,7 +51,8 @@ local shouldHandleChatboxSendBtnClick = true
 local activeUIElemStack = array.wrap()
 
 local chatboxMessageHistory = array.wrap()
-local clientChatBoxMessage = ""
+local chatboxHistoryPointerRef = ref.wrap()
+local clientChatBoxMessageRef = ref.wrap("")
 
 local chatBoxDimensions = {
     x = 16.5,
@@ -73,7 +74,7 @@ local chatboxSendBtnDimensions = {
 }
 -- local chatboxDims = {640, 1280}
 
-local devConsoleMessage = ""
+local devConsoleMessageRef = ref.wrap("")
 local devConsoleEnabled = false
 local playedMacro
 local devConsoleMessageHistory = array.wrap()
@@ -481,6 +482,44 @@ local function tiledUIPanel(assetName, tileSize, scale, panelPos)
     return self
 end
 
+
+local function moveHistoryDown()
+    -- TODO:
+end
+
+local function moveHistoryUp()
+    -- TODO:
+end
+
+local function handleMessageHistoryRewindKp(key, refToHistoryPointer, history, messageRef)
+    if key == "up" then
+        if #history == 0 then
+            return false
+        end
+        if not refToHistoryPointer.val then
+            refToHistoryPointer.val = #history
+        else
+            refToHistoryPointer.val = math.max(refToHistoryPointer.val - 1, 1)
+        end
+        messageRef.val = history[refToHistoryPointer.val]
+        -- devConsoleMessage = history[refToHistoryPointer.val]
+    elseif key == "down" then
+        if not refToHistoryPointer.val then
+            return false
+        end
+        refToHistoryPointer.val = refToHistoryPointer.val + 1
+        if refToHistoryPointer.val > #history then
+            refToHistoryPointer.val = nil
+            -- TODO: Retain history
+            messageRef.val = ""
+        else
+            messageRef.val = history[refToHistoryPointer.val]
+        end
+        return true
+    end
+    return false
+end
+
 local function focusChat()
     if not loginBoxEnabled then
         activeLoginBoxField = "nickname"
@@ -521,15 +560,18 @@ local function handleChatKp(key)
     if key == "return" then
         if serverpeer and serverpeer:state() == "connected" then
             local maxChatMessageLength = assets.get("settings").maximumChatMessageLength
-            if #clientChatBoxMessage == 0 or #clientChatBoxMessage > maxChatMessageLength then
+            if #clientChatBoxMessageRef.val == 0 or #clientChatBoxMessageRef.val > maxChatMessageLength then
                 return
             end
-            sendMessage("message", clientChatBoxMessage)
+            sendMessage("message", clientChatBoxMessageRef.val)
         end
         -- TODO: Handle sends from the server
-        clientChatBoxMessage = ""
+        clientChatBoxMessageRef.val = ""
     elseif key == "backspace" then
-        clientChatBoxMessage = string.popped(clientChatBoxMessage)
+        clientChatBoxMessageRef.val = string.popped(clientChatBoxMessageRef.val)
+    else
+        -- TODO: Have a local message history
+        handleMessageHistoryRewindKp(key, chatboxHistoryPointerRef, chatboxMessageHistory, clientChatBoxMessageRef)
     end
 end
 
@@ -720,10 +762,10 @@ end
 
 local function handleChatTextInput(key)
     local maxChatMessageLength = assets.get("settings").maximumChatMessageLength
-    if #clientChatBoxMessage > maxChatMessageLength then
+    if #clientChatBoxMessageRef.val > maxChatMessageLength then
         return
     end
-    clientChatBoxMessage = clientChatBoxMessage .. key
+    clientChatBoxMessageRef.val = clientChatBoxMessageRef.val .. key
 end
 
 local function handleLoginBoxKp(key)
@@ -772,55 +814,21 @@ local function handleLoginBoxTextInput(key)
     end
 end
 
-local function moveHistoryDown()
-    -- TODO:
-end
-
-local function moveHistoryUp()
-    -- TODO:
-end
-
-local function handleHistoryMovementKp(key, refToHistoryPointer, history)
-    if key == "up" then
-        if #history == 0 then
-            return
-        end
-        if not refToHistoryPointer.val then
-            refToHistoryPointer.val = #history
-        else
-            refToHistoryPointer.val = math.max(refToHistoryPointer.val - 1, 1)
-        end
-        devConsoleMessage = history[refToHistoryPointer.val]
-    elseif key == "down" then
-        if not refToHistoryPointer.val then
-            return
-        end
-        refToHistoryPointer.val = refToHistoryPointer.val + 1
-        if refToHistoryPointer.val > #history then
-            refToHistoryPointer.val = nil
-            -- TODO: Retain history
-            devConsoleMessage = ""
-            return
-        end
-        devConsoleMessage = history[refToHistoryPointer.val]
-    end
-end
-
 local function handleDevConsoleKp(key)
     if not devConsoleEnabled then
         return
     end
     if key == "return" then
-        if #devConsoleMessage ~= 0 then
-            devConsoleMessageHistory:append(devConsoleMessage)
+        if #devConsoleMessageRef.val ~= 0 then
+            devConsoleMessageHistory:append(devConsoleMessageRef.val)
             devConsoleHistoryPointer.val = nil
-            executeDevConsoleCommand(devConsoleMessage)
+            executeDevConsoleCommand(devConsoleMessageRef.val)
         end
-        devConsoleMessage = ""
+        devConsoleMessageRef.val = ""
     elseif key == "backspace" then
-        devConsoleMessage = string.popped(devConsoleMessage)
+        devConsoleMessageRef.val = string.popped(devConsoleMessageRef.val)
     else
-        handleHistoryMovementKp(key, devConsoleHistoryPointer, devConsoleMessageHistory)
+        handleMessageHistoryRewindKp(key, devConsoleHistoryPointer, devConsoleMessageHistory, devConsoleMessageRef)
     end
 end
 
@@ -828,8 +836,8 @@ local function handleDevConsoleTextInput(key)
     if not devConsoleEnabled then
         return
     end
-    assert(devConsoleMessage, devConsoleHistoryPointer.val, 2)
-    devConsoleMessage = devConsoleMessage .. key
+    assert(devConsoleMessageRef, devConsoleHistoryPointer.val, 2)
+    devConsoleMessageRef.val = devConsoleMessageRef.val .. key
 end
 
 --- API
@@ -926,7 +934,7 @@ function game.draw()
     if activeUIElemStack:last() == "chatBox" then
         hasCaret = true
     end
-    drawTextInputField(chatboxTextFieldPos.x, chatboxTextFieldPos.y, hasCaret, clientChatBoxMessage)
+    drawTextInputField(chatboxTextFieldPos.x, chatboxTextFieldPos.y, hasCaret, clientChatBoxMessageRef.val)
 
     -- render send button
     -- love.graphics.draw(assets.get("resources/images/ui/smallIcons.png"), 1220, 100, 0, 3, 3) -- icons preview
@@ -1069,7 +1077,7 @@ function game.draw()
         local x, y = 30, 1000
         -- local x, y = 0, 0
         tintedTextField(x, y, 1600, 2, {0.8, 0.8, 0.8, 0.1})
-        drawTextInputField(x, y, true, devConsoleMessage)
+        drawTextInputField(x, y, true, devConsoleMessageRef.val)
         drawMessageList(devConsoleMessageHistory, {
             x = 10,
             y = 0,

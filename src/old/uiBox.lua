@@ -1,3 +1,4 @@
+---@diagnostic disable: unused-function, undefined-global
 local uiBox = {}
 
 local types = require("std.types")

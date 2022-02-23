@@ -10,7 +10,7 @@
   "assetReloadUpdateFrequency": 2,
   "targetTPS": 60,
   "serverAddress": "192.168.0.234:6750",
-  "maximumChatMessageLength": 64,
+  "maximumChatMessageLength": 32,
   "macroSaveFile": "macros.json",
   "pathToMacros": "macros"
 }

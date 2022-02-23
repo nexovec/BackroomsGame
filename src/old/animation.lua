@@ -1,7 +1,7 @@
 local animation = {}
 
 -- requires
-local tween = require("tween")
+local tween = require("libs.tween")
 
 local array = require("std.array")
 local std = require("std")
