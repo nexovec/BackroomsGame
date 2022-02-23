@@ -51,6 +51,7 @@ local shouldHandleChatboxSendBtnClick = true
 local activeUIElemStack = array.wrap()
 
 local chatboxMessageHistory = array.wrap()
+local localPlayerChatMessageHistory = array.wrap()
 local chatboxHistoryPointerRef = ref.wrap()
 local clientChatBoxMessageRef = ref.wrap("")
 
@@ -564,14 +565,15 @@ local function handleChatKp(key)
                 return
             end
             sendMessage("message", clientChatBoxMessageRef.val)
+            localPlayerChatMessageHistory:append(clientChatBoxMessageRef.val)
+            chatboxHistoryPointerRef.val = nil -- refreshes scrolling in the chat history.
         end
         -- TODO: Handle sends from the server
         clientChatBoxMessageRef.val = ""
     elseif key == "backspace" then
         clientChatBoxMessageRef.val = string.popped(clientChatBoxMessageRef.val)
     else
-        -- TODO: Have a local message history
-        handleMessageHistoryRewindKp(key, chatboxHistoryPointerRef, chatboxMessageHistory, clientChatBoxMessageRef)
+        handleMessageHistoryRewindKp(key, chatboxHistoryPointerRef, localPlayerChatMessageHistory, clientChatBoxMessageRef)
     end
 end
 
