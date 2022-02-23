@@ -64,10 +64,7 @@ function startPlayingMacro(macro)
 end
 
 function stopRecordingPlayerInputs()
-    -- TODO: Recursive count instead (map:subnodeCount)
     -- TODO: Redirect the save folder
-    -- TODO: Use ticks as keys, encode ordered
-    -- TODO: Use custom ordered iterator
     local success = false
     if isRecordingMacro then
         success = true
@@ -123,12 +120,16 @@ function playedMacroDispatchEvents()
         return
     end
     for k, v in currentlyPlayedMacro:iter() do
-        if v.frame >= currentFrame - playedMacroStartFrame then
+        if v.frame <= currentFrame - playedMacroStartFrame then
             -- FIXME: This is exploitable
             -- TODO: Dispatch multiple during the same tick.
-            love.event.push(v.mType, v.contents)
+            if type(v.contents) == "table" then
+                love.event.push(v.mType, unpack(v.contents))
+            else
+                love.event.push(v.mType, v.contents)
+            end
             table.remove(currentlyPlayedMacro, k)
-            return
+            return playedMacroDispatchEvents()
         end
     end
 end

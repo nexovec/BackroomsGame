@@ -9,7 +9,7 @@
     "Lua.workspace.library": [
         "${3rd}/love2d/library"
     ],
-    "Lua.workspace.checkThirdParty": true,
+    "Lua.workspace.checkThirdParty": false,
     "gotoSymbolStack.currentStackPosition": 0,
     "gotoSymbolStack.maxStackPosition": 0,
     "gotoSymbolStack.filePositionInfo": []
