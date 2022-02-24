@@ -923,6 +923,7 @@ function game.draw()
             (settingsBoxDimensionsInTiles.y + 0.5) * UITileSize * UIScale + 100)
         love.graphics.setColor(1, 1, 1, 1)
     end
+    tileAtlas.wrap("resources/images/items.png", 16, 0):drawTile(0, 0, 2, 14, 256, 256)
 
     -- draw dev devConsole
     if devConsoleEnabled then

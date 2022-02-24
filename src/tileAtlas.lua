@@ -27,7 +27,7 @@ function tileAtlas:drawTile(posX, posY, tileX, tileY, width, height)
 end
 
 function tileAtlas.wrap(drawableNameOrDrawable, tileSize, stride)
-    assert(type(drawableNameOrDrawable) == "string", "Not yet implemented", 2)
+    -- assert(type(drawableNameOrDrawable) == "string", "Not yet implemented", 2)
     return setmetatable({
         assetName = drawableNameOrDrawable,
         tileSize = tileSize,
