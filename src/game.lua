@@ -36,7 +36,7 @@ local UIScale = 5
 -- local UIScale = 5 * 1.33
 local UIElemHadlers = nil
 
-local loginBoxEnabled = false
+local loginboxEnabled = false
 local settingsEnabled = false
 
 local shouldHandleSettingsBtnClick = true
@@ -49,15 +49,15 @@ local localPlayerChatMessageHistory = array.wrap()
 local chatboxHistoryPointerRef = ref.wrap()
 local clientChatBoxMessageRef = ref.wrap("")
 
-local chatBoxDimensions = {
+local chatboxDimensions = {
     x = 16.5,
     y = 1,
     width = 7,
     height = 12
 }
 local chatMessagesBoundingBox = {
-    x = chatBoxDimensions.x * UITileSize * UIScale,
-    y = chatBoxDimensions.y * UITileSize * UIScale,
+    x = chatboxDimensions.x * UITileSize * UIScale,
+    y = chatboxDimensions.y * UITileSize * UIScale,
     width = 500,
     height = 1000
 }
@@ -77,9 +77,9 @@ local devConsoleHistoryPointer = ref.wrap()
 local currentMacroName = nil
 local recordedMacroesCount = 1
 
-local loginBoxUsernameText = ""
-local loginBoxPasswordText = ""
-local loginBoxErrorText = ""
+local loginboxUsernameText = ""
+local loginboxPasswordText = ""
+local loginboxErrorText = ""
 local nicknamePickerBoxDims = {750, 300}
 local slotIconsAtlas = tileAtlas.wrap("resources/images/slotIcons.png", 32, 6)
 
@@ -87,13 +87,18 @@ local logMessageBoxDims = {1600, 400}
 local activeLoginBoxField = "nickname"
 
 local shouldHandleLoginClick = false
-local loginBoxDimensions = {
+local loginboxDimensions = {
     x = 4,
     y = 4,
     width = 8,
     height = 3
 }
-local loginBoxBtnDimensions = nil
+local loginboxBtnDimensions = {
+    x = UITileSize / 2 * UIScale * (loginboxDimensions.x * 2 + 10 - 0.5),
+    y = UITileSize / 2 * UIScale * (loginboxDimensions.y * 2 + 4 - 0.1),
+    width = 3 * UITileSize * UIScale,
+    height = UITileSize * UIScale
+}
 local settingsBoxDimensionsInTiles = {
     x = 6,
     y = 6,
@@ -107,16 +112,16 @@ local settingsBtnDimensions = {
     height = 64
 }
 
-local loginBoxTextFieldsSizes = {
+local loginboxTextFieldsSizes = {
     username = {
-        x = loginBoxDimensions.x * UITileSize * UIScale + 270,
-        y = loginBoxDimensions.y * UITileSize * UIScale + 60,
+        x = loginboxDimensions.x * UITileSize * UIScale + 270,
+        y = loginboxDimensions.y * UITileSize * UIScale + 60,
         width = 300,
         margins = 2
     },
     password = {
-        x = loginBoxDimensions.x * UITileSize * UIScale + 270,
-        y = loginBoxDimensions.y * UITileSize * UIScale + 110,
+        x = loginboxDimensions.x * UITileSize * UIScale + 270,
+        y = loginboxDimensions.y * UITileSize * UIScale + 110,
         width = 300,
         margins = 2
     }
@@ -152,16 +157,16 @@ end
 
 local function loginPromptToggle(msg)
     local msg = msg or ""
-    loginBoxEnabled = not loginBoxEnabled
-    if not loginBoxEnabled then
-        loginBoxEnabled = false
+    loginboxEnabled = not loginboxEnabled
+    if not loginboxEnabled then
+        loginboxEnabled = false
         activeUIElemStack:pop()
         return
     end
-    activeUIElemStack:append("loginBox")
+    activeUIElemStack:append("loginbox")
     -- TODO: Enum for active elements
     activeNicknamePickerField = "nickname"
-    loginBoxErrorText = msg
+    loginboxErrorText = msg
 end
 
 local function devConsoleTogglePrompt()
@@ -186,7 +191,7 @@ local function receivedMessageHandle(hostevent)
     elseif prefix == "status" then
         local prefix, trimmedMessage = network.getNetworkMessagePrefix(trimmedMessage)
         if prefix == "logOut" then
-            if not loginBoxEnabled then
+            if not loginboxEnabled then
                 loginPromptToggle(trimmedMessage)
             end
             -- server tells you to disconnect
@@ -368,14 +373,14 @@ local function handleMessageHistoryRewindKp(key, refToHistoryPointer, history, m
 end
 
 local function focusChat()
-    if not loginBoxEnabled then
+    if not loginboxEnabled then
         activeLoginBoxField = "nickname"
     end
-    activeUIElemStack:append("chatBox")
+    activeUIElemStack:append("chatbox")
 end
 
-local function loginClicked()
-    attemptLogin(loginBoxUsernameText, loginBoxPasswordText)
+local function onLoginClicked()
+    attemptLogin(loginboxUsernameText, loginboxPasswordText)
     loginPromptToggle()
     focusChat()
 end
@@ -388,16 +393,16 @@ local function pointIntersectsQuad(pX, pY, qX, qY, qW, qH)
 end
 
 local function handleLoginBoxFieldFocusOnMouseClick(xIn, yIn, mb, isTouch, repeating)
-    if not loginBoxEnabled then
+    if not loginboxEnabled then
         return
     end
-    if pointIntersectsQuad(xIn, yIn, loginBoxTextFieldsSizes.username.x, loginBoxTextFieldsSizes.username.y,
-        loginBoxTextFieldsSizes.username.width,
-        assets.get("font"):getAscent() + loginBoxTextFieldsSizes.username.margins) then
+    if pointIntersectsQuad(xIn, yIn, loginboxTextFieldsSizes.username.x, loginboxTextFieldsSizes.username.y,
+        loginboxTextFieldsSizes.username.width,
+        assets.get("font"):getAscent() + loginboxTextFieldsSizes.username.margins) then
         activeLoginBoxField = "nickname"
-    elseif pointIntersectsQuad(xIn, yIn, loginBoxTextFieldsSizes.password.x, loginBoxTextFieldsSizes.password.y,
-        loginBoxTextFieldsSizes.password.width,
-        assets.get("font"):getAscent() + loginBoxTextFieldsSizes.password.margins) then
+    elseif pointIntersectsQuad(xIn, yIn, loginboxTextFieldsSizes.password.x, loginboxTextFieldsSizes.password.y,
+        loginboxTextFieldsSizes.password.width,
+        assets.get("font"):getAscent() + loginboxTextFieldsSizes.password.margins) then
         activeLoginBoxField = "password"
     end
 end
@@ -424,6 +429,27 @@ local function handleChatKp(key)
     end
 end
 
+local function posIsInRectangle(x, y, btnDimensions, switch)
+    switch = switch or true
+    if pointIntersectsQuad(x, y, btnDimensions) then
+        return true
+    end
+    return false
+end
+
+-- Only call cbk if switch is true and mouse is in the button area
+-- returns: if cbk was triggered or not
+local function handleBtnClick(x, y, btnDimensions, mb, isTouch, repeating, switch, cbk)
+    if not switch then
+        return false
+    end
+    if pointIntersectsQuad(x, y, btnDimensions) then
+        cbk()
+        return true
+    end
+    return false
+end
+
 local function handleChatSendBtnClick(x, y, mb, isTouch, repeating)
     if not shouldHandleChatboxSendBtnClick then
         return
@@ -437,14 +463,14 @@ end
 local function toggleSettings()
     if settingsEnabled then
         settingsEnabled = false
-        if loginBoxEnabled then
+        if loginboxEnabled then
             shouldHandleLoginClick = true
         end
         activeUIElemStack:pop()
         return false
     end
     settingsEnabled = true
-    if loginBoxEnabled then
+    if loginboxEnabled then
         shouldHandleLoginClick = false
     end
     activeUIElemStack:append("settings")
@@ -460,6 +486,12 @@ local function handleSettingsBtnClick(xIn, yIn, mb, isTouch, repeating)
     end
 end
 
+local function isPosOutOfSettingsPanel(x, y)
+    local multiplier = UITileSize * UIScale
+    return not pointIntersectsQuad(x, y, settingsBoxDimensionsInTiles.x * multiplier,
+        settingsBoxDimensionsInTiles.y * multiplier, settingsBoxDimensionsInTiles.width * multiplier,
+        settingsBoxDimensionsInTiles.height * multiplier)
+end
 -- optionally can take no parameters to omit checks
 local function handleSettingsClose(x, y, mb)
     if not settingsEnabled then
@@ -472,6 +504,7 @@ local function handleSettingsClose(x, y, mb)
             settingsBoxDimensionsInTiles.height * multiplier) then
         return
     else
+        print("I am running")
         toggleSettings()
     end
 end
@@ -480,15 +513,15 @@ local function handleLoginClick(xIn, yIn, mb, isTouch, repeating)
     if not shouldHandleLoginClick then
         return
     end
-    loginBoxBtnDimensions = {
-        x = UITileSize / 2 * UIScale * (loginBoxDimensions.x * 2 + 10 - 0.5),
-        y = UITileSize / 2 * UIScale * (loginBoxDimensions.y * 2 + 4 - 0.1),
+    loginboxBtnDimensions = {
+        x = UITileSize / 2 * UIScale * (loginboxDimensions.x * 2 + 10 - 0.5),
+        y = UITileSize / 2 * UIScale * (loginboxDimensions.y * 2 + 4 - 0.1),
         width = 3 * UITileSize * UIScale,
         height = UITileSize * UIScale
     }
-    if pointIntersectsQuad(xIn, yIn, loginBoxBtnDimensions.x, loginBoxBtnDimensions.y, loginBoxBtnDimensions.width,
-        loginBoxBtnDimensions.height) then
-        loginClicked()
+    if pointIntersectsQuad(xIn, yIn, loginboxBtnDimensions.x, loginboxBtnDimensions.y, loginboxBtnDimensions.width,
+        loginboxBtnDimensions.height) then
+        onLoginClicked()
         shouldHandleLoginClick = false
     end
 end
@@ -562,7 +595,8 @@ local function drawMessageList(messages, boundingBox, startFromBottom)
     end
 end
 
-local function drawTextInputField(x, y, hasCaret, text)
+local function drawTextInputField(x, y, hasCaret, text, width, margins, color)
+    tintedTextField(x, y, width, margins, color)
     local text = text or ""
     local underscore
     if delta % 1 < 0.5 then
@@ -630,7 +664,7 @@ local function handleLoginBoxKp(key)
     if key == "return" then
         -- TODO: Verify nickname
         -- TODO: Lettercount limits
-        loginClicked()
+        onLoginClicked()
 
         if not serverpeer then
             chatboxMessageHistory:append("Server is nil.")
@@ -648,18 +682,18 @@ local function handleLoginBoxKp(key)
         switchFields()
     elseif key == "backspace" then
         if activeLoginBoxField == "nickname" then
-            loginBoxUsernameText = string.popped(loginBoxUsernameText)
+            loginboxUsernameText = string.popped(loginboxUsernameText)
         else
-            loginBoxPasswordText = string.popped(loginBoxPasswordText)
+            loginboxPasswordText = string.popped(loginboxPasswordText)
         end
     end
 end
 
 local function handleLoginBoxTextInput(key)
     if activeLoginBoxField == "password" then
-        loginBoxPasswordText = loginBoxPasswordText .. key
+        loginboxPasswordText = loginboxPasswordText .. key
     else
-        loginBoxUsernameText = loginBoxUsernameText .. key
+        loginboxUsernameText = loginboxUsernameText .. key
     end
 end
 
@@ -705,11 +739,11 @@ function game.load(args)
     -- init logic:
     -- FIXME: Fix rendering when scaling
     UIElemHandlers = {
-        loginBox = {
+        loginbox = {
             keypressed = handleLoginBoxKp,
             textinput = handleLoginBoxTextInput
         },
-        chatBox = {
+        chatbox = {
             keypressed = handleChatKp,
             textinput = handleChatTextInput
         },
@@ -760,7 +794,7 @@ function game.tick(deltaTime)
     t.update()
     animations.updateAnimations(deltaTime)
     assets.update(deltaTime)
-    if loginBoxEnabled then
+    if loginboxEnabled then
         shouldHandleLoginClick = true
     end
     delta = delta + deltaTime
@@ -792,7 +826,7 @@ function game.draw()
 
     -- render logbox
     renderUIPanel(1, 9, 15, 4)
-    renderUIPanel(chatBoxDimensions.x, chatBoxDimensions.y, chatBoxDimensions.width, chatBoxDimensions.height)
+    renderUIPanel(chatboxDimensions.x, chatboxDimensions.y, chatboxDimensions.width, chatboxDimensions.height)
     love.graphics.setColor(0, 0, 0, 1)
     -- TODO: Fade out top of the chat window
     -- TODO: Smooth chat scrolling
@@ -804,12 +838,11 @@ function game.draw()
         x = chatMessagesBoundingBox.x + 30,
         y = chatMessagesBoundingBox.y + 880
     }
-    tintedTextField(chatboxTextFieldPos.x, chatboxTextFieldPos.y, 450, 2)
     local hasCaret = false
-    if activeUIElemStack:last() == "chatBox" then
+    if activeUIElemStack:last() == "chatbox" then
         hasCaret = true
     end
-    drawTextInputField(chatboxTextFieldPos.x, chatboxTextFieldPos.y, hasCaret, clientChatBoxMessageRef.val)
+    drawTextInputField(chatboxTextFieldPos.x, chatboxTextFieldPos.y, hasCaret, clientChatBoxMessageRef.val, 450, 2)
 
     -- render send button
     love.graphics.draw(assets.get("resources/images/ui/smallIcons.png"), 1220, 100, 0, 3, 3) -- icons preview
@@ -861,26 +894,27 @@ function game.draw()
     -- local x, y, width, height = 11.8, 6, 2, 2
     -- tiledUIPanel("uiImage", tileSize, scale, {10, 4, 2, 2}):draw(x, y, width, height)
     -- TODO: Don't flicker the login box if credentials are rejected. (fade-out ?)
-    -- render loginBox
+
+    -- render loginbox
     local caret
     if delta % 1 < 0.5 then
         caret = "_"
     else
         caret = ""
     end
-    if loginBoxEnabled then
-        local x, y = loginBoxDimensions.x, loginBoxDimensions.y
+    if loginboxEnabled then
+        local x, y = loginboxDimensions.x, loginboxDimensions.y
         if not devConsoleEnabled then
             tintScreen()
         end
 
-        drawing.tiledUIPanel("uiImage", UITileSize, UIScale):draw(loginBoxDimensions)
+        drawing.tiledUIPanel("uiImage", UITileSize, UIScale):draw(loginboxDimensions)
         drawing.tiledUIPanel("uiImage", UITileSize / 2, UIScale, {20, 20, 4, 4}):draw(x * 2 + 10 - 0.5, y * 2 + 4 - 0.1,
             6, 2)
         love.graphics.setColor(0, 0, 0, 1)
         love.graphics.print("login", (x + 5.8) * UITileSize * UIScale, (y + 2.1) * UITileSize * UIScale)
         love.graphics.print("username:", x * UITileSize * UIScale + 50, y * UITileSize * UIScale + 60)
-        usernameTextFieldSizes = loginBoxTextFieldsSizes.username
+        usernameTextFieldSizes = loginboxTextFieldsSizes.username
         tintedTextField(usernameTextFieldSizes.x, usernameTextFieldSizes.y, usernameTextFieldSizes.width,
             usernameTextFieldSizes.margins)
         local usernameCaret = ""
@@ -888,12 +922,12 @@ function game.draw()
             usernameCaret = caret
         end
         love.graphics.setColor(0, 0, 0, 1)
-        love.graphics.print(loginBoxUsernameText .. usernameCaret, x * UITileSize * UIScale + 270,
+        love.graphics.print(loginboxUsernameText .. usernameCaret, x * UITileSize * UIScale + 270,
             y * UITileSize * UIScale + 60)
         love.graphics.print("password:", x * UITileSize * UIScale + 50, y * UITileSize * UIScale + 110)
 
         love.graphics.setColor(0, 0, 0, 0.1)
-        local passwordTextFieldSizes = loginBoxTextFieldsSizes.password
+        local passwordTextFieldSizes = loginboxTextFieldsSizes.password
         tintedTextField(passwordTextFieldSizes.x, passwordTextFieldSizes.y, passwordTextFieldSizes.width,
             passwordTextFieldSizes.margins)
         love.graphics.setColor(0, 0, 0, 1)
@@ -901,11 +935,11 @@ function game.draw()
         if activeLoginBoxField == "password" then
             pwdCaret = caret
         end
-        love.graphics.print(string.rep("*", #loginBoxPasswordText) .. pwdCaret, x * UITileSize * UIScale + 270,
+        love.graphics.print(string.rep("*", #loginboxPasswordText) .. pwdCaret, x * UITileSize * UIScale + 270,
             y * UITileSize * UIScale + 110)
         love.graphics.setColor(0.8, 0.3, 0.3, 1)
         love.graphics.setFont(assets.get("resources/fonts/JPfallback.ttf", 24))
-        love.graphics.printf(loginBoxErrorText, x * UITileSize * UIScale + 32, y * UITileSize * UIScale + 170, 300,
+        love.graphics.printf(loginboxErrorText, x * UITileSize * UIScale + 32, y * UITileSize * UIScale + 170, 300,
             "left")
         love.graphics.setColor(1, 1, 1, 1)
         love.graphics.setFont(assets.get("font"))
@@ -929,8 +963,7 @@ function game.draw()
     if devConsoleEnabled then
         tintScreen()
         local x, y = 30, 1000
-        tintedTextField(x, y, 1600, 2, {0.8, 0.8, 0.8, 0.1})
-        drawTextInputField(x, y, true, devConsoleMessageRef.val)
+        drawTextInputField(x, y, true, devConsoleMessageRef.val, 1600, 2, {0.8, 0.8, 0.8, 0.1})
         drawMessageList(devConsoleMessageHistory, {
             x = 10,
             y = 0,
@@ -945,13 +978,53 @@ function game.quit()
     serverpeer:disconnect_now()
 end
 
-function game.mousepressed(x, y, mb, isTouch, presses)
+function mousepressedOriginal(x, y, mb, isTouch, presses)
     handleChatSendBtnClick(x, y, mb, isTouch, presses)
     if not handleSettingsBtnClick(x, y, mb, isTouch, presses) then
         handleSettingsClose(x, y, mb)
     end
     handleLoginClick(x, y, mb, isTouch, presses)
     handleLoginBoxFieldFocusOnMouseClick(x, y, mb, isTouch, presses)
+end
+
+function mousepressedPassingCallbacks(x, y, mb, isTouch, presses)
+    handleBtnClick(x, y, chatboxSendBtnDimensions, mb, isTouch, presses, shouldHandleChatboxSendBtnClick, function()
+        handleChatKp("return")
+    end)
+    if not handleBtnClick(x, y, settingsBtnDimensions, mb, isTouch, presses, shouldHandleSettingsBtnClick, function()
+        toggleSettings()
+    end) then
+        if (settingsEnabled and isPosOutOfSettingsPanel(x, y)) then
+            toggleSettings()
+        end
+    end
+    handleBtnClick(x, y, loginboxBtnDimensions, mb, isTouch, presses, loginboxEnabled, function()
+        onLoginClicked()
+        shouldHandleLoginClick = false
+    end)
+    handleLoginBoxFieldFocusOnMouseClick(x, y, mb, isTouch, presses)
+end
+
+function mousepressedDirect(x, y, mb, isTouch, presses)
+    if posIsInRectangle(x, y, chatboxSendBtnDimensions, shouldHandleChatboxSendBtnClick) then
+        handleChatKp("return")
+    end
+    if posIsInRectangle(x, y, settingsBtnDimensions, shouldHandleSettingsBtnClick) or
+    (settingsEnabled and isPosOutOfSettingsPanel(x, y)) then
+        toggleSettings()
+    end
+    if loginboxEnabled and posIsInRectangle(x, y, loginboxBtnDimensions, shouldHandleLoginClick) then
+        onLoginClicked()
+        shouldHandleLoginClick = false
+    end
+    handleLoginBoxFieldFocusOnMouseClick(x, y, mb, isTouch, presses)
+end
+
+function game.mousepressed(x, y, mb, isTouch, presses)
+    -- TODO: Pick one of the three and inline here:
+    mousepressedDirect(x, y, mb, isTouch, presses)
+    -- mousepressedPassingCallbacks(x, y, mb, isTouch, presses)
+    -- mousepressedOriginal(x,y, mb, isTouch, presses)
 end
 
 function game.keypressed(key)
@@ -965,6 +1038,7 @@ function game.keypressed(key)
         devConsoleTogglePrompt()
         return
     end
+    -- NOTE: I don't like this.
     if not not UIElemHandlers[activeUIElemStack:last()] then
         UIElemHandlers[activeUIElemStack:last()].keypressed(key)
     end
