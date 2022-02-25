@@ -27,6 +27,8 @@ local serverpeer = nil
 local playerAreaCanvas = nil
 local playerAreaDims = array.wrap {720, 720}
 
+local inventorySlots = {}
+
 local playerAnimation = nil
 
 local tempCanvas = nil
@@ -83,6 +85,17 @@ local loginboxUsernameText = ""
 local loginboxPasswordText = ""
 local loginboxErrorText = ""
 local slotIconsAtlas = tileAtlas.wrap("resources/images/slotIcons.png", 32, 6)
+local itemsAtlas = tileAtlas.wrap("resources/images/items.png", 16, 0)
+local equipmentToDraw = {
+    mainHand = {
+        x = 2,
+        y = 14
+    },
+    offHand = nil,
+    headGear = nil,
+    bodyArmor = nil,
+    shoeGear = nil
+}
 
 local activeLoginBoxField = "nickname"
 
@@ -636,13 +649,17 @@ local function renderUIPanel(x, y, width, height, shape)
     tiledUIPanel.wrap("uiImage", UITileSize, UIScale, shape):draw(x, y, width, height)
 end
 
-local function drawEquipmentSlot(x, y, width, height, iconX, iconY)
+local function drawAtEquipmentSlot(x, y, width, height, iconX, iconY, itemX, itemY, itemAtlas)
     if type(x) == "table" then
-        return drawEquipmentSlot(x.x, x.y, x.width, x.height, y, width)
+        return drawAtEquipmentSlot(x.x, x.y, x.width, x.height, y, width)
     end
     tiledUIPanel.wrap("uiImage", UITileSize, UIScale, {10, 6, 2, 2}):draw(x, y, width, height)
     slotIconsAtlas:drawTile((x + 0.1) * UITileSize * UIScale, (y + 0.15) * UITileSize * UIScale, iconX, iconY,
         (width - 0.5) * UITileSize * UIScale, (height - 0.5) * UITileSize * UIScale)
+    if not not itemX and not not itemY then
+        itemAtlas:drawTile((x + 0.1) * UITileSize * UIScale, (y + 0.15) * UITileSize * UIScale, itemX, itemY,
+            (width - 0.5) * UITileSize * UIScale, (height - 0.5) * UITileSize * UIScale)
+    end
 end
 
 ---- handling input
@@ -888,11 +905,25 @@ function game.draw()
     drawing.resolutionScaledDraw(tempCanvas, quad, 1040, 80)
 
     -- equipment view
-    drawEquipmentSlot(9 - 0.2, 4, 2, 2, 3, 1)
-    drawEquipmentSlot(9 - 0.2, 6, 2, 2, 3, 1)
-    drawEquipmentSlot(13, 2, 2, 2, 1, 0)
-    drawEquipmentSlot(13.5, 4, 2, 2, 0, 0)
-    drawEquipmentSlot(13, 6, 2, 2, 7, 0)
+    local mainHandEquipment = equipmentToDraw["mainHand"]
+    drawAtEquipmentSlot(9 - 0.2, 4, 2, 2, 3, 1, mainHandEquipment and mainHandEquipment.x,
+        mainHandEquipment and mainHandEquipment.y, itemsAtlas)
+
+    local offHandEquipment = equipmentToDraw["offHand"]
+    drawAtEquipmentSlot(9 - 0.2, 6, 2, 2, 3, 1, offHandEquipment and offHandEquipment.x,
+        offHandEquipment and offHandEquipment.y, itemsAtlas)
+
+    local headGearEquipment = equipmentToDraw["headGear"]
+    drawAtEquipmentSlot(13, 2, 2, 2, 1, 0, headGearEquipment and headGearEquipment.x,
+        headGearEquipment and headGearEquipment.y, itemsAtlas)
+
+    local bodyArmorEquipment = equipmentToDraw["bodyArmor"]
+    drawAtEquipmentSlot(13.5, 4, 2, 2, 0, 0, bodyArmorEquipment and bodyArmorEquipment.x,
+        bodyArmorEquipment and bodyArmorEquipment.y, itemsAtlas)
+
+    local shoeGearEquipment = equipmentToDraw["shoeGear"]
+    drawAtEquipmentSlot(13, 6, 2, 2, 7, 0, shoeGearEquipment and shoeGearEquipment.x,
+        shoeGearEquipment and shoeGearEquipment.y, itemsAtlas)
 
     -- local x, y, width, height = 11.8, 6, 2, 2
     -- tiledUIPanel("uiImage", tileSize, scale, {10, 4, 2, 2}):draw(x, y, width, height)
@@ -960,7 +991,6 @@ function game.draw()
             (settingsBoxDimensionsInTiles.y + 0.5) * UITileSize * UIScale + 100)
         love.graphics.setColor(1, 1, 1, 1)
     end
-    tileAtlas.wrap("resources/images/items.png", 16, 0):drawTile(0, 0, 2, 14, 256, 256)
 
     -- draw dev devConsole
     if devConsoleEnabled then
