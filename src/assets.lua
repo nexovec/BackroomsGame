@@ -1,10 +1,7 @@
 local assets = {}
--- TODO: Make this work with server!
-
-local json = require("std.json")
-local std = require("std")
 local map = require("std.map")
 local string = require("std.string")
+local assert = require("std.assert")
 local array = require("std.array")
 require("loveOverrides")
 
@@ -21,7 +18,7 @@ end
 
 -- TODO: Report unused assets
 -- TODO: Scan whole folder recursively
-local function reloadResource(k, path)
+local function reloadResource(k)
     -- reload assset
     local v = resources[k]
     if v.asset and v.asset.release then
@@ -49,7 +46,7 @@ local function optionallyRegisterResource(k, v)
 end
 
 local function registerResourcesFromJson(file)
-    local resTable = decodeJsonFile(file)
+    local resTable = love.decodeJsonFile(file)
     for k, v in pairs(resTable) do
         optionallyRegisterResource(k, v)
     end
@@ -58,7 +55,7 @@ end
 local function init(funcsToCallBasedOnFileExtensionArg)
     funcsToCallBasedOnFileExtension = funcsToCallBasedOnFileExtensionArg
     setmetatable(funcsToCallBasedOnFileExtension, {
-        __index = function(tbl, key)
+        __index = function(_, key)
             assert(type(key) == "string", "You must index by a file extension", 2)
         end
     })
@@ -84,7 +81,7 @@ end
 -- API
 function assets.initOnServer()
     init {
-        ["json"] = decodeJsonFile
+        ["json"] = love.decodeJsonFile
     }
 end
 
@@ -92,7 +89,7 @@ function assets.initOnClient()
     init {
         ["png"] = love.graphics.newArrayImage,
         ["glsl"] = love.graphics.newShader,
-        ["json"] = decodeJsonFile,
+        ["json"] = love.decodeJsonFile,
         ["ttf"] = function(font, fontSize)
             return love.graphics.newFont(font, fontSize or 48)
         end
@@ -149,13 +146,17 @@ function assets.getModTime(asset)
     return assets.get(asset, unpack(resources[asset] and resources[asset].params or {})).cachedFileLastModified
 end
 
+--luacheck:no unused args
 function assets.set(key, resource)
     error("Not yet implemented.")
 end
+--luacheck:unused args
 
+--luacheck:no unused args
 function assets.__index(where, what)
     error("You must use assets.get(filePathOrResourceName) to reference assets", 2)
 end
+--luacheck:unused args
 
 assets.resources = resources
 return setmetatable(assets, assets)

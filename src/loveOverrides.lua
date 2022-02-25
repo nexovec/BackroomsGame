@@ -1,10 +1,10 @@
-local utf8 = require("utf8")
 local assert = require("std.assert")
 local json = require("std.json")
+local lua = require("std.luaOverrides")
 
 -- API
 
-function decodeJsonFile(filepath)
+function love.decodeJsonFile(filepath)
     local dataJson = love.filesystem.newFileData(filepath):getString()
     assert(dataJson)
     return json.decode(dataJson)
@@ -50,29 +50,6 @@ if love.graphics then
         return res
     end
 
-    function love.graphics.applyShader(canvas, textureShader, uniformsTable, options)
-        -- TODO: Test
-        local oldCanvas = love.graphics.getCanvas()
-        love.graphics.setCanvas(canvas)
-        love.graphics.withShader(textureShader, function()
-            for i, v in pairs(uniformsTable) do
-                textureShader:send(i, v)
-            end
-            if options then
-                if options.draw then
-                    love.graphics.draw(options.draw, options.x, options.y)
-                else
-                    love.graphics.rectangle("fill", options.x, options.y, canvas:getDimensions())
-                end
-            else
-                love.graphics.rectangle("fill", 0, 0, canvas:getDimensions())
-            end
-        end)
-        love.graphics.setCanvas()
-        -- FIXME: This breaks the code
-        -- love.graphics.setCanvas(oldCanvas)
-    end
-
     function love.graphics.wrapGraphicsState(func)
         love.graphics.push("all")
         func()
@@ -94,21 +71,21 @@ if love.filesystem then
         end
         if type(moduleNameOrFunc) == "string" then
             module = require(moduleNameOrFunc)
-        elseif isCallable(moduleNameOrFunc) then
+        elseif lua.isCallable(moduleNameOrFunc) then
             moduleNameOrFunc(path, moduleNameOrFunc, passCurrentRequirePaths)
         end
         love.filesystem.setRequirePath(oldPath)
         return module
     end
 
-    function love.requireDirectory(pathToDir, localRequires)
-        -- TODO: Test
-        assert(type(pathToDir) == "string", nil, nil, nil)
-        local requirePaths = localRequires .. ";"
-        if localRequires then
-            requirePaths = requirePaths .. love.filesystem.getRequirePath()
-        end
-        -- TODO: Make sure .init.lua is in requirePath.
-        return love.wrapRequirePath(pathToDir, localRequires)
-    end
+    -- function love.requireDirectory(pathToDir, localRequires)
+    --     -- TODO: Test
+    --     assert(type(pathToDir) == "string", nil, nil, nil)
+    --     local requirePaths = localRequires .. ";"
+    --     if localRequires then
+    --         requirePaths = requirePaths .. love.filesystem.getRequirePath()
+    --     end
+    --     -- TODO: Make sure .init.lua is in requirePath.
+    --     return love.wrapRequirePath(pathToDir, localRequires)
+    -- end
 end

@@ -1,6 +1,6 @@
 local ref = {}
 local types = require("std.types")
-local assert = require("std.assert")
+-- local assert = require("std.assert")
 
 function ref.wrap(obj)
     -- assert(obj, "Can't make an empty reference.", 2)

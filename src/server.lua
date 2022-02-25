@@ -5,7 +5,6 @@ local timing = require("timing")
 local network = require("network")
 local assert = require("std.assert")
 local assets = require("assets")
-local json = require("std.json")
 local enet = require("enet")
 local map = require("std.map")
 require("loveOverrides")
@@ -15,7 +14,7 @@ local connectedPeers = array.wrap()
 local userSessions = map.wrap()
 
 local credentialsPath = "data/credentials.json"
-local credentials
+local credentials = nil
 
 local function beginServer()
     print("Starting the Server...")
@@ -140,7 +139,7 @@ local function receiveEnetHandle(hostevent)
         print(msg)
         enetServer:broadcast("message:" .. msg)
     elseif prefix == "status" then
-        local prefix, trimmedData = network.getNetworkMessagePrefix(trimmedData)
+        prefix, trimmedData = network.getNetworkMessagePrefix(trimmedData)
         if prefix == "logIn" then
             attemptLogin(hostevent.peer, network.getNetworkMessagePrefix(trimmedData))
         elseif trimmedData == "ping!" then
@@ -148,11 +147,9 @@ local function receiveEnetHandle(hostevent)
             timing.delayCall(function()
                 tempHost.peer:send("pingpong:pong!")
             end, 2)
-        else
-            -- TODO:
+            -- TODO: else
         end
-    else
-        -- TODO: Handle unwanted messages
+        -- TODO: else: Handle unwanted messages
     end
     return true
 end
@@ -175,7 +172,7 @@ local function onDisconnect(peer)
 end
 
 local function handleDisconnections()
-    for k, v in ipairs(connectedPeers) do
+    for _, v in ipairs(connectedPeers) do
         if v:state() == "disconnected" then
             onDisconnect(v)
         end
@@ -183,7 +180,7 @@ local function handleDisconnections()
     connectedPeers = connectedPeers:squashed()
 end
 
-function handleEnetServer()
+local function handleEnetServer()
     handleDisconnections()
     if not enetServer then
         error("You're running a different server instance already.")
@@ -210,6 +207,7 @@ function handleEnetServer()
         end
         -- TODO: Unlog timed-out clients
     end
+    -- luacheck: ignore hostevent
     hostevent = nil
 end
 
@@ -219,9 +217,9 @@ function server.load()
     -- TODO: Save credentials when new account registers
     -- TODO: Username blacklist
     -- TODO: Ip blacklist
-    local listOfCredentials = array.wrap(decodeJsonFile("data/credentials.json"))
+    local listOfCredentials = array.wrap(love.decodeJsonFile(credentialsPath))
     credentials = array.wrap()
-    for k, v in listOfCredentials:iter() do
+    for _, v in listOfCredentials:iter() do
         registerAccount(v)
     end
     -- DEBUG:

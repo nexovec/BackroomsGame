@@ -8,6 +8,7 @@ local types = require("std.types")
 local map = require("std.map")
 local array = require("std.array")
 local utf8 = require("utf8")
+local macro = require("macro")
 local game
 local server
 
@@ -25,56 +26,6 @@ local reportedFPS = 0
 local macroStartFrame = nil
 local playedMacroStartFrame = nil
 local currentFrame = 0
-local currentMacro
-local isRecordingMacro
-local currentlyPlayedMacro
-
-local function addMacroEvent(type, contents)
-    assert(currentMacro)
-    currentMacro:append{
-        frame = currentFrame - macroStartFrame,
-        timestamp = tostring(love.timer.getTime()),
-        mType = type,
-        contents = contents
-    }
-end
-
-function startRecordingPlayerInputs(macroName)
-    if currentMacro then
-        return false
-    end
-    macroStartFrame = currentFrame
-    currentMacro = array.wrap()
-    currentMacroName = macroName
-    isRecordingMacro = true
-    return true
-end
-
-function pauseRecordingPlayerInputs()
-    if not currentMacro then
-        return false
-    end
-    isRecordingMacro = not isRecordingMacro
-    return true
-end
-
-function startPlayingMacro(macro)
-    playedMacroStartFrame = currentFrame
-    currentlyPlayedMacro = macro
-end
-
-function stopRecordingPlayerInputs()
-    -- TODO: Redirect the save folder
-    local success = false
-    if isRecordingMacro then
-        success = true
-    end
-    local tempMacro = currentMacro
-    macroStartFrame = nil
-    currentMacro = nil
-    isRecordingMacro = false
-    return tempMacro, success
-end
 
 function love.load(args)
     -- TODO: Untested platform warnings, compatibility checks
@@ -137,6 +88,7 @@ end
 function love.update(dt)
     profile.start()
     currentFrame = currentFrame + 1
+    macro.currentFrame = currentFrame
     ticks = ticks + 1
 
     if options.isServer then

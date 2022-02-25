@@ -2,7 +2,7 @@ local set = {}
 local setInstanceParent = {}
 
 local function hasValue(tbl, val)
-    for i, v in pairs(tbl) do
+    for _, v in pairs(tbl) do
         if v == val then
             return true
         end
@@ -21,7 +21,7 @@ end
 local function isContiguousArray(tbl)
     local len = size(tbl)
     local counter = 0
-    for i, v in ipairs(tbl) do
+    for i in ipairs(tbl) do
         if not (i > 0 and i <= len) then
             return false
         end
@@ -34,10 +34,12 @@ local function isContiguousArray(tbl)
     end
 end
 
+-- TODO: move to std.array
+-- luacheck: ignore checkUniqueness
 local function checkUniqueness(elems)
     -- NOTE: assumes this is a contiguous array
     local cache = {}
-    for i, v in ipairs(elems) do
+    for _, v in ipairs(elems) do
         if hasValue(cache, v) then
             return false
         end
@@ -48,7 +50,7 @@ end
 
 local function getUnique(tbl)
     local cache = {}
-    for i, v in ipairs(tbl) do
+    for _, v in ipairs(tbl) do
         if not hasValue(cache, v) then
             cache[#cache + 1] = v
         end

@@ -1,9 +1,12 @@
 local types = {}
 local set = require("std.set")
+local lua = require("std.luaOverrides")
 
-typeNamesLua = set.createSet {"string", "nil", "userdata", "number", "function", "table", "boolean", "thread"}
+-- luacheck:ignore typeNamesLua
+local typeNamesLua = set.createSet {"string", "nil", "userdata", "number", "function", "table", "boolean", "thread"}
 
-typeNamesLove = set.createSet { -- TODO: Exclude the ones excluded in config.lua
+-- luacheck:ignore typeNamesLove
+local typeNamesLove = set.createSet { -- TODO: Exclude the ones excluded in config.lua
 -- TODO: Move into a json file
 "Object", "Data", "CompressedData", "CompressedImageData", "FileData", "FontData", "GlyphData", "ImageData",
 "SoundData", "BezierCurve", "RandomGenerator", "Body", "Contact", "Fixture", "World", "Shape", "ChainShape",
@@ -13,6 +16,7 @@ typeNamesLove = set.createSet { -- TODO: Exclude the ones excluded in config.lua
 "SpriteBatch", "Text", "Video", "Decoder", "Source", "QueuableSource", "File", "Font", "Rasterizer", "Joystick",
 "VideoStream", "Variant"}
 
+-- luacheck:ignore typeNamesStd
 local typeNamesStd = {"class"}
 
 function types.makeType(obj, typeName)
@@ -58,7 +62,7 @@ function types.isureal(num)
 end
 
 function types.optionalCall(func, ...)
-    if isCallable(func) then
+    if lua.isCallable(func) then
         return func(...)
     end
 end

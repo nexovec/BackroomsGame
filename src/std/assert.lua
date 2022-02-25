@@ -6,6 +6,10 @@ return function(term, errMsg, errLevel, errHandle)
     errMsg = errMsg or "Assertion failed!"
     errLevel = errLevel or 1
     if not term then
-        error(errMsg, 1 + errLevel)
+        if errHandle then
+            errHandle()
+        else
+            error(errMsg, 1 + errLevel)
+        end
     end
 end

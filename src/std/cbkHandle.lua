@@ -13,7 +13,7 @@ function cbkHandle:connect(callback)
 end
 
 function cbkHandle:fire(...)
-    for i, v in self.subscribers:iter() do
+    for _, v in self.subscribers:iter() do
         v(...)
     end
 end

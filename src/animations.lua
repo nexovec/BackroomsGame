@@ -37,7 +37,7 @@ end
 
 local function newContiguousAnimation(self, aConf)
     self.offsets = {0}
-    local width, height = assets.get(self.tileAtlas.assetName):getDimensions()
+    local width = assets.get(self.tileAtlas.assetName):getDimensions()
     self.widthInTiles = width / aConf.tileSize
     return self
 end
@@ -70,7 +70,6 @@ function animations:play(playbackDuration, sequenceName, isLooping)
     if sequenceName then
         self.activeSequence = self.sequenceNames[sequenceName]
     end
-    local frameCount = self.frameCounts[self.activeSequence]
     self.progress = 0
     local tweenRef = tween.new(playbackDuration, self, {
         progress = 1 - 1 / self.frameCounts[self.activeSequence]
@@ -89,7 +88,6 @@ function animations:draw(x, y, width, height)
     self.tileAtlas:drawTile(x or 0, y or 0, i % self.widthInTiles, math.floor(i / self.widthInTiles), width or 128,
         height or 128)
     -- TODO: Positions and scaling
-
 end
 
 return types.makeType(animations, "animations")

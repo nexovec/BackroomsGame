@@ -31,13 +31,13 @@ end
 function string.startsWith(str, startingLetters)
     -- TODO: Test
     local comparedCodes = array.wrap()
-    for p, c in utf8.codes(startingLetters) do
+    for _, c in utf8.codes(startingLetters) do
         -- NOTE: will likely produce false positives in non-ASCII
         -- TODO: Detect escape characters
         comparedCodes:append(c)
     end
     local i = 0
-    for p, c in utf8.codes(str) do
+    for _, c in utf8.codes(str) do
         i = i + 1
         if i > #comparedCodes then
             return true

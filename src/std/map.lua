@@ -19,7 +19,7 @@ function map:prettyPrint()
 end
 
 function map:prettyPrintRecursive(passed)
-    local passed = passed or array.wrap()
+    passed = passed or array.wrap()
     -- TODO:
     -- passed:append(self)
     if not self then
@@ -55,7 +55,7 @@ function map:get(key)
 end
 
 function map:contains(elem)
-    for k, v in pairs(self) do
+    for _, v in pairs(self) do
         if v == elem then
             return true
         end
@@ -78,7 +78,7 @@ end
 
 function map:length()
     local i = 0
-    for k, v in pairs(self) do
+    for _ in pairs(self) do
         i = i + 1
     end
     return i
@@ -94,7 +94,6 @@ end
 function map:invert()
     local res = {}
     for k, v in pairs(self) do
-        -- if not type(v) == "string" or type(v) == "number" then error("Table contains uninvertable type at index " .. k, 2) end
         res[v] = k
     end
     return res
@@ -102,7 +101,7 @@ end
 
 function map:keys()
     local res = array.wrap()
-    for k, v in pairs(self) do
+    for k in pairs(self) do
         res:append(k)
     end
     return res

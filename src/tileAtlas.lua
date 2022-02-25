@@ -1,7 +1,6 @@
 local tileAtlas = {}
 
 local types = require("std.types")
-local assert = require("std.assert")
 local assets = require("assets")
 
 -- API
@@ -9,8 +8,9 @@ local assets = require("assets")
 function tileAtlas:drawTile(posX, posY, tileX, tileY, width, height)
     -- TODO: Check bounds on the texture
     -- TODO: Implement stride
-    local width = width or self.tileSize
-    local height = height or self.tileSize
+    -- luacheck: ignore width
+    width = width or self.tileSize
+    height = height or self.tileSize
     local asset = assets.get(self.assetName)
     local textureDimsX, textureDimsY = asset:getDimensions()
     local scalingFactor = (height / self.tileSize)

@@ -15,9 +15,11 @@ local network = require("network")
 local tileAtlas = require("tileAtlas")
 local assets = require("assets")
 local drawing = require("drawing")
+local tiledUIPanel = require("tiledUIPanel")
+local macro = require("macro")
 
 -- variables
-local scaled = drawing.resolutionScaledPos -- function alias
+-- local scaled = drawing.resolutionScaledPos -- function alias
 
 local enetclient = nil
 local serverpeer = nil
@@ -33,8 +35,8 @@ local tintDrawn = false
 
 local UITileSize = 16
 local UIScale = 5
--- local UIScale = 5 * 1.33
-local UIElemHadlers = nil
+
+local UIElemHandlers = nil
 
 local loginboxEnabled = false
 local settingsEnabled = false
@@ -80,10 +82,8 @@ local recordedMacroesCount = 1
 local loginboxUsernameText = ""
 local loginboxPasswordText = ""
 local loginboxErrorText = ""
-local nicknamePickerBoxDims = {750, 300}
 local slotIconsAtlas = tileAtlas.wrap("resources/images/slotIcons.png", 32, 6)
 
-local logMessageBoxDims = {1600, 400}
 local activeLoginBoxField = "nickname"
 
 local shouldHandleLoginClick = false
@@ -156,7 +156,7 @@ local function attemptLogin(username, password)
 end
 
 local function loginPromptToggle(msg)
-    local msg = msg or ""
+    msg = msg or ""
     loginboxEnabled = not loginboxEnabled
     if not loginboxEnabled then
         loginboxEnabled = false
@@ -165,7 +165,7 @@ local function loginPromptToggle(msg)
     end
     activeUIElemStack:append("loginbox")
     -- TODO: Enum for active elements
-    activeNicknamePickerField = "nickname"
+    -- activeNicknamePickerField = "nickname"
     loginboxErrorText = msg
 end
 
@@ -189,7 +189,7 @@ local function receivedMessageHandle(hostevent)
     elseif prefix == "message" then
         chatboxMessageHistory:append(trimmedMessage)
     elseif prefix == "status" then
-        local prefix, trimmedMessage = network.getNetworkMessagePrefix(trimmedMessage)
+        prefix, trimmedMessage = network.getNetworkMessagePrefix(trimmedMessage)
         if prefix == "logOut" then
             if not loginboxEnabled then
                 loginPromptToggle(trimmedMessage)
@@ -197,6 +197,7 @@ local function receivedMessageHandle(hostevent)
             -- server tells you to disconnect
         elseif prefix == "connected" then
             -- TODO:
+            return true
         else
             error("Enet: message prefix " .. prefix .. " is unhandled!")
         end
@@ -242,6 +243,7 @@ local function handleEnetClient()
         chatboxMessageHistory:append("You were disconnected")
         serverpeer = enetclient:connect(serverAddress)
     end
+    -- luacheck: ignore unused hostevent
     hostevent = nil
 end
 
@@ -252,19 +254,19 @@ local function executeDevConsoleCommand(cmd)
         local macrosDir = "macros"
         local subCommand = macroDevCommandArgs:dequeue()
         if subCommand == "record" then
-            if not startRecordingPlayerInputs() then
+            if not macro.startRecordingPlayerInputs() then
                 devConsoleMessageHistory:append(
                     "You are already recording a macro, use macro stop|pause to stop/pause/unpause this macro.")
             end
             currentMacroName = macroDevCommandArgs:dequeue()
             devConsoleMessageHistory:append("You are recording a macro...")
         elseif subCommand == "pause" then
-            if not pauseRecordingPlayerInputs() then
+            if not macro.pauseRecordingPlayerInputs() then
                 devConsoleMessageHistory:append("Can't pause, no macro is being recorded")
             end
         elseif subCommand == "stop" then
             local arg1 = macroDevCommandArgs:dequeue()
-            local currentMacro, success = stopRecordingPlayerInputs()
+            local currentMacro, success = macro.stopRecordingPlayerInputs()
             if not success then
                 devConsoleMessageHistory:append("Can't use this command, because no macro is being recorded.")
                 return
@@ -303,7 +305,7 @@ local function executeDevConsoleCommand(cmd)
                 return
             end
             local macroNames = array.wrap()
-            for k, v in pairs(macros) do
+            for _, v in pairs(macros) do
                 local path = "macros/" .. v
                 if not love.filesystem.getInfo(path, "file") then
                     return devConsoleMessageHistory:append("Macro " .. path .. " is not a file")
@@ -330,7 +332,7 @@ local function executeDevConsoleCommand(cmd)
                 return devConsoleMessageHistory:append("Couldn't read macro file: " .. tostring(success))
             end
             playedMacro = map.wrap(json.decode(fileContents))
-            startPlayingMacro(playedMacro)
+            macro.startPlayingMacro(playedMacro)
             -- TODO: Play them
             -- TODO: Play them faster
             -- TODO: CLI option --test that runs predetermined macroes
@@ -383,6 +385,7 @@ local function onLoginClicked()
     attemptLogin(loginboxUsernameText, loginboxPasswordText)
     loginPromptToggle()
     focusChat()
+    shouldHandleLoginClick = false
 end
 
 local function pointIntersectsQuad(pX, pY, qX, qY, qW, qH)
@@ -392,6 +395,7 @@ local function pointIntersectsQuad(pX, pY, qX, qY, qW, qH)
     return pX >= qX and pX < qX + qW and pY >= qY and pY < qY + qH
 end
 
+-- luacheck:no unused args
 local function handleLoginBoxFieldFocusOnMouseClick(xIn, yIn, mb, isTouch, repeating)
     if not loginboxEnabled then
         return
@@ -406,6 +410,7 @@ local function handleLoginBoxFieldFocusOnMouseClick(xIn, yIn, mb, isTouch, repea
         activeLoginBoxField = "password"
     end
 end
+-- luacheck:unused args
 
 local function handleChatKp(key)
     -- chat handling
@@ -429,16 +434,9 @@ local function handleChatKp(key)
     end
 end
 
-local function posIsInRectangle(x, y, btnDimensions, switch)
-    switch = switch or true
-    if pointIntersectsQuad(x, y, btnDimensions) then
-        return true
-    end
-    return false
-end
-
 -- Only call cbk if switch is true and mouse is in the button area
 -- returns: if cbk was triggered or not
+-- luacheck:no unused args
 local function handleBtnClick(x, y, btnDimensions, mb, isTouch, repeating, switch, cbk)
     if not switch then
         return false
@@ -449,7 +447,7 @@ local function handleBtnClick(x, y, btnDimensions, mb, isTouch, repeating, switc
     end
     return false
 end
-
+-- luacheck:no unused args
 local function handleChatSendBtnClick(x, y, mb, isTouch, repeating)
     if not shouldHandleChatboxSendBtnClick then
         return
@@ -458,6 +456,7 @@ local function handleChatSendBtnClick(x, y, mb, isTouch, repeating)
         handleChatKp("return")
     end
 end
+-- luacheck:unused args
 
 ---@return boolean returns whether the settings are active.
 local function toggleSettings()
@@ -477,6 +476,7 @@ local function toggleSettings()
     return true
 end
 
+-- luacheck:no unused args
 local function handleSettingsBtnClick(xIn, yIn, mb, isTouch, repeating)
     if not shouldHandleSettingsBtnClick then
         return
@@ -485,6 +485,7 @@ local function handleSettingsBtnClick(xIn, yIn, mb, isTouch, repeating)
         return toggleSettings()
     end
 end
+-- luacheck:unused args
 
 local function isPosOutOfSettingsPanel(x, y)
     local multiplier = UITileSize * UIScale
@@ -493,6 +494,7 @@ local function isPosOutOfSettingsPanel(x, y)
         settingsBoxDimensionsInTiles.height * multiplier)
 end
 -- optionally can take no parameters to omit checks
+-- luacheck:no unused args
 local function handleSettingsClose(x, y, mb)
     if not settingsEnabled then
         return
@@ -508,7 +510,7 @@ local function handleSettingsClose(x, y, mb)
         toggleSettings()
     end
 end
-
+-- luacheck:no unused args
 local function handleLoginClick(xIn, yIn, mb, isTouch, repeating)
     if not shouldHandleLoginClick then
         return
@@ -525,11 +527,12 @@ local function handleLoginClick(xIn, yIn, mb, isTouch, repeating)
         shouldHandleLoginClick = false
     end
 end
+-- luacheck:unused args
 
 local function tintedTextField(x, y, width, vertMargins, color)
     local ascent = assets.get("font"):getAscent()
     local oldColor = {love.graphics.getColor()}
-    local color = color or {0, 0, 0, 0.1}
+    color = color or {0, 0, 0, 0.1}
     love.graphics.setColor(color)
     love.graphics.rectangle("fill", x, y, width, ascent + 2 * vertMargins)
     love.graphics.setColor(unpack(oldColor))
@@ -552,7 +555,7 @@ local function drawOutline(obj, color, ...)
         end
     end
     local oldColor = {love.graphics.getColor()}
-    local color = color or {1, 0, 0, 1}
+    color = color or {1, 0, 0, 1}
     love.graphics.setColor(unpack(color))
     if not not obj[1] and not not obj[2] then
         -- TODO: obj is a point. Draw circle!
@@ -576,8 +579,8 @@ local function drawMessageList(messages, boundingBox, startFromBottom)
     if startFromBottom then
         local firstRowYOffset = boundingBox.y + boundingBox.height - 30 - ascent
         for _, messageText in array.wrap(messages):reverse():iter() do
-            local msgWidth, listOfRows = font:getWrap(messageText, maxRowWidth)
-            for k, v in ipairs(listOfRows) do
+            local _, listOfRows = font:getWrap(messageText, maxRowWidth)
+            for _, v in ipairs(listOfRows) do
                 love.graphics.print(v, boundingBox.x + 30, firstRowYOffset - ascent * rowIndex)
                 rowIndex = rowIndex + 1
             end
@@ -586,8 +589,8 @@ local function drawMessageList(messages, boundingBox, startFromBottom)
         local firstRowYOffset = boundingBox.y + 30 - ascent
         -- local scrollDistance = math.max(#chatboxMessageHistory * ascent - 1000, 0)
         for _, messageText in ipairs(messages) do
-            local msgWidth, listOfRows = font:getWrap(messageText, maxRowWidth)
-            for k, v in array.wrap(listOfRows):iter() do
+            local _, listOfRows = font:getWrap(messageText, maxRowWidth)
+            for _, v in array.wrap(listOfRows):iter() do
                 love.graphics.print(v, boundingBox.x + 30, firstRowYOffset + ascent * rowIndex)
                 rowIndex = rowIndex + 1
             end
@@ -597,7 +600,7 @@ end
 
 local function drawTextInputField(x, y, hasCaret, text, width, margins, color)
     tintedTextField(x, y, width, margins, color)
-    local text = text or ""
+    text = text or ""
     local underscore
     if delta % 1 < 0.5 then
         underscore = "_"
@@ -622,21 +625,22 @@ local function tintScreen()
 end
 
 local function renderUITab(x, y, width, height, horizontalIconTileIndex, verticalIconTileIndex)
-    drawing.tiledUIPanel("uiImage", UITileSize, UIScale, {10, 4, 2, 2}):draw(x, y, width, height)
+    assert(tiledUIPanel.wrap("uiImage", UITileSize, UIScale, {10, 4, 2, 2}).draw)
+    tiledUIPanel.wrap("uiImage", UITileSize, UIScale, {10, 4, 2, 2}):draw(x, y, width, height)
     slotIconsAtlas:drawTile((x + 0.1) * UITileSize * UIScale, (y + 0.15) * UITileSize * UIScale,
         horizontalIconTileIndex, verticalIconTileIndex, (width - 0.5) * UITileSize * UIScale,
         (height - 0.5) * UITileSize * UIScale)
 end
 
 local function renderUIPanel(x, y, width, height, shape)
-    drawing.tiledUIPanel("uiImage", UITileSize, UIScale, shape):draw(x, y, width, height)
+    tiledUIPanel.wrap("uiImage", UITileSize, UIScale, shape):draw(x, y, width, height)
 end
 
 local function drawEquipmentSlot(x, y, width, height, iconX, iconY)
     if type(x) == "table" then
         return drawEquipmentSlot(x.x, x.y, x.width, x.height, y, width)
     end
-    drawing.tiledUIPanel("uiImage", UITileSize, UIScale, {10, 6, 2, 2}):draw(x, y, width, height)
+    tiledUIPanel.wrap("uiImage", UITileSize, UIScale, {10, 6, 2, 2}):draw(x, y, width, height)
     slotIconsAtlas:drawTile((x + 0.1) * UITileSize * UIScale, (y + 0.15) * UITileSize * UIScale, iconX, iconY,
         (width - 0.5) * UITileSize * UIScale, (height - 0.5) * UITileSize * UIScale)
 end
@@ -675,8 +679,7 @@ local function handleLoginBoxKp(key)
             chatboxMessageHistory:append("Not connected to the server.")
         elseif serverpeer:state() == "connecting" then
             chatboxMessageHistory:append("Still connecting to the server.")
-        else
-            -- TODO:
+            -- TODO: else:
         end
     elseif key == "tab" then
         switchFields()
@@ -908,13 +911,13 @@ function game.draw()
             tintScreen()
         end
 
-        drawing.tiledUIPanel("uiImage", UITileSize, UIScale):draw(loginboxDimensions)
-        drawing.tiledUIPanel("uiImage", UITileSize / 2, UIScale, {20, 20, 4, 4}):draw(x * 2 + 10 - 0.5, y * 2 + 4 - 0.1,
-            6, 2)
+        tiledUIPanel.wrap("uiImage", UITileSize, UIScale):draw(loginboxDimensions)
+        tiledUIPanel.wrap("uiImage", UITileSize / 2, UIScale, {20, 20, 4, 4}):draw(x * 2 + 10 - 0.5, y * 2 + 4 - 0.1, 6,
+            2)
         love.graphics.setColor(0, 0, 0, 1)
         love.graphics.print("login", (x + 5.8) * UITileSize * UIScale, (y + 2.1) * UITileSize * UIScale)
         love.graphics.print("username:", x * UITileSize * UIScale + 50, y * UITileSize * UIScale + 60)
-        usernameTextFieldSizes = loginboxTextFieldsSizes.username
+        local usernameTextFieldSizes = loginboxTextFieldsSizes.username
         tintedTextField(usernameTextFieldSizes.x, usernameTextFieldSizes.y, usernameTextFieldSizes.width,
             usernameTextFieldSizes.margins)
         local usernameCaret = ""
@@ -947,7 +950,7 @@ function game.draw()
 
     if settingsEnabled then
         tintScreen()
-        drawing.tiledUIPanel("uiImage", UITileSize, UIScale):draw(settingsBoxDimensionsInTiles)
+        tiledUIPanel.wrap("uiImage", UITileSize, UIScale):draw(settingsBoxDimensionsInTiles)
         love.graphics.setColor(0, 0, 0, 1)
         love.graphics.print("UI Style", (settingsBoxDimensionsInTiles.x + 0.5) * UITileSize * UIScale,
             (settingsBoxDimensionsInTiles.y + 0.5) * UITileSize * UIScale)
@@ -978,7 +981,8 @@ function game.quit()
     serverpeer:disconnect_now()
 end
 
-function mousepressedOriginal(x, y, mb, isTouch, presses)
+-- luacheck:no unused
+local function mousepressedOriginal(x, y, mb, isTouch, presses)
     handleChatSendBtnClick(x, y, mb, isTouch, presses)
     if not handleSettingsBtnClick(x, y, mb, isTouch, presses) then
         handleSettingsClose(x, y, mb)
@@ -987,7 +991,7 @@ function mousepressedOriginal(x, y, mb, isTouch, presses)
     handleLoginBoxFieldFocusOnMouseClick(x, y, mb, isTouch, presses)
 end
 
-function mousepressedPassingCallbacks(x, y, mb, isTouch, presses)
+local function mousepressedPassingCallbacks(x, y, mb, isTouch, presses)
     handleBtnClick(x, y, chatboxSendBtnDimensions, mb, isTouch, presses, shouldHandleChatboxSendBtnClick, function()
         handleChatKp("return")
     end)
@@ -1000,22 +1004,21 @@ function mousepressedPassingCallbacks(x, y, mb, isTouch, presses)
     end
     handleBtnClick(x, y, loginboxBtnDimensions, mb, isTouch, presses, loginboxEnabled, function()
         onLoginClicked()
-        shouldHandleLoginClick = false
     end)
     handleLoginBoxFieldFocusOnMouseClick(x, y, mb, isTouch, presses)
 end
+-- luacheck:unused
 
-function mousepressedDirect(x, y, mb, isTouch, presses)
-    if posIsInRectangle(x, y, chatboxSendBtnDimensions, shouldHandleChatboxSendBtnClick) then
+local function mousepressedDirect(x, y, mb, isTouch, presses)
+    if pointIntersectsQuad(x, y, chatboxSendBtnDimensions) and shouldHandleChatboxSendBtnClick then
         handleChatKp("return")
     end
-    if posIsInRectangle(x, y, settingsBtnDimensions, shouldHandleSettingsBtnClick) or
-    (settingsEnabled and isPosOutOfSettingsPanel(x, y)) then
+    if pointIntersectsQuad(x, y, settingsBtnDimensions) and shouldHandleSettingsBtnClick or
+        (settingsEnabled and isPosOutOfSettingsPanel(x, y)) then
         toggleSettings()
     end
-    if loginboxEnabled and posIsInRectangle(x, y, loginboxBtnDimensions, shouldHandleLoginClick) then
+    if loginboxEnabled and pointIntersectsQuad(x, y, loginboxBtnDimensions) and shouldHandleLoginClick then
         onLoginClicked()
-        shouldHandleLoginClick = false
     end
     handleLoginBoxFieldFocusOnMouseClick(x, y, mb, isTouch, presses)
 end
@@ -1051,8 +1054,11 @@ function game.textinput(key)
     UIElemHandlers[activeUIElemStack:last()].textinput(key)
 end
 
+-- luacheck: push no unused args
 function game.mousemoved(x, y, dx, dy, istouch)
+    return true
     -- TODO: Hover animation for buttons
 end
+-- luacheck: pop
 
 return game

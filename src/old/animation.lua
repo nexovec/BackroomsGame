@@ -1,3 +1,4 @@
+-- luacheck:ignore
 local animation = {}
 
 -- requires
@@ -7,7 +8,7 @@ local array = require("std.array")
 local std = require("std")
 local types = require("std.types")
 local assets = require("assets")
-assert = std.assert
+local assert = std.assert
 
 -- helper functions
 
@@ -68,7 +69,7 @@ function animation.updateAnimations(dt)
             v.startTime = v.startTime + v.playbackDuration
         end
     end
-    for k, v in pairs(animationObjects) do
+    for _, v in pairs(animationObjects) do
         if v.assetLastModified ~= assets.getModTime(v.assetFilePath) then
             -- TODO: Reload asset and restitch animation
         end

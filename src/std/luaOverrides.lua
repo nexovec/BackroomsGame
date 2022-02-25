@@ -20,7 +20,7 @@
 ---@param var any
 ---@param ... string variable arguments
 ---@return nil
-function assertType(var, ...)
+local function assertType(var, ...)
     local params = {...}
     for k, v in ipairs(params) do
         assert(type(v) == "string", "Argument #" .. tostring(k) .. " has unexpected type " .. type(v), nil, nil)
@@ -33,7 +33,7 @@ function assertType(var, ...)
     end
     error("Type assert failed", 2)
 end
-function isCallable(var)
+local function isCallable(var)
     -- TODO: Test
     return type(var) == "function" or (type(var) == "table" and getmetatable(var).__call)
 end

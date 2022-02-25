@@ -16,6 +16,7 @@ function array:shallowCopy()
     return new
 end
 
+-- luacheck: no unused args
 function array:deepCopy()
     error("Not yet implemented")
 end
@@ -66,7 +67,7 @@ function array:prettyPrint()
 end
 
 function array:prettyPrintRecursive(passed)
-    local passed = passed or array.wrap()
+    passed = passed or array.wrap()
     passed:append(self)
     if not self then
         return error('Array is nil!', 2)
@@ -131,7 +132,6 @@ function array:indexOf(elem)
 end
 
 --- Functional programming filter. Uses ipairs under the hood.
----@param func function Gets called for every element of the array with value, key, array as parameters. Must return a boolean
 function array:filter(func)
     assert(self, "Call with : instead of .", 2)
     -- TODO: Test
@@ -140,7 +140,8 @@ function array:filter(func)
         local res = func(v, k, self)
         if res == true then
             new[#new + 1] = v
-        elseif res then
+        elseif not not res then
+            error("This must return a boolean")
         else
             error("Filter function must return boolean", 2)
         end
@@ -218,7 +219,7 @@ function array:inverse()
     assert(self, "Call with : instead of .", 2)
     local res = {}
     for k, v in ipairs(self) do
-        -- if not type(v) == "string" or type(v) == "number" then error("Table contains uninvertable type at index " .. k, 2) end
+        -- if not type(v) == "string" or type(v) == "number" then error("Uninvertable type at index " .. k, 2) end
         res[v] = k
     end
     return array.wrap(res)

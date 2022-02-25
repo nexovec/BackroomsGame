@@ -1,8 +1,33 @@
+-- luacheck: ignore
 ---@diagnostic disable: unused-function, undefined-global
 local uiBox = {}
 
 local types = require("std.types")
 local assets = require("assets")
+local assert = require("std.assert")
+
+function love.graphics.applyShader(canvas, textureShader, uniformsTable, options)
+    -- TODO: Test
+    -- local oldCanvas = love.graphics.getCanvas()
+    love.graphics.setCanvas(canvas)
+    love.graphics.withShader(textureShader, function()
+        for i, v in pairs(uniformsTable) do
+            textureShader:send(i, v)
+        end
+        if options then
+            if options.draw then
+                love.graphics.draw(options.draw, options.x, options.y)
+            else
+                love.graphics.rectangle("fill", options.x, options.y, canvas:getDimensions())
+            end
+        else
+            love.graphics.rectangle("fill", 0, 0, canvas:getDimensions())
+        end
+    end)
+    love.graphics.setCanvas()
+    -- FIXME: This breaks the code
+    -- love.graphics.setCanvas(oldCanvas)
+end
 
 function uiBox:clear()
     -- stencil buffer
@@ -80,7 +105,6 @@ function uiBox.makeBox(width, height, shader, uniformsTable, rounding)
     self:clear()
     return self
 end
-
 -- old UI code with shader generated textures
 local function renderOldUI()
     local uiBox = require("old.uiBox")

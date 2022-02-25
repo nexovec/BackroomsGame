@@ -2,16 +2,19 @@ local timing = {}
 
 -- TODO: User-defined timer, then move to std
 local lua = require("std.luaOverrides")
+
 local delayedCalls = {}
+
 function timing.delayCall(func, delayInSeconds)
     -- TODO: Test with callable metatables
-    assert(isCallable)
+    assert(lua.isCallable)
     delayedCalls[#delayedCalls + 1] = {
         startTime = love.timer.getTime(),
         delay = delayInSeconds,
         call = func
     }
 end
+
 function timing.update()
     -- TODO: Test
     for i, v in ipairs(delayedCalls) do
@@ -21,4 +24,5 @@ function timing.update()
         end
     end
 end
+
 return timing
