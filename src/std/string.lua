@@ -5,6 +5,7 @@ local string = setmetatable({}, {
 local types = require("std.types")
 local utf8 = require("utf8")
 local array = require("std.array")
+local assert = require("std.assert")
 
 function string.__call()
     error("Not yet implemented.")

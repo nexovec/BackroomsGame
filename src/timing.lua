@@ -6,7 +6,6 @@ local lua = require("std.luaOverrides")
 local delayedCalls = {}
 
 function timing.delayCall(func, delayInSeconds)
-    -- TODO: Test with callable metatables
     assert(lua.isCallable)
     delayedCalls[#delayedCalls + 1] = {
         startTime = love.timer.getTime(),
@@ -16,7 +15,6 @@ function timing.delayCall(func, delayInSeconds)
 end
 
 function timing.update()
-    -- TODO: Test
     for i, v in ipairs(delayedCalls) do
         if love.timer.getTime() - v.startTime > v.delay then
             v.call()

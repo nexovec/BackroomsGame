@@ -22,9 +22,6 @@ local options = {}
 
 local reportedFPS = 0
 
--- TODO: Move macro handling to a separate file
-local macroStartFrame = nil
-local playedMacroStartFrame = nil
 local currentFrame = 0
 
 function love.load(args)
@@ -64,27 +61,6 @@ function love.load(args)
     timeLastLogged = love.timer.getTime()
 end
 
-function playedMacroDispatchEvents()
-    if currentlyPlayedMacro:length() == 0 then
-        playedMacroStartFrame = nil
-        currentlyPlayedMacro = nil
-        return
-    end
-    for k, v in currentlyPlayedMacro:iter() do
-        if v.frame <= currentFrame - playedMacroStartFrame then
-            -- FIXME: This is exploitable
-            -- TODO: Dispatch multiple during the same tick.
-            if type(v.contents) == "table" then
-                love.event.push(v.mType, unpack(v.contents))
-            else
-                love.event.push(v.mType, v.contents)
-            end
-            table.remove(currentlyPlayedMacro, k)
-            return playedMacroDispatchEvents()
-        end
-    end
-end
-
 function love.update(dt)
     profile.start()
     currentFrame = currentFrame + 1
@@ -102,8 +78,8 @@ function love.update(dt)
             msPerTick = 1 / targetTPS
             deltaTime = deltaTime + dt
             while deltaTime >= msPerTick do
-                if not not currentlyPlayedMacro then
-                    playedMacroDispatchEvents()
+                if not not macro.currentlyPlayedMacro then
+                    macro.playedMacroDispatchEvents()
                 end
                 -- shouldRender = true
                 game.tick(deltaTime)
@@ -147,29 +123,29 @@ function love.quit()
 end
 
 function love.keypressed(...)
-    if isRecordingMacro then
-        addMacroEvent("keypressed", ...)
+    if macro.isRecordingMacro then
+        macro.addMacroEvent("keypressed", ...)
     end
     game.keypressed(...)
 end
 
 function love.textinput(...)
-    if isRecordingMacro then
-        addMacroEvent("textinput", ...)
+    if macro.isRecordingMacro then
+        macro.addMacroEvent("textinput", ...)
     end
     game.textinput(...)
 end
 
 function love.mousepressed(...)
-    if isRecordingMacro then
-        addMacroEvent("mousepressed", ...)
+    if macro.isRecordingMacro then
+        macro.addMacroEvent("mousepressed", ...)
     end
     game.mousepressed(...)
 end
 
 function love.mousemoved(...)
-    if isRecordingMacro then
-        addMacroEvent("mousemoved", ...)
+    if macro.isRecordingMacro then
+        macro.addMacroEvent("mousemoved", ...)
     end
     game.mousemoved(...)
 end

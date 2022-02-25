@@ -73,7 +73,7 @@ local function hotReloadAssets()
         end
         v.cachedFileLastModified = v.cachedFileLastModified or fileInfo.modtime
         if v.cachedFileLastModified < fileInfo.modtime and v.func ~= stubResourceHandle then
-            reloadResource(k, v.path)
+            reloadResource(k)
         end
     end
 end

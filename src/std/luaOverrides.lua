@@ -1,3 +1,4 @@
+local assert = require("std.assert")
 -- ! sets some globals
 -- overrides for lua built-ins
 -- local oldreq = require

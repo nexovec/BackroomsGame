@@ -31,8 +31,29 @@ function macro.pauseRecordingPlayerInputs()
 end
 
 function macro.startPlayingMacro(obj)
-    macro.playedMacroStartFrame = obj.currentFrame
+    macro.playedMacroStartFrame = macro.currentFrame
     macro.currentlyPlayedMacro = obj
+end
+
+function macro.playedMacroDispatchEvents()
+    if macro.currentlyPlayedMacro:length() == 0 then
+        macro.playedMacroStartFrame = nil
+        macro.currentlyPlayedMacro = nil
+        return
+    end
+    for k, v in macro.currentlyPlayedMacro:iter() do
+        if v.frame <= macro.currentFrame - macro.playedMacroStartFrame then
+            -- FIXME: This is exploitable
+            -- TODO: Dispatch multiple during the same tick.
+            if type(v.contents) == "table" then
+                love.event.push(v.mType, unpack(v.contents))
+            else
+                love.event.push(v.mType, v.contents)
+            end
+            table.remove(macro.currentlyPlayedMacro, k)
+            return macro.playedMacroDispatchEvents()
+        end
+    end
 end
 
 function macro.stopRecordingPlayerInputs()

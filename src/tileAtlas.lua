@@ -7,7 +7,6 @@ local assets = require("assets")
 
 function tileAtlas:drawTile(posX, posY, tileX, tileY, width, height)
     -- TODO: Check bounds on the texture
-    -- TODO: Implement stride
     -- luacheck: ignore width
     width = width or self.tileSize
     height = height or self.tileSize
