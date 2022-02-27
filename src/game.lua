@@ -659,6 +659,8 @@ local function drawAtEquipmentSlot(x, y, width, height, iconX, iconY, itemX, ite
     if not not itemX and not not itemY then
         itemAtlas:drawTile((x + 0.1) * UITileSize * UIScale, (y + 0.15) * UITileSize * UIScale, itemX, itemY,
             (width - 0.5) * UITileSize * UIScale, (height - 0.5) * UITileSize * UIScale)
+    elseif not not itemX and not itemY then
+        error("Drawing items by id not yet implemented.")
     end
 end
 
@@ -892,6 +894,12 @@ function game.draw()
 
         local playerAreaQuad = love.graphics.newQuad(0, 0, 720, 720, 720, 720)
         love.graphics.draw(assets.get("resources/images/background2.png"), playerAreaQuad)
+
+        -- TODO:
+        local itemX, itemY = 2, 14
+        local x, y, width, height = 0, 0, 256, 256
+        itemsAtlas:drawTile(x, y, itemX, itemY, width, height)
+        drawOutline({x = x, y = y, width = width, height = height})
         playerAnimation:draw(0, 0, 720, 720)
     end)
     local playfieldScenePlacementQuad = love.graphics.newQuad(0, 0, unpack(playerAreaDims:rep(2)))
