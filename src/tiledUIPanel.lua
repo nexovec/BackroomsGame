@@ -46,8 +46,8 @@ function tiledUIPanel:draw(xPosInTiles, yPosInTiles, widthInTiles, heightInTiles
             -- local scaledPosX, scaledPosY, scaledPosWidth, scaledPosHeight =
             drawing.resolutionScaledPos(unscaledPosX, unscaledPosY, unscaledPosWidth, unscaledPosHeight, false)
             -- TODO:
-            -- atlas:drawTile(scaledPosX, scaledPosY, tileX, tileY, scaledPosWidth, scaledPosHeight)
-            atlas:drawTile(unscaledPosX, unscaledPosY, tileX, tileY, unscaledPosWidth, unscaledPosHeight)
+            -- atlas:drawTile(tileX, tileY, scaledPosX, scaledPosY, scaledPosWidth, scaledPosHeight)
+            atlas:drawTile(tileX, tileY, unscaledPosX, unscaledPosY, unscaledPosWidth, unscaledPosHeight)
         end
     end
 end

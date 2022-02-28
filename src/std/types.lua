@@ -1,6 +1,7 @@
 local types = {}
 local set = require("std.set")
 local lua = require("std.luaOverrides")
+local assert = require("std.assert")
 
 -- luacheck:ignore typeNamesLua
 local typeNamesLua = set.createSet {"string", "nil", "userdata", "number", "function", "table", "boolean", "thread"}
@@ -26,6 +27,14 @@ function types.makeType(obj, typeName)
     obj.type = typeName
     obj.__index = obj.__index or obj
     return obj
+end
+
+function types.assertIsDimensions(obj)
+    assert(obj, "", 2)
+    assert(not not obj.x, "", 2)
+    assert(not not obj.y, "", 2)
+    assert(not not obj.width, "", 2)
+    assert(not not obj.height, "", 2)
 end
 
 function types.isCallable(var)

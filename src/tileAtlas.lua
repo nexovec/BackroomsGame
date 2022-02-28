@@ -2,11 +2,18 @@ local tileAtlas = {}
 
 local types = require("std.types")
 local assets = require("assets")
+local assert = require("std.assert")
 
 -- API
 
-function tileAtlas:drawTile(posX, posY, tileX, tileY, width, height)
+function tileAtlas:drawTile(tileX, tileY, posX, posY, width, height)
     -- TODO: Check bounds on the texture
+    if not not tileX and not tileY then
+        assert(tileX)
+        types.assertIsDimensions(tileX)
+        assert(not not tileX.tileX and not not tileX.tileY)
+        return self:drawTile(tileX.tileX, tileX.tileY, tileX.x, tileX.y, tileX.width, tileX.height)
+    end
     -- luacheck: ignore width
     width = width or self.tileSize
     height = height or self.tileSize

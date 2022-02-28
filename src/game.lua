@@ -12,6 +12,7 @@ local ref = require("std.ref")
 local t = require("timing")
 local animations = require("animations")
 local network = require("network")
+local types = require("std.types")
 local tileAtlas = require("tileAtlas")
 local assets = require("assets")
 local drawing = require("drawing")
@@ -50,6 +51,7 @@ local activeUIElemStack = array.wrap()
 
 local chatboxMessageHistory = array.wrap()
 local localPlayerChatMessageHistory = array.wrap()
+local sceneType = "playerCloseUpView"
 local chatboxHistoryPointerRef = ref.wrap()
 local clientChatBoxMessageRef = ref.wrap("")
 
@@ -86,6 +88,15 @@ local loginboxPasswordText = ""
 local loginboxErrorText = ""
 local slotIconsAtlas = tileAtlas.wrap("resources/images/slotIcons.png", 32, 6)
 local itemsAtlas = tileAtlas.wrap("resources/images/items.png", 16, 0)
+
+local itemsInScene = array.wrap {{
+    tileX = 2,
+    tileY = 14,
+    x = 0,
+    y = 0,
+    width = 256,
+    height = 256
+}}
 local equipmentToDraw = {
     mainHand = {
         x = 2,
@@ -640,9 +651,8 @@ end
 local function renderUITab(x, y, width, height, horizontalIconTileIndex, verticalIconTileIndex)
     assert(tiledUIPanel.wrap("uiImage", UITileSize, UIScale, {10, 4, 2, 2}).draw)
     tiledUIPanel.wrap("uiImage", UITileSize, UIScale, {10, 4, 2, 2}):draw(x, y, width, height)
-    slotIconsAtlas:drawTile((x + 0.1) * UITileSize * UIScale, (y + 0.15) * UITileSize * UIScale,
-        horizontalIconTileIndex, verticalIconTileIndex, (width - 0.5) * UITileSize * UIScale,
-        (height - 0.5) * UITileSize * UIScale)
+    slotIconsAtlas:drawTile(horizontalIconTileIndex, verticalIconTileIndex, (x + 0.1) * UITileSize * UIScale,
+        (y + 0.15) * UITileSize * UIScale, (width - 0.5) * UITileSize * UIScale, (height - 0.5) * UITileSize * UIScale)
 end
 
 local function renderUIPanel(x, y, width, height, shape)
@@ -654,10 +664,10 @@ local function drawAtEquipmentSlot(x, y, width, height, iconX, iconY, itemX, ite
         return drawAtEquipmentSlot(x.x, x.y, x.width, x.height, y, width)
     end
     tiledUIPanel.wrap("uiImage", UITileSize, UIScale, {10, 6, 2, 2}):draw(x, y, width, height)
-    slotIconsAtlas:drawTile((x + 0.1) * UITileSize * UIScale, (y + 0.15) * UITileSize * UIScale, iconX, iconY,
+    slotIconsAtlas:drawTile(iconX, iconY, (x + 0.1) * UITileSize * UIScale, (y + 0.15) * UITileSize * UIScale,
         (width - 0.5) * UITileSize * UIScale, (height - 0.5) * UITileSize * UIScale)
     if not not itemX and not not itemY then
-        itemAtlas:drawTile((x + 0.1) * UITileSize * UIScale, (y + 0.15) * UITileSize * UIScale, itemX, itemY,
+        itemAtlas:drawTile(itemX, itemY, (x + 0.1) * UITileSize * UIScale, (y + 0.15) * UITileSize * UIScale,
             (width - 0.5) * UITileSize * UIScale, (height - 0.5) * UITileSize * UIScale)
     elseif not not itemX and not itemY then
         error("Drawing items by id not yet implemented.")
@@ -868,40 +878,46 @@ function game.draw()
 
     -- render send button
     love.graphics.draw(assets.get("resources/images/ui/smallIcons.png"), 1220, 100, 0, 3, 3) -- icons preview
-    tileAtlas.wrap("resources/images/ui/smallIcons.png", 12, 2):drawTile(chatboxSendBtnDimensions.x,
-        chatboxSendBtnDimensions.y, 0, 8, chatboxSendBtnDimensions.width, chatboxSendBtnDimensions.height)
+    tileAtlas.wrap("resources/images/ui/smallIcons.png", 12, 2):drawTile(0, 8, chatboxSendBtnDimensions.x,
+        chatboxSendBtnDimensions.y, chatboxSendBtnDimensions.width, chatboxSendBtnDimensions.height)
     drawOutline(chatMessagesBoundingBox.x + 480, chatMessagesBoundingBox.y + 870, 64, 64)
-    tileAtlas.wrap("resources/images/ui/smallIcons.png", 12, 2):drawTile(1830, 0, 2, 4, 64, 64)
+    tileAtlas.wrap("resources/images/ui/smallIcons.png", 12, 2):drawTile(2, 4, 1830, 0, 64, 64)
     drawOutline(settingsBtnDimensions)
     love.graphics.setColor(1, 1, 1, 1)
 
     -- draw scene
-    playerAreaCanvas:renderTo(function()
-        love.graphics.clear(1.0, 1.0, 1.0)
-        love.graphics.withShader(assets.get("testShaderA"), function()
-            assets.get("testShaderA"):sendColor("color1", {0.9, 0.7, 0.9, 1.0})
-            assets.get("testShaderA"):sendColor("color2", {0.7, 0.9, 0.9, 1.0})
-            assets.get("testShaderA"):send("rectSize", {64, 64})
-            love.graphics.rectangle("fill", 0, 0, 720, 720)
-        end)
-
-        -- love.graphics.withShader(blurShader, function()
-        --     blurShader:send("blurSize", 1 / (2560 / 16))
-        --     blurShader:send("sigma", 5)
-        --     local playerSpriteQuad = love.graphics.newQuad(0, 0, 720, 720, 720, 720)
-        --     assets.playerImage:draw(playerSpriteQuad, 0, 0, 0, 1, 1, 0, 0)
-        -- end)
-
-        local playerAreaQuad = love.graphics.newQuad(0, 0, 720, 720, 720, 720)
-        love.graphics.draw(assets.get("resources/images/background2.png"), playerAreaQuad)
-
-        -- TODO:
-        local itemX, itemY = 2, 14
-        local x, y, width, height = 0, 0, 256, 256
-        itemsAtlas:drawTile(x, y, itemX, itemY, width, height)
-        drawOutline({x = x, y = y, width = width, height = height})
-        playerAnimation:draw(0, 0, 720, 720)
+    love.graphics.setCanvas(playerAreaCanvas)
+    -- playerAreaCanvas:renderTo(function()
+    love.graphics.clear(1.0, 1.0, 1.0)
+    love.graphics.withShader(assets.get("testShaderA"), function()
+        assets.get("testShaderA"):sendColor("color1", {0.9, 0.7, 0.9, 1.0})
+        assets.get("testShaderA"):sendColor("color2", {0.7, 0.9, 0.9, 1.0})
+        assets.get("testShaderA"):send("rectSize", {64, 64})
+        love.graphics.rectangle("fill", 0, 0, 720, 720)
     end)
+
+    -- love.graphics.withShader(blurShader, function()
+    --     blurShader:send("blurSize", 1 / (2560 / 16))
+    --     blurShader:send("sigma", 5)
+    --     local playerSpriteQuad = love.graphics.newQuad(0, 0, 720, 720, 720, 720)
+    --     assets.playerImage:draw(playerSpriteQuad, 0, 0, 0, 1, 1, 0, 0)
+    -- end)
+
+    local playerAreaQuad = love.graphics.newQuad(0, 0, 720, 720, 720, 720)
+    love.graphics.draw(assets.get("resources/images/background2.png"), playerAreaQuad)
+    -- TODO: Make the item bob in the scene
+    if sceneType == "playerCloseUpView" then
+        local itemInScene = itemsInScene:peek()
+        itemsAtlas:drawTile(itemInScene)
+        drawOutline(itemInScene)
+        playerAnimation:draw(0, 0, 720, 720)
+    elseif sceneType == "battleMode" then
+        error("Not yet implemented.")
+    else
+        error("Scene type " .. tostring(sceneType) .. " is not allowed")
+    end
+    -- end)
+    love.graphics.setCanvas()
     local playfieldScenePlacementQuad = love.graphics.newQuad(0, 0, unpack(playerAreaDims:rep(2)))
     local pos = UIScale * UITileSize * (0.5 - (8 - 720 / (UITileSize * UIScale)))
     drawing.resolutionScaledDraw(playerAreaCanvas, playfieldScenePlacementQuad, pos, pos)

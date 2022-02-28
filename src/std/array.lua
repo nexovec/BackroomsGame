@@ -44,7 +44,8 @@ function array:concat(tbl)
 end
 
 function array:pop()
-    assert(self, "Call with : instead of .", 2)
+    assert(not not self, "Call with : instead of .", 2)
+    assert(#self ~= 0)
     local res = self[#self]
     self[#self] = nil
     return res
@@ -90,6 +91,10 @@ function array:prettyPrintRecursive(passed)
 end
 
 function array:last()
+    return self[#self]
+end
+
+function array:peek()
     return self[#self]
 end
 
