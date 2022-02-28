@@ -97,10 +97,19 @@ local itemsInScene = array.wrap {{
     width = 256,
     height = 256
 }}
+local draggedItem = nil
+local mainHandInventorySlotDimensions = {
+    x = 9 - 0.2,
+    y = 4,
+    width = 2,
+    height = 2
+}
 local equipmentToDraw = {
     mainHand = {
         x = 2,
-        y = 14
+        y = 14,
+        width = 256,
+        height = 256
     },
     offHand = nil,
     headGear = nil,
@@ -755,6 +764,40 @@ local function handleDevConsoleTextInput(key)
     devConsoleMessageRef.val = devConsoleMessageRef.val .. key
 end
 
+function game.initRendering()
+    love.graphics.setFont(assets.get("font"))
+    playerAnimation = animations.loadAnimation("character")
+    playerAreaCanvas = love.graphics.newCanvas(unpack(playerAreaDims))
+    tempCanvas = love.graphics.newCanvas(32, 32)
+    characterSpriteCanvas = love.graphics.newCanvas(32, 32)
+    playerAnimation:play(2, "idle", true)
+    characterSpriteCanvas:renderTo(function()
+        -- TODO: Resample fireCircles.png:
+        -- playerAnimation = animations.loadAnimation("fireCircles")
+
+        -- init logic:
+        -- FIXME: Fix rendering when scaling
+        love.graphics.clear()
+        characterSpriteCanvas:setFilter("linear", "linear", 4)
+        local asset = assets.get("resources/images/character.png")
+        local width, height = asset:getDimensions()
+        local characterSheetQuad = love.graphics.newQuad(0, 0, 32, 32, width, height)
+        love.graphics.draw(asset, characterSheetQuad, 0, 0)
+    end)
+
+    tempCanvas:setFilter("linear", "linear", 4)
+    local maskShader = assets.get("resources/shaders/masks/maskFromTexture.glsl")
+    local function useMaskShaderToDrawCharacter()
+        love.graphics.withShader(maskShader, function()
+            love.graphics.clear()
+            maskShader:send("Tex", characterSpriteCanvas)
+            love.graphics.draw(characterSpriteCanvas, love.graphics.newQuad(0, 0, 24, 32, 24, 32), 0, 0)
+        end)
+    end
+    tempCanvas:renderTo(useMaskShaderToDrawCharacter)
+    -- playerAnimation:play(2, "circle", true)
+end
+
 --- API
 
 function game.load(args)
@@ -763,13 +806,6 @@ function game.load(args)
     serverAddress = assets.get("settings").serverAddress
     love.window.setTitle("Backrooms v0.0.1 pre-dev")
     love.keyboard.setKeyRepeat(true)
-    love.graphics.setFont(assets.get("font"))
-    playerAnimation = animations.loadAnimation("character")
-    -- TODO: Resample fireCircles.png:
-    -- playerAnimation = animations.loadAnimation("fireCircles")
-
-    -- init logic:
-    -- FIXME: Fix rendering when scaling
     UIElemHandlers = {
         loginbox = {
             keypressed = handleLoginBoxKp,
@@ -792,32 +828,8 @@ function game.load(args)
     }
     activeUIElemStack:append("chatboxMessageHistory")
     loginPromptToggle()
-    playerAreaCanvas = love.graphics.newCanvas(unpack(playerAreaDims))
-    tempCanvas = love.graphics.newCanvas(32, 32)
-    characterSpriteCanvas = love.graphics.newCanvas(32, 32)
-    playerAnimation:play(2, "idle", true)
-    characterSpriteCanvas:renderTo(function()
-        love.graphics.clear()
-        characterSpriteCanvas:setFilter("linear", "linear", 4)
-        local asset = assets.get("resources/images/character.png")
-        local width, height = asset:getDimensions()
-        local characterSheetQuad = love.graphics.newQuad(0, 0, 32, 32, width, height)
-        love.graphics.draw(asset, characterSheetQuad, 0, 0)
-    end)
-
-    tempCanvas:setFilter("linear", "linear", 4)
-    local maskShader = assets.get("resources/shaders/masks/maskFromTexture.glsl")
-    local function useMaskShaderToDrawCharacter()
-        love.graphics.withShader(maskShader, function()
-            love.graphics.clear()
-            maskShader:send("Tex", characterSpriteCanvas)
-            love.graphics.draw(characterSpriteCanvas, love.graphics.newQuad(0, 0, 24, 32, 24, 32), 0, 0)
-        end)
-    end
-    tempCanvas:renderTo(useMaskShaderToDrawCharacter)
-    -- playerAnimation:play(2, "circle", true)
-
     love.keyboard.setKeyRepeat(true)
+    game.initRendering()
 
     beginClient()
 end
@@ -949,6 +961,10 @@ function game.draw()
     drawAtEquipmentSlot(13, 6, 2, 2, 7, 0, shoeGearEquipment and shoeGearEquipment.x,
         shoeGearEquipment and shoeGearEquipment.y, itemsAtlas)
 
+    if draggedItem then
+        -- TODO: Render item at mouse position if there is any
+    end
+
     -- local x, y, width, height = 11.8, 6, 2, 2
     -- tiledUIPanel("uiImage", tileSize, scale, {10, 4, 2, 2}):draw(x, y, width, height)
     -- TODO: Don't flicker the login box if credentials are rejected. (fade-out ?)
@@ -1035,55 +1051,6 @@ function game.quit()
     serverpeer:disconnect_now()
 end
 
--- luacheck:no unused
-local function mousepressedOriginal(x, y, mb, isTouch, presses)
-    handleChatSendBtnClick(x, y, mb, isTouch, presses)
-    if not handleSettingsBtnClick(x, y, mb, isTouch, presses) then
-        handleSettingsClose(x, y, mb)
-    end
-    handleLoginClick(x, y, mb, isTouch, presses)
-    handleLoginBoxFieldFocusOnMouseClick(x, y, mb, isTouch, presses)
-end
-
-local function mousepressedPassingCallbacks(x, y, mb, isTouch, presses)
-    handleBtnClick(x, y, chatboxSendBtnDimensions, mb, isTouch, presses, shouldHandleChatboxSendBtnClick, function()
-        handleChatKp("return")
-    end)
-    if not handleBtnClick(x, y, settingsBtnDimensions, mb, isTouch, presses, shouldHandleSettingsBtnClick, function()
-        toggleSettings()
-    end) then
-        if (settingsEnabled and isPosOutOfSettingsPanel(x, y)) then
-            toggleSettings()
-        end
-    end
-    handleBtnClick(x, y, loginboxBtnDimensions, mb, isTouch, presses, loginboxEnabled, function()
-        onLoginClicked()
-    end)
-    handleLoginBoxFieldFocusOnMouseClick(x, y, mb, isTouch, presses)
-end
--- luacheck:unused
-
-local function mousepressedDirect(x, y, mb, isTouch, presses)
-    if pointIntersectsQuad(x, y, chatboxSendBtnDimensions) and shouldHandleChatboxSendBtnClick then
-        handleChatKp("return")
-    end
-    if pointIntersectsQuad(x, y, settingsBtnDimensions) and shouldHandleSettingsBtnClick or
-        (settingsEnabled and isPosOutOfSettingsPanel(x, y)) then
-        toggleSettings()
-    end
-    if loginboxEnabled and pointIntersectsQuad(x, y, loginboxBtnDimensions) and shouldHandleLoginClick then
-        onLoginClicked()
-    end
-    handleLoginBoxFieldFocusOnMouseClick(x, y, mb, isTouch, presses)
-end
-
-function game.mousepressed(x, y, mb, isTouch, presses)
-    -- TODO: Pick one of the three and inline here:
-    mousepressedDirect(x, y, mb, isTouch, presses)
-    -- mousepressedPassingCallbacks(x, y, mb, isTouch, presses)
-    -- mousepressedOriginal(x,y, mb, isTouch, presses)
-end
-
 function game.keypressed(key)
     if key == "f5" then
         love.event.quit("restart")
@@ -1098,6 +1065,47 @@ function game.keypressed(key)
     -- NOTE: I don't like this.
     if not not UIElemHandlers[activeUIElemStack:last()] then
         UIElemHandlers[activeUIElemStack:last()].keypressed(key)
+    end
+end
+
+function game.mousepressed(x, y, mb, isTouch, presses)
+    if pointIntersectsQuad(x, y, settingsBtnDimensions) and shouldHandleSettingsBtnClick or
+        (settingsEnabled and isPosOutOfSettingsPanel(x, y)) then
+        toggleSettings()
+        return
+    end
+    if loginboxEnabled and pointIntersectsQuad(x, y, loginboxBtnDimensions) and shouldHandleLoginClick then
+        onLoginClicked()
+    end
+
+    if loginboxEnabled then
+        return
+    end
+
+    if pointIntersectsQuad(x, y, chatboxSendBtnDimensions) and shouldHandleChatboxSendBtnClick then
+        handleChatKp("return")
+        return
+    end
+
+    handleLoginBoxFieldFocusOnMouseClick(x, y, mb, isTouch, presses)
+    if pointIntersectsQuad(x, y, equipmentToDraw.mainHand) then
+        draggedItem = equipmentToDraw.mainHand
+        print("Picked up an item.")
+    end
+    -- TODO: Pick up items in the inventory
+end
+
+function game.mousereleased(x, y, mb)
+    if draggedItem then
+        draggedItem = nil
+        local m = mainHandInventorySlotDimensions
+        local mul = UIScale * UITileSize
+        if pointIntersectsQuad(x, y, m.x * mul, m.y * mul, m.width * mul, m.height * mul) then
+            print("Deposited item into mainHand slot")
+            -- TODO: Equip item
+            return
+        end
+        -- TOOD: Unequip item
     end
 end
 

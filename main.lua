@@ -143,6 +143,13 @@ function love.mousepressed(...)
     game.mousepressed(...)
 end
 
+function love.mousereleased(...)
+    if macro.isRecordingMacro then
+        macro.addMacroEvent("mousereleased", ...)
+    end
+    game.mousereleased(...)
+end
+
 function love.mousemoved(...)
     if macro.isRecordingMacro then
         macro.addMacroEvent("mousemoved", ...)
