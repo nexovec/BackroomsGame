@@ -53,6 +53,10 @@ function string.startsWith(str, startingLetters)
     return true
 end
 
+function string.endsWidth(str, endingLetters)
+    -- TODO:
+end
+
 function string.split(str, sep)
     assert(utf8.len(sep) == 1, "Multi-character separators are not implemented yet", 2)
     local sepCode = utf8.codepoint(sep)

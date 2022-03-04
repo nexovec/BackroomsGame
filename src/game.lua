@@ -12,7 +12,6 @@ local ref = require("std.ref")
 local t = require("timing")
 local animations = require("animations")
 local network = require("network")
-local types = require("std.types")
 local tileAtlas = require("tileAtlas")
 local assets = require("assets")
 local drawing = require("drawing")
@@ -24,13 +23,21 @@ local macro = require("macro")
 
 local enetclient = nil
 local serverpeer = nil
-
-local playerAreaCanvas = nil
-local playerAreaDims = array.wrap {720, 720}
-
-local inventorySlots = {}
+local sceneviewCanvas = nil
 
 local playerAnimation = nil
+
+local testMugItemInfo = {
+    tileX = 2,
+    tileY = 14,
+    visible = true
+}
+local testMugItemDims = {
+    x = 0,
+    y = 0,
+    width = 256,
+    height = 256
+}
 
 local tempCanvas = nil
 local characterSpriteCanvas = nil
@@ -55,19 +62,25 @@ local sceneType = "playerCloseUpView"
 local chatboxHistoryPointerRef = ref.wrap()
 local clientChatBoxMessageRef = ref.wrap("")
 
-local chatboxDimensions = {
+local sceneviewDims = {
+    x = UIScale * UITileSize * (0.5 - (8 - 720 / (UITileSize * UIScale))),
+    y = UIScale * UITileSize * (0.5 - (8 - 720 / (UITileSize * UIScale))),
+    width = 720,
+    height = 720
+}
+local chatboxDims = {
     x = 16.5,
     y = 1,
     width = 7,
     height = 12
 }
 local chatMessagesBoundingBox = {
-    x = chatboxDimensions.x * UITileSize * UIScale,
-    y = chatboxDimensions.y * UITileSize * UIScale,
+    x = chatboxDims.x * UITileSize * UIScale,
+    y = chatboxDims.y * UITileSize * UIScale,
     width = 500,
     height = 1000
 }
-local chatboxSendBtnDimensions = {
+local chatboxSendBtnDims = {
     x = chatMessagesBoundingBox.x + 475,
     y = chatMessagesBoundingBox.y + 865,
     width = 64,
@@ -89,14 +102,7 @@ local loginboxErrorText = ""
 local slotIconsAtlas = tileAtlas.wrap("resources/images/slotIcons.png", 32, 6)
 local itemsAtlas = tileAtlas.wrap("resources/images/items.png", 16, 0)
 
-local itemsInScene = array.wrap {{
-    tileX = 2,
-    tileY = 14,
-    x = 0,
-    y = 0,
-    width = 256,
-    height = 256
-}}
+local itemsInScene = array.wrap()
 local draggedItem = nil
 local mainHandInventorySlotDimensions = {
     x = 9 - 0.2,
@@ -104,13 +110,8 @@ local mainHandInventorySlotDimensions = {
     width = 2,
     height = 2
 }
-local equipmentToDraw = {
-    mainHand = {
-        x = 2,
-        y = 14,
-        width = 256,
-        height = 256
-    },
+local equipmentSlotsEquipment = {
+    mainHand = nil,
     offHand = nil,
     headGear = nil,
     bodyArmor = nil,
@@ -120,15 +121,15 @@ local equipmentToDraw = {
 local activeLoginBoxField = "nickname"
 
 local shouldHandleLoginClick = false
-local loginboxDimensions = {
+local loginboxDims = {
     x = 4,
     y = 4,
     width = 8,
     height = 3
 }
-local loginboxBtnDimensions = {
-    x = UITileSize / 2 * UIScale * (loginboxDimensions.x * 2 + 10 - 0.5),
-    y = UITileSize / 2 * UIScale * (loginboxDimensions.y * 2 + 4 - 0.1),
+local loginboxBtnDims = {
+    x = UITileSize / 2 * UIScale * (loginboxDims.x * 2 + 10 - 0.5),
+    y = UITileSize / 2 * UIScale * (loginboxDims.y * 2 + 4 - 0.1),
     width = 3 * UITileSize * UIScale,
     height = UITileSize * UIScale
 }
@@ -147,14 +148,14 @@ local settingsBtnDimensions = {
 
 local loginboxTextFieldsSizes = {
     username = {
-        x = loginboxDimensions.x * UITileSize * UIScale + 270,
-        y = loginboxDimensions.y * UITileSize * UIScale + 60,
+        x = loginboxDims.x * UITileSize * UIScale + 270,
+        y = loginboxDims.y * UITileSize * UIScale + 60,
         width = 300,
         margins = 2
     },
     password = {
-        x = loginboxDimensions.x * UITileSize * UIScale + 270,
-        y = loginboxDimensions.y * UITileSize * UIScale + 110,
+        x = loginboxDims.x * UITileSize * UIScale + 270,
+        y = loginboxDims.y * UITileSize * UIScale + 110,
         width = 300,
         margins = 2
     }
@@ -467,30 +468,6 @@ local function handleChatKp(key)
     end
 end
 
--- Only call cbk if switch is true and mouse is in the button area
--- returns: if cbk was triggered or not
--- luacheck:no unused args
-local function handleBtnClick(x, y, btnDimensions, mb, isTouch, repeating, switch, cbk)
-    if not switch then
-        return false
-    end
-    if pointIntersectsQuad(x, y, btnDimensions) then
-        cbk()
-        return true
-    end
-    return false
-end
--- luacheck:no unused args
-local function handleChatSendBtnClick(x, y, mb, isTouch, repeating)
-    if not shouldHandleChatboxSendBtnClick then
-        return
-    end
-    if pointIntersectsQuad(x, y, chatboxSendBtnDimensions) then
-        handleChatKp("return")
-    end
-end
--- luacheck:unused args
-
 ---@return boolean returns whether the settings are active.
 local function toggleSettings()
     if settingsEnabled then
@@ -508,17 +485,6 @@ local function toggleSettings()
     activeUIElemStack:append("settings")
     return true
 end
-
--- luacheck:no unused args
-local function handleSettingsBtnClick(xIn, yIn, mb, isTouch, repeating)
-    if not shouldHandleSettingsBtnClick then
-        return
-    end
-    if pointIntersectsQuad(xIn, yIn, settingsBtnDimensions) then
-        return toggleSettings()
-    end
-end
--- luacheck:unused args
 
 local function isPosOutOfSettingsPanel(x, y)
     local multiplier = UITileSize * UIScale
@@ -543,24 +509,7 @@ local function handleSettingsClose(x, y, mb)
         toggleSettings()
     end
 end
--- luacheck:no unused args
-local function handleLoginClick(xIn, yIn, mb, isTouch, repeating)
-    if not shouldHandleLoginClick then
-        return
-    end
-    loginboxBtnDimensions = {
-        x = UITileSize / 2 * UIScale * (loginboxDimensions.x * 2 + 10 - 0.5),
-        y = UITileSize / 2 * UIScale * (loginboxDimensions.y * 2 + 4 - 0.1),
-        width = 3 * UITileSize * UIScale,
-        height = UITileSize * UIScale
-    }
-    if pointIntersectsQuad(xIn, yIn, loginboxBtnDimensions.x, loginboxBtnDimensions.y, loginboxBtnDimensions.width,
-        loginboxBtnDimensions.height) then
-        onLoginClicked()
-        shouldHandleLoginClick = false
-    end
-end
--- luacheck:unused args
+-- luacheck: unused args
 
 local function tintedTextField(x, y, width, vertMargins, color)
     local ascent = assets.get("font"):getAscent()
@@ -767,7 +716,7 @@ end
 function game.initRendering()
     love.graphics.setFont(assets.get("font"))
     playerAnimation = animations.loadAnimation("character")
-    playerAreaCanvas = love.graphics.newCanvas(unpack(playerAreaDims))
+    sceneviewCanvas = love.graphics.newCanvas(sceneviewDims.width, sceneviewDims.height)
     tempCanvas = love.graphics.newCanvas(32, 32)
     characterSpriteCanvas = love.graphics.newCanvas(32, 32)
     playerAnimation:play(2, "idle", true)
@@ -829,6 +778,7 @@ function game.load(args)
     activeUIElemStack:append("chatboxMessageHistory")
     loginPromptToggle()
     love.keyboard.setKeyRepeat(true)
+    -- itemsInScene:append(testMugItem)
     game.initRendering()
 
     beginClient()
@@ -870,7 +820,7 @@ function game.draw()
 
     -- render logbox
     renderUIPanel(1, 9, 15, 4)
-    renderUIPanel(chatboxDimensions.x, chatboxDimensions.y, chatboxDimensions.width, chatboxDimensions.height)
+    renderUIPanel(chatboxDims.x, chatboxDims.y, chatboxDims.width, chatboxDims.height)
     love.graphics.setColor(0, 0, 0, 1)
     -- TODO: Fade out top of the chat window
     -- TODO: Smooth chat scrolling
@@ -890,15 +840,15 @@ function game.draw()
 
     -- render send button
     love.graphics.draw(assets.get("resources/images/ui/smallIcons.png"), 1220, 100, 0, 3, 3) -- icons preview
-    tileAtlas.wrap("resources/images/ui/smallIcons.png", 12, 2):drawTile(0, 8, chatboxSendBtnDimensions.x,
-        chatboxSendBtnDimensions.y, chatboxSendBtnDimensions.width, chatboxSendBtnDimensions.height)
+    tileAtlas.wrap("resources/images/ui/smallIcons.png", 12, 2):drawTile(0, 8, chatboxSendBtnDims.x,
+        chatboxSendBtnDims.y, chatboxSendBtnDims.width, chatboxSendBtnDims.height)
     drawOutline(chatMessagesBoundingBox.x + 480, chatMessagesBoundingBox.y + 870, 64, 64)
     tileAtlas.wrap("resources/images/ui/smallIcons.png", 12, 2):drawTile(2, 4, 1830, 0, 64, 64)
     drawOutline(settingsBtnDimensions)
     love.graphics.setColor(1, 1, 1, 1)
 
     -- draw scene
-    love.graphics.setCanvas(playerAreaCanvas)
+    love.graphics.setCanvas(sceneviewCanvas)
     -- playerAreaCanvas:renderTo(function()
     love.graphics.clear(1.0, 1.0, 1.0)
     love.graphics.withShader(assets.get("testShaderA"), function()
@@ -908,20 +858,25 @@ function game.draw()
         love.graphics.rectangle("fill", 0, 0, 720, 720)
     end)
 
-    -- love.graphics.withShader(blurShader, function()
-    --     blurShader:send("blurSize", 1 / (2560 / 16))
-    --     blurShader:send("sigma", 5)
-    --     local playerSpriteQuad = love.graphics.newQuad(0, 0, 720, 720, 720, 720)
-    --     assets.playerImage:draw(playerSpriteQuad, 0, 0, 0, 1, 1, 0, 0)
-    -- end)
-
     local playerAreaQuad = love.graphics.newQuad(0, 0, 720, 720, 720, 720)
     love.graphics.draw(assets.get("resources/images/background2.png"), playerAreaQuad)
+
     -- TODO: Make the item bob in the scene
     if sceneType == "playerCloseUpView" then
-        local itemInScene = itemsInScene:peek()
-        itemsAtlas:drawTile(itemInScene)
-        drawOutline(itemInScene)
+        -- for _, itemInScene in itemsInScene:iter() do
+        --     if itemInScene.visible then
+        --         itemsAtlas:drawTile(itemInScene)
+        --         drawOutline(itemInScene)
+        --     end
+        -- end
+        itemsAtlas:drawTile(testMugItemInfo.tileX, testMugItemInfo.tileY, testMugItemDims)
+        -- local blurShader = assets.get("resources/shaders/blur.glsl")
+        -- love.graphics.withShader(blurShader, function()
+        --     blurShader:send("blurSize", 1 / (2560 / 16))
+        --     blurShader:send("sigma", 5)
+        --     local playerSpriteQuad = love.graphics.newQuad(0, 0, 720, 720, 720, 720)
+        --     playerAnimation:draw(0, 0, 720, 720)
+        -- end)
         playerAnimation:draw(0, 0, 720, 720)
     elseif sceneType == "battleMode" then
         error("Not yet implemented.")
@@ -930,9 +885,9 @@ function game.draw()
     end
     -- end)
     love.graphics.setCanvas()
-    local playfieldScenePlacementQuad = love.graphics.newQuad(0, 0, unpack(playerAreaDims:rep(2)))
-    local pos = UIScale * UITileSize * (0.5 - (8 - 720 / (UITileSize * UIScale)))
-    drawing.resolutionScaledDraw(playerAreaCanvas, playfieldScenePlacementQuad, pos, pos)
+    local playfieldScenePlacementQuad = love.graphics.newQuad(0, 0, sceneviewDims.width, sceneviewDims.height,
+        sceneviewDims.width, sceneviewDims.height)
+    drawing.resolutionScaledDraw(sceneviewCanvas, playfieldScenePlacementQuad, sceneviewDims.x, sceneviewDims.y)
 
     -- render character silhouette
     -- FIXME: Fix rendering when scaling
@@ -941,28 +896,31 @@ function game.draw()
     drawing.resolutionScaledDraw(tempCanvas, quad, 1040, 80)
 
     -- equipment view
-    local mainHandEquipment = equipmentToDraw["mainHand"]
-    drawAtEquipmentSlot(9 - 0.2, 4, 2, 2, 3, 1, mainHandEquipment and mainHandEquipment.x,
-        mainHandEquipment and mainHandEquipment.y, itemsAtlas)
+    local mainHandEquipment = equipmentSlotsEquipment["mainHand"]
+    drawAtEquipmentSlot(9 - 0.2, 4, 2, 2, 3, 10, mainHandEquipment and mainHandEquipment.tileX,
+        mainHandEquipment and mainHandEquipment.tileY, itemsAtlas)
 
-    local offHandEquipment = equipmentToDraw["offHand"]
+    local offHandEquipment = equipmentSlotsEquipment["offHand"]
     drawAtEquipmentSlot(9 - 0.2, 6, 2, 2, 3, 1, offHandEquipment and offHandEquipment.x,
         offHandEquipment and offHandEquipment.y, itemsAtlas)
 
-    local headGearEquipment = equipmentToDraw["headGear"]
+    local headGearEquipment = equipmentSlotsEquipment["headGear"]
     drawAtEquipmentSlot(13, 2, 2, 2, 1, 0, headGearEquipment and headGearEquipment.x,
         headGearEquipment and headGearEquipment.y, itemsAtlas)
 
-    local bodyArmorEquipment = equipmentToDraw["bodyArmor"]
+    local bodyArmorEquipment = equipmentSlotsEquipment["bodyArmor"]
     drawAtEquipmentSlot(13.5, 4, 2, 2, 0, 0, bodyArmorEquipment and bodyArmorEquipment.x,
         bodyArmorEquipment and bodyArmorEquipment.y, itemsAtlas)
 
-    local shoeGearEquipment = equipmentToDraw["shoeGear"]
+    local shoeGearEquipment = equipmentSlotsEquipment["shoeGear"]
     drawAtEquipmentSlot(13, 6, 2, 2, 7, 0, shoeGearEquipment and shoeGearEquipment.x,
         shoeGearEquipment and shoeGearEquipment.y, itemsAtlas)
 
     if draggedItem then
-        -- TODO: Render item at mouse position if there is any
+        -- TODO: Correct scaling
+        -- itemsAtlas:drawTile(2, 14, (love.mouse.getX() - sceneviewDims.y) - (draggedItem.offsets.x - sceneviewDims.x),
+        --     (love.mouse.getY() -  sceneviewDims.y) - (draggedItem.offsets.y - sceneviewDims.y), draggedItem.width, draggedItem.height)
+        itemsAtlas:drawTile(2, 14, love.mouse.getX(), love.mouse.getY(), draggedItem.width, draggedItem.height)
     end
 
     -- local x, y, width, height = 11.8, 6, 2, 2
@@ -977,12 +935,12 @@ function game.draw()
         caret = ""
     end
     if loginboxEnabled then
-        local x, y = loginboxDimensions.x, loginboxDimensions.y
+        local x, y = loginboxDims.x, loginboxDims.y
         if not devConsoleEnabled then
             tintScreen()
         end
 
-        tiledUIPanel.wrap("uiImage", UITileSize, UIScale):draw(loginboxDimensions)
+        tiledUIPanel.wrap("uiImage", UITileSize, UIScale):draw(loginboxDims)
         tiledUIPanel.wrap("uiImage", UITileSize / 2, UIScale, {20, 20, 4, 4}):draw(x * 2 + 10 - 0.5, y * 2 + 4 - 0.1, 6,
             2)
         love.graphics.setColor(0, 0, 0, 1)
@@ -1074,7 +1032,7 @@ function game.mousepressed(x, y, mb, isTouch, presses)
         toggleSettings()
         return
     end
-    if loginboxEnabled and pointIntersectsQuad(x, y, loginboxBtnDimensions) and shouldHandleLoginClick then
+    if loginboxEnabled and pointIntersectsQuad(x, y, loginboxBtnDims) and shouldHandleLoginClick then
         onLoginClicked()
     end
 
@@ -1082,29 +1040,44 @@ function game.mousepressed(x, y, mb, isTouch, presses)
         return
     end
 
-    if pointIntersectsQuad(x, y, chatboxSendBtnDimensions) and shouldHandleChatboxSendBtnClick then
+    if pointIntersectsQuad(x, y, chatboxSendBtnDims) and shouldHandleChatboxSendBtnClick then
         handleChatKp("return")
         return
     end
 
     handleLoginBoxFieldFocusOnMouseClick(x, y, mb, isTouch, presses)
-    if pointIntersectsQuad(x, y, equipmentToDraw.mainHand) then
-        draggedItem = equipmentToDraw.mainHand
-        print("Picked up an item.")
+    if pointIntersectsQuad(x, y, testMugItemDims) then
+        draggedItem = testMugItemInfo
     end
+    -- for _, item in itemsInScene:iter() do
+    --     if pointIntersectsQuad(x, y, item) then
+    --         draggedItem = map.shallowCopy(item)
+    --         assert(draggedItem.tileX and draggedItem.tileY)
+    --         draggedItem.offsets = {
+    --             -- TODO:
+    --             x = item.x,
+    --             y = item.y
+    --         }
+    --         draggedItem.visible = false
+    --         print("Picked up an item.")
+    --     end
+    -- end
     -- TODO: Pick up items in the inventory
 end
 
-function game.mousereleased(x, y, mb)
+function game.mousereleased(x, y)
     if draggedItem then
-        draggedItem = nil
         local m = mainHandInventorySlotDimensions
         local mul = UIScale * UITileSize
         if pointIntersectsQuad(x, y, m.x * mul, m.y * mul, m.width * mul, m.height * mul) then
             print("Deposited item into mainHand slot")
+            equipmentSlotsEquipment.mainHand = draggedItem
             -- TODO: Equip item
-            return
+            -- TODO: Disable mouse trigger
+        else
+            draggedItem.visible = true
         end
+        draggedItem = nil
         -- TOOD: Unequip item
     end
 end

@@ -76,6 +76,27 @@ function map:indexOf(elem)
     return nil
 end
 
+function map:shallowCopy()
+    local res = {}
+    for k,v in pairs(self) do
+        res[k] = v
+    end
+    return res
+end
+
+function map:convertTrueStringsToBooleans()
+    -- TODO: test
+    for k, v in pairs(self) do
+        if type(v) == string then
+            if v == "true" then
+                self[k] = true
+            elseif v == "false" then
+                self[k] = false
+            end
+        end
+    end
+end
+
 function map:length()
     local i = 0
     for _ in pairs(self) do
