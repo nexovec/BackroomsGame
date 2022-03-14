@@ -1002,7 +1002,7 @@ function game.draw()
             height = 1020
         }, true)
     end
-    love.graphics.print("Nice text", 0, 10, 0, 8, 8)
+    -- love.graphics.print("Nice text", 0, 10, 0, 8, 8)
 end
 
 function game.quit()
