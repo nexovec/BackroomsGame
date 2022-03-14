@@ -619,7 +619,7 @@ end
 
 local function drawAtEquipmentSlot(x, y, width, height, iconX, iconY, itemX, itemY, itemAtlas)
     if type(x) == "table" then
-        return drawAtEquipmentSlot(x.x, x.y, x.width, x.height, y, width)
+        return drawAtEquipmentSlot(x.x, x.y, x.width, x.height, y, width, height, iconX, iconY)
     end
     tiledUIPanel.wrap("uiImage", UITileSize, UIScale, {10, 6, 2, 2}):draw(x, y, width, height)
     slotIconsAtlas:drawTile(iconX, iconY, (x + 0.1) * UITileSize * UIScale, (y + 0.15) * UITileSize * UIScale,
@@ -897,7 +897,7 @@ function game.draw()
 
     -- equipment view
     local mainHandEquipment = equipmentSlotsEquipment["mainHand"]
-    drawAtEquipmentSlot(9 - 0.2, 4, 2, 2, 3, 10, mainHandEquipment and mainHandEquipment.tileX,
+    drawAtEquipmentSlot(9 - 0.2, 4, 2, 2, 3, 1, mainHandEquipment and mainHandEquipment.tileX,
         mainHandEquipment and mainHandEquipment.tileY, itemsAtlas)
 
     local offHandEquipment = equipmentSlotsEquipment["offHand"]
@@ -1002,6 +1002,7 @@ function game.draw()
             height = 1020
         }, true)
     end
+    -- love.graphics.print("Nice text", 0, 10, 0, 8, 8)
 end
 
 function game.quit()
