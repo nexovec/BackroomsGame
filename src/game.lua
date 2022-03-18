@@ -17,6 +17,7 @@ local tiledUIPanel = require("tiledUIPanel")
 local macro = require("macro")
 local client = require("client")
 local messaging = require("messaging")
+local dims = require("dims")
 
 -- variables
 -- local scaled = drawing.resolutionScaledPos -- function alias
@@ -29,7 +30,8 @@ local testMugItemInfo = {
     tileY = 14,
     visible = true
 }
-local testMugItemDims = {
+
+local testMugItemDims = dims.wrap {
     x = 0,
     y = 0,
     width = 256,
@@ -59,25 +61,25 @@ local sceneType = "playerCloseUpView"
 local chatboxHistoryPointerRef = ref.wrap()
 local clientChatBoxMessageRef = ref.wrap("")
 
-local sceneviewDims = {
+local sceneviewDims = dims.wrap {
     x = UIScale * UITileSize * (0.5 - (8 - 720 / (UITileSize * UIScale))),
     y = UIScale * UITileSize * (0.5 - (8 - 720 / (UITileSize * UIScale))),
     width = 720,
     height = 720
 }
-local chatboxDims = {
+local chatboxDims = dims.wrap {
     x = 16.5,
     y = 1,
     width = 7,
     height = 12
 }
-local chatMessagesBoundingBox = {
+local chatMessagesBoundingBox = dims.wrap {
     x = chatboxDims.x * UITileSize * UIScale,
     y = chatboxDims.y * UITileSize * UIScale,
     width = 500,
     height = 1000
 }
-local chatboxSendBtnDims = {
+local chatboxSendBtnDims = dims.wrap {
     x = chatMessagesBoundingBox.x + 475,
     y = chatMessagesBoundingBox.y + 865,
     width = 64,
@@ -101,7 +103,7 @@ local itemsAtlas = tileAtlas.wrap("resources/images/items.png", 16, 0)
 
 -- local itemsInScene = array.wrap()
 local draggedItem = nil
-local mainHandInventorySlotDimensions = {
+local mainHandInventorySlotDims = dims.wrap {
     x = 9 - 0.2,
     y = 4,
     width = 2,
@@ -118,25 +120,25 @@ local equipmentSlotsEquipment = {
 local activeLoginBoxField = "nickname"
 
 local shouldHandleLoginClick = false
-local loginboxDims = {
+local loginboxDims = dims.wrap {
     x = 4,
     y = 4,
     width = 8,
     height = 3
 }
-local loginboxBtnDims = {
+local loginboxBtnDims = dims.wrap {
     x = UITileSize / 2 * UIScale * (loginboxDims.x * 2 + 10 - 0.5),
     y = UITileSize / 2 * UIScale * (loginboxDims.y * 2 + 4 - 0.1),
     width = 3 * UITileSize * UIScale,
     height = UITileSize * UIScale
 }
-local settingsBoxDimensionsInTiles = {
+local settingsBoxDimensionsInTiles = dims.wrap {
     x = 6,
     y = 6,
     width = 4,
     height = 6
 }
-local settingsBtnDimensions = {
+local settingsBtnDimensions = dims.wrap {
     x = 1830,
     y = 10,
     width = 64,
@@ -332,7 +334,8 @@ end
 
 local function pointIntersectsQuad(pX, pY, qX, qY, qW, qH)
     if type(qX) == "table" then
-        return pointIntersectsQuad(pX, pY, qX.x, qX.y, qX.width, qX.height)
+        assert(qX.type == "dims")
+        return pointIntersectsQuad(pX, pY, qX:unpack())
     end
     return pX >= qX and pX < qX + qW and pY >= qY and pY < qY + qH
 end
@@ -453,7 +456,7 @@ local function drawOutline(obj, color, ...)
         error("Not yet implemented.")
     elseif not not obj.x and not not obj.y and not not obj.width and obj.height then
         -- TODO: obj is a rectangle (a dimensions object)
-        love.graphics.rectangle("line", obj.x, obj.y, obj.width, obj.height)
+        love.graphics.rectangle("line", dims.wrap(obj):unpack())
     else
         local typeText = obj.type or type(obj)
         error("You can't draw an outline of " .. tostring(typeText), 2)
@@ -525,9 +528,10 @@ local function renderUIPanel(x, y, width, height, shape)
     tiledUIPanel.wrap("uiImage", UITileSize, UIScale, shape):draw(x, y, width, height)
 end
 
-local function drawAtEquipmentSlot(x, y, width, height, iconX, iconY, itemX, itemY, itemAtlas)
+local function drawAtEquipmentSlot(iconX, iconY, itemX, itemY, itemAtlas, x, y, width, height)
     if type(x) == "table" then
-        return drawAtEquipmentSlot(x.x, x.y, x.width, x.height, y, width, height, iconX, iconY)
+        assert(not y)
+        return drawAtEquipmentSlot(iconX, iconY, itemX, itemY, tileAtlas, x:unpack())
     end
     tiledUIPanel.wrap("uiImage", UITileSize, UIScale, {10, 6, 2, 2}):draw(x, y, width, height)
     slotIconsAtlas:drawTile(iconX, iconY, (x + 0.1) * UITileSize * UIScale, (y + 0.15) * UITileSize * UIScale,
@@ -728,7 +732,8 @@ function game.draw()
 
     -- render logbox
     renderUIPanel(1, 9, 15, 4)
-    renderUIPanel(chatboxDims.x, chatboxDims.y, chatboxDims.width, chatboxDims.height)
+    -- renderUIPanel(chatboxDims.x, chatboxDims.y, chatboxDims.width, chatboxDims.height)
+    renderUIPanel(chatboxDims:unpack())
     love.graphics.setColor(0, 0, 0, 1)
     -- TODO: Fade out top of the chat window
     -- TODO: Smooth chat scrolling
@@ -805,24 +810,24 @@ function game.draw()
 
     -- equipment view
     local mainHandEquipment = equipmentSlotsEquipment["mainHand"]
-    drawAtEquipmentSlot(9 - 0.2, 4, 2, 2, 3, 1, mainHandEquipment and mainHandEquipment.tileX,
-        mainHandEquipment and mainHandEquipment.tileY, itemsAtlas)
+    drawAtEquipmentSlot(3, 1, mainHandEquipment and mainHandEquipment.tileX,
+        mainHandEquipment and mainHandEquipment.tileY, itemsAtlas, 9 - 0.2, 4, 2, 2)
 
     local offHandEquipment = equipmentSlotsEquipment["offHand"]
-    drawAtEquipmentSlot(9 - 0.2, 6, 2, 2, 3, 1, offHandEquipment and offHandEquipment.x,
-        offHandEquipment and offHandEquipment.y, itemsAtlas)
+    drawAtEquipmentSlot(3, 1, offHandEquipment and offHandEquipment.x, offHandEquipment and offHandEquipment.y,
+        itemsAtlas, 9 - 0.2, 6, 2, 2)
 
     local headGearEquipment = equipmentSlotsEquipment["headGear"]
-    drawAtEquipmentSlot(13, 2, 2, 2, 1, 0, headGearEquipment and headGearEquipment.x,
-        headGearEquipment and headGearEquipment.y, itemsAtlas)
+    drawAtEquipmentSlot(1, 0, headGearEquipment and headGearEquipment.x, headGearEquipment and headGearEquipment.y,
+        itemsAtlas, 13, 2, 2, 2)
 
     local bodyArmorEquipment = equipmentSlotsEquipment["bodyArmor"]
-    drawAtEquipmentSlot(13.5, 4, 2, 2, 0, 0, bodyArmorEquipment and bodyArmorEquipment.x,
-        bodyArmorEquipment and bodyArmorEquipment.y, itemsAtlas)
+    drawAtEquipmentSlot(0, 0, bodyArmorEquipment and bodyArmorEquipment.x, bodyArmorEquipment and bodyArmorEquipment.y,
+        itemsAtlas, 13.5, 4, 2, 2)
 
     local shoeGearEquipment = equipmentSlotsEquipment["shoeGear"]
-    drawAtEquipmentSlot(13, 6, 2, 2, 7, 0, shoeGearEquipment and shoeGearEquipment.x,
-        shoeGearEquipment and shoeGearEquipment.y, itemsAtlas)
+    drawAtEquipmentSlot(7, 0, shoeGearEquipment and shoeGearEquipment.x, shoeGearEquipment and shoeGearEquipment.y,
+        itemsAtlas, 13, 6, 2, 2)
 
     if draggedItem then
         -- TODO: Correct scaling
@@ -977,7 +982,7 @@ end
 
 function game.mousereleased(x, y)
     if draggedItem then
-        local m = mainHandInventorySlotDimensions
+        local m = mainHandInventorySlotDims
         local mul = UIScale * UITileSize
         if pointIntersectsQuad(x, y, m.x * mul, m.y * mul, m.width * mul, m.height * mul) then
             print("Deposited item into mainHand slot")

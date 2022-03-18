@@ -4,13 +4,11 @@ local network = require("network")
 local enet = require("enet")
 local messaging = require("messaging")
 
-
 local enetclient = nil
 client.serverpeer = nil
 
 local connectionFails = 0
 local hasConnected = false
-
 
 function client.beginClient(serverAddress)
     client.serverAddress = serverAddress
