@@ -2,7 +2,6 @@ local game = {}
 -- FIXME: Add the fire lading circles image (downscaled, so the repo size doesn't go through the roof)
 
 -- requires
-local enet = require("enet")
 local assert = require("std.assert")
 local array = require("std.array")
 local map = require("std.map")
@@ -11,21 +10,19 @@ local string = require("std.string")
 local ref = require("std.ref")
 local t = require("timing")
 local animations = require("animations")
-local network = require("network")
 local tileAtlas = require("tileAtlas")
 local assets = require("assets")
 local drawing = require("drawing")
 local tiledUIPanel = require("tiledUIPanel")
 local macro = require("macro")
+local client = require("client")
+local messaging = require("messaging")
 
 -- variables
 -- local scaled = drawing.resolutionScaledPos -- function alias
 
-local enetclient = nil
-local serverpeer = nil
-local sceneviewCanvas = nil
-
 local playerAnimation = nil
+local sceneviewCanvas = nil
 
 local testMugItemInfo = {
     tileX = 2,
@@ -56,7 +53,7 @@ local shouldHandleChatboxSendBtnClick = true
 
 local activeUIElemStack = array.wrap()
 
-local chatboxMessageHistory = array.wrap()
+local chatboxMessageHistory = messaging.chatboxMessageHistory
 local localPlayerChatMessageHistory = array.wrap()
 local sceneType = "playerCloseUpView"
 local chatboxHistoryPointerRef = ref.wrap()
@@ -90,7 +87,7 @@ local chatboxSendBtnDims = {
 local devConsoleMessageRef = ref.wrap("")
 local devConsoleEnabled = false
 local playedMacro = nil
-local devConsoleMessageHistory = array.wrap()
+local devConsoleMessageHistory = messaging.devConsoleMessageHistory
 local devConsoleHistoryPointer = ref.wrap()
 
 local currentMacroName = nil
@@ -102,7 +99,7 @@ local loginboxErrorText = ""
 local slotIconsAtlas = tileAtlas.wrap("resources/images/slotIcons.png", 32, 6)
 local itemsAtlas = tileAtlas.wrap("resources/images/items.png", 16, 0)
 
-local itemsInScene = array.wrap()
+-- local itemsInScene = array.wrap()
 local draggedItem = nil
 local mainHandInventorySlotDimensions = {
     x = 9 - 0.2,
@@ -161,33 +158,13 @@ local loginboxTextFieldsSizes = {
     }
 }
 
-local serverAddress = nil
-local connectionFails = 0
-local hasConnected = false
+function client.onLogOut(trimmedMessage)
+    if not loginboxEnabled then
+        client.loginPromptToggle(trimmedMessage)
+    end
+end
 
 local delta = 0
-
---- NETWORKING:
-
-local function beginClient()
-    chatboxMessageHistory:append("Attempting to join the server...")
-
-    -- establish a connection to host on same PC
-    enetclient = enet.host_create()
-    serverpeer = enetclient:connect(serverAddress)
-    serverpeer:timeout(0, 0, 5000)
-end
-
-local function sendMessage(...)
-    local params = {...}
-    local message = table.concat(params, ":")
-    serverpeer:send(message)
-end
-
-local function attemptLogin(username, password)
-    -- TODO: Encrypt password
-    sendMessage("status", "logIn", username .. ":" .. password)
-end
 
 local function loginPromptToggle(msg)
     msg = msg or ""
@@ -210,75 +187,6 @@ local function devConsoleTogglePrompt()
     else
         activeUIElemStack:pop()
     end
-end
-
-local function receivedMessageHandle(hostevent)
-    local data = hostevent.data
-    local prefix, trimmedMessage = network.getNetworkMessagePrefix(data)
-    -- TODO: Remove ping ponging
-    if prefix == "pingpong" then
-        t.delayCall(function()
-            sendMessage("pingpong", "ping!")
-        end, 2)
-    elseif prefix == "message" then
-        chatboxMessageHistory:append(trimmedMessage)
-    elseif prefix == "status" then
-        prefix, trimmedMessage = network.getNetworkMessagePrefix(trimmedMessage)
-        if prefix == "logOut" then
-            if not loginboxEnabled then
-                loginPromptToggle(trimmedMessage)
-            end
-            -- server tells you to disconnect
-        elseif prefix == "connected" then
-            -- TODO:
-            return true
-        else
-            error("Enet: message prefix " .. prefix .. " is unhandled!")
-        end
-    else
-        -- TODO: Don't crash
-        error(prefix .. ":" .. trimmedMessage)
-    end
-end
-
-local function handleEnetClient()
-    local hostevent = enetclient:service()
-    if serverpeer:state() == "disconnected" then
-        connectionFails = connectionFails + 1
-        if connectionFails < 6 and hasConnected then
-            chatboxMessageHistory:append("Connection lost. Reconnecting...")
-        elseif connectionFails < 2 and not hasConnected then
-            -- TODO: Notify user you're waiting for a response from the server
-            chatboxMessageHistory:append("Can't connect to the server.")
-        end
-        serverpeer:reset()
-        serverpeer = enetclient:connect(serverAddress)
-        serverpeer:timeout(0, 0, math.min(connectionFails, 6) * 5000)
-    end
-    if not enetclient then
-        return
-    end
-    if not hostevent then
-        return
-    end
-    -- if hostevent.peer == clientpeer then return end
-
-    local type = hostevent.type
-    if type == "connect" then
-        sendMessage("pingpong", "ping!")
-        connectionFails = 0
-        hasConnected = true
-        chatboxMessageHistory:append("You've connected to the server!")
-    end
-    if type == "receive" then
-        receivedMessageHandle(hostevent)
-    end
-    if type == "disconnected" then
-        chatboxMessageHistory:append("You were disconnected")
-        serverpeer = enetclient:connect(serverAddress)
-    end
-    -- luacheck: ignore unused hostevent
-    hostevent = nil
 end
 
 local function executeDevConsoleCommand(cmd)
@@ -416,7 +324,7 @@ local function focusChat()
 end
 
 local function onLoginClicked()
-    attemptLogin(loginboxUsernameText, loginboxPasswordText)
+    client.attemptLogin(loginboxUsernameText, loginboxPasswordText)
     loginPromptToggle()
     focusChat()
     shouldHandleLoginClick = false
@@ -449,12 +357,12 @@ end
 local function handleChatKp(key)
     -- chat handling
     if key == "return" then
-        if serverpeer and serverpeer:state() == "connected" then
+        if client.isConnected() == true then
             local maxChatMessageLength = assets.get("settings").maximumChatMessageLength
             if #clientChatBoxMessageRef.val == 0 or #clientChatBoxMessageRef.val > maxChatMessageLength then
                 return
             end
-            sendMessage("message", clientChatBoxMessageRef.val)
+            client.sendMessage("message", clientChatBoxMessageRef.val)
             localPlayerChatMessageHistory:append(clientChatBoxMessageRef.val)
             chatboxHistoryPointerRef.val = nil -- refreshes scrolling in the chat history.
         end
@@ -657,14 +565,15 @@ local function handleLoginBoxKp(key)
         -- TODO: Lettercount limits
         onLoginClicked()
 
-        if not serverpeer then
+        -- TODO: Probably not needed:
+        if not client.serverpeer then
             chatboxMessageHistory:append("Server is nil.")
             return
         end
 
-        if serverpeer:state() == "disconnected" then
+        if client.serverpeer:state() == "disconnected" then
             chatboxMessageHistory:append("Not connected to the server.")
-        elseif serverpeer:state() == "connecting" then
+        elseif client.serverpeer:state() == "connecting" then
             chatboxMessageHistory:append("Still connecting to the server.")
             -- TODO: else:
         end
@@ -752,7 +661,6 @@ end
 function game.load(args)
     assert(type(args) == "table")
     love.window.setMode(assets.get("settings").realResolution[1], assets.get("settings").realResolution[2])
-    serverAddress = assets.get("settings").serverAddress
     love.window.setTitle("Backrooms v0.0.1 pre-dev")
     love.keyboard.setKeyRepeat(true)
     UIElemHandlers = {
@@ -781,7 +689,7 @@ function game.load(args)
     -- itemsInScene:append(testMugItem)
     game.initRendering()
 
-    beginClient()
+    client.beginClient(assets.get("settings").serverAddress)
 end
 
 function game.tick(deltaTime)
@@ -792,7 +700,7 @@ function game.tick(deltaTime)
         shouldHandleLoginClick = true
     end
     delta = delta + deltaTime
-    handleEnetClient()
+    client.handleEnetClient()
 end
 
 function game.draw()
@@ -919,7 +827,8 @@ function game.draw()
     if draggedItem then
         -- TODO: Correct scaling
         -- itemsAtlas:drawTile(2, 14, (love.mouse.getX() - sceneviewDims.y) - (draggedItem.offsets.x - sceneviewDims.x),
-        --     (love.mouse.getY() -  sceneviewDims.y) - (draggedItem.offsets.y - sceneviewDims.y), draggedItem.width, draggedItem.height)
+        --     (love.mouse.getY() - sceneviewDims.y) - (draggedItem.offsets.y - sceneviewDims.y), draggedItem.width,
+        --     draggedItem.height)
         itemsAtlas:drawTile(2, 14, love.mouse.getX(), love.mouse.getY(), draggedItem.width, draggedItem.height)
     end
 
@@ -1007,7 +916,7 @@ end
 
 function game.quit()
     print("Terminating the game")
-    serverpeer:disconnect_now()
+    client.onDisconnect()
 end
 
 function game.keypressed(key)
