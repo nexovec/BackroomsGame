@@ -18,6 +18,7 @@ local macro = require("macro")
 local client = require("client")
 local messaging = require("messaging")
 local dims = require("dims")
+local sizes = require("sizes_of_things")
 
 -- variables
 -- local scaled = drawing.resolutionScaledPos -- function alias
@@ -31,19 +32,9 @@ local testMugItemInfo = {
     visible = true
 }
 
-local testMugItemDims = dims.wrap {
-    x = 0,
-    y = 0,
-    width = 256,
-    height = 256
-}
-
 local tempCanvas = nil
 local characterSpriteCanvas = nil
 local tintDrawn = false
-
-local UITileSize = 16
-local UIScale = 5
 
 local UIElemHandlers = nil
 
@@ -60,31 +51,6 @@ local localPlayerChatMessageHistory = array.wrap()
 local sceneType = "playerCloseUpView"
 local chatboxHistoryPointerRef = ref.wrap()
 local clientChatBoxMessageRef = ref.wrap("")
-
-local sceneviewDims = dims.wrap {
-    x = UIScale * UITileSize * (0.5 - (8 - 720 / (UITileSize * UIScale))),
-    y = UIScale * UITileSize * (0.5 - (8 - 720 / (UITileSize * UIScale))),
-    width = 720,
-    height = 720
-}
-local chatboxDims = dims.wrap {
-    x = 16.5,
-    y = 1,
-    width = 7,
-    height = 12
-}
-local chatMessagesBoundingBox = dims.wrap {
-    x = chatboxDims.x * UITileSize * UIScale,
-    y = chatboxDims.y * UITileSize * UIScale,
-    width = 500,
-    height = 1000
-}
-local chatboxSendBtnDims = dims.wrap {
-    x = chatMessagesBoundingBox.x + 475,
-    y = chatMessagesBoundingBox.y + 865,
-    width = 64,
-    height = 64
-}
 
 local devConsoleMessageRef = ref.wrap("")
 local devConsoleEnabled = false
@@ -103,12 +69,6 @@ local itemsAtlas = tileAtlas.wrap("resources/images/items.png", 16, 0)
 
 -- local itemsInScene = array.wrap()
 local draggedItem = nil
-local mainHandInventorySlotDims = dims.wrap {
-    x = 9 - 0.2,
-    y = 4,
-    width = 2,
-    height = 2
-}
 local equipmentSlotsEquipment = {
     mainHand = nil,
     offHand = nil,
@@ -120,45 +80,6 @@ local equipmentSlotsEquipment = {
 local activeLoginBoxField = "nickname"
 
 local shouldHandleLoginClick = false
-local loginboxDims = dims.wrap {
-    x = 4,
-    y = 4,
-    width = 8,
-    height = 3
-}
-local loginboxBtnDims = dims.wrap {
-    x = UITileSize / 2 * UIScale * (loginboxDims.x * 2 + 10 - 0.5),
-    y = UITileSize / 2 * UIScale * (loginboxDims.y * 2 + 4 - 0.1),
-    width = 3 * UITileSize * UIScale,
-    height = UITileSize * UIScale
-}
-local settingsBoxDimensionsInTiles = dims.wrap {
-    x = 6,
-    y = 6,
-    width = 4,
-    height = 6
-}
-local settingsBtnDimensions = dims.wrap {
-    x = 1830,
-    y = 10,
-    width = 64,
-    height = 64
-}
-
-local loginboxTextFieldsSizes = {
-    username = {
-        x = loginboxDims.x * UITileSize * UIScale + 270,
-        y = loginboxDims.y * UITileSize * UIScale + 60,
-        width = 300,
-        margins = 2
-    },
-    password = {
-        x = loginboxDims.x * UITileSize * UIScale + 270,
-        y = loginboxDims.y * UITileSize * UIScale + 110,
-        width = 300,
-        margins = 2
-    }
-}
 
 function client.onLogOut(trimmedMessage)
     if not loginboxEnabled then
@@ -345,13 +266,13 @@ local function handleLoginBoxFieldFocusOnMouseClick(xIn, yIn, mb, isTouch, repea
     if not loginboxEnabled then
         return
     end
-    if pointIntersectsQuad(xIn, yIn, loginboxTextFieldsSizes.username.x, loginboxTextFieldsSizes.username.y,
-        loginboxTextFieldsSizes.username.width,
-        assets.get("font"):getAscent() + loginboxTextFieldsSizes.username.margins) then
+    if pointIntersectsQuad(xIn, yIn, sizes.loginboxTextFieldsSizes.username.x, sizes.loginboxTextFieldsSizes.username.y,
+        sizes.loginboxTextFieldsSizes.username.width,
+        assets.get("font"):getAscent() + sizes.loginboxTextFieldsSizes.username.margins) then
         activeLoginBoxField = "nickname"
-    elseif pointIntersectsQuad(xIn, yIn, loginboxTextFieldsSizes.password.x, loginboxTextFieldsSizes.password.y,
-        loginboxTextFieldsSizes.password.width,
-        assets.get("font"):getAscent() + loginboxTextFieldsSizes.password.margins) then
+    elseif pointIntersectsQuad(xIn, yIn, sizes.loginboxTextFieldsSizes.password.x,
+        sizes.loginboxTextFieldsSizes.password.y, sizes.loginboxTextFieldsSizes.password.width,
+        assets.get("font"):getAscent() + sizes.loginboxTextFieldsSizes.password.margins) then
         activeLoginBoxField = "password"
     end
 end
@@ -398,10 +319,10 @@ local function toggleSettings()
 end
 
 local function isPosOutOfSettingsPanel(x, y)
-    local multiplier = UITileSize * UIScale
-    return not pointIntersectsQuad(x, y, settingsBoxDimensionsInTiles.x * multiplier,
-        settingsBoxDimensionsInTiles.y * multiplier, settingsBoxDimensionsInTiles.width * multiplier,
-        settingsBoxDimensionsInTiles.height * multiplier)
+    local multiplier = sizes.UITileSize * sizes.UIScale
+    return not pointIntersectsQuad(x, y, sizes.settingsBoxDimensionsInTiles.x * multiplier,
+        sizes.settingsBoxDimensionsInTiles.y * multiplier, sizes.settingsBoxDimensionsInTiles.width * multiplier,
+        sizes.settingsBoxDimensionsInTiles.height * multiplier)
 end
 -- optionally can take no parameters to omit checks
 -- luacheck:no unused args
@@ -409,11 +330,10 @@ local function handleSettingsClose(x, y, mb)
     if not settingsEnabled then
         return
     end
-    local multiplier = UITileSize * UIScale
-    if not not x and
-        pointIntersectsQuad(x, y, settingsBoxDimensionsInTiles.x * multiplier,
-            settingsBoxDimensionsInTiles.y * multiplier, settingsBoxDimensionsInTiles.width * multiplier,
-            settingsBoxDimensionsInTiles.height * multiplier) then
+    local multiplier = sizes.UITileSize * sizes.UIScale
+    if not not x and pointIntersectsQuad(x, y, sizes.settingsBoxDimensionsInTiles.x * multiplier,
+        sizes.settingsBoxDimensionsInTiles.y * multiplier, sizes.settingsBoxDimensionsInTiles.width * multiplier,
+        sizes.settingsBoxDimensionsInTiles.height * multiplier) then
         return
     else
         print("I am running")
@@ -518,14 +438,15 @@ local function tintScreen()
 end
 
 local function renderUITab(x, y, width, height, horizontalIconTileIndex, verticalIconTileIndex)
-    assert(tiledUIPanel.wrap("uiImage", UITileSize, UIScale, {10, 4, 2, 2}).draw)
-    tiledUIPanel.wrap("uiImage", UITileSize, UIScale, {10, 4, 2, 2}):draw(x, y, width, height)
-    slotIconsAtlas:drawTile(horizontalIconTileIndex, verticalIconTileIndex, (x + 0.1) * UITileSize * UIScale,
-        (y + 0.15) * UITileSize * UIScale, (width - 0.5) * UITileSize * UIScale, (height - 0.5) * UITileSize * UIScale)
+    assert(tiledUIPanel.wrap("uiImage", sizes.UITileSize, sizes.UIScale, {10, 4, 2, 2}).draw)
+    tiledUIPanel.wrap("uiImage", sizes.UITileSize, sizes.UIScale, {10, 4, 2, 2}):draw(x, y, width, height)
+    slotIconsAtlas:drawTile(horizontalIconTileIndex, verticalIconTileIndex,
+        (x + 0.1) * sizes.UITileSize * sizes.UIScale, (y + 0.15) * sizes.UITileSize * sizes.UIScale,
+        (width - 0.5) * sizes.UITileSize * sizes.UIScale, (height - 0.5) * sizes.UITileSize * sizes.UIScale)
 end
 
 local function renderUIPanel(x, y, width, height, shape)
-    tiledUIPanel.wrap("uiImage", UITileSize, UIScale, shape):draw(x, y, width, height)
+    tiledUIPanel.wrap("uiImage", sizes.UITileSize, sizes.UIScale, shape):draw(x, y, width, height)
 end
 
 local function drawAtEquipmentSlot(iconX, iconY, itemX, itemY, itemAtlas, x, y, width, height)
@@ -533,12 +454,14 @@ local function drawAtEquipmentSlot(iconX, iconY, itemX, itemY, itemAtlas, x, y, 
         assert(not y)
         return drawAtEquipmentSlot(iconX, iconY, itemX, itemY, tileAtlas, x:unpack())
     end
-    tiledUIPanel.wrap("uiImage", UITileSize, UIScale, {10, 6, 2, 2}):draw(x, y, width, height)
-    slotIconsAtlas:drawTile(iconX, iconY, (x + 0.1) * UITileSize * UIScale, (y + 0.15) * UITileSize * UIScale,
-        (width - 0.5) * UITileSize * UIScale, (height - 0.5) * UITileSize * UIScale)
+    tiledUIPanel.wrap("uiImage", sizes.UITileSize, sizes.UIScale, {10, 6, 2, 2}):draw(x, y, width, height)
+    slotIconsAtlas:drawTile(iconX, iconY, (x + 0.1) * sizes.UITileSize * sizes.UIScale,
+        (y + 0.15) * sizes.UITileSize * sizes.UIScale, (width - 0.5) * sizes.UITileSize * sizes.UIScale,
+        (height - 0.5) * sizes.UITileSize * sizes.UIScale)
     if not not itemX and not not itemY then
-        itemAtlas:drawTile(itemX, itemY, (x + 0.1) * UITileSize * UIScale, (y + 0.15) * UITileSize * UIScale,
-            (width - 0.5) * UITileSize * UIScale, (height - 0.5) * UITileSize * UIScale)
+        itemAtlas:drawTile(itemX, itemY, (x + 0.1) * sizes.UITileSize * sizes.UIScale,
+            (y + 0.15) * sizes.UITileSize * sizes.UIScale, (width - 0.5) * sizes.UITileSize * sizes.UIScale,
+            (height - 0.5) * sizes.UITileSize * sizes.UIScale)
     elseif not not itemX and not itemY then
         error("Drawing items by id not yet implemented.")
     end
@@ -629,7 +552,7 @@ end
 function game.initRendering()
     love.graphics.setFont(assets.get("font"))
     playerAnimation = animations.loadAnimation("character")
-    sceneviewCanvas = love.graphics.newCanvas(sceneviewDims.width, sceneviewDims.height)
+    sceneviewCanvas = love.graphics.newCanvas(sizes.sceneviewDims.width, sizes.sceneviewDims.height)
     tempCanvas = love.graphics.newCanvas(32, 32)
     characterSpriteCanvas = love.graphics.newCanvas(32, 32)
     playerAnimation:play(2, "idle", true)
@@ -733,17 +656,17 @@ function game.draw()
     -- render logbox
     renderUIPanel(1, 9, 15, 4)
     -- renderUIPanel(chatboxDims.x, chatboxDims.y, chatboxDims.width, chatboxDims.height)
-    renderUIPanel(chatboxDims:unpack())
+    renderUIPanel(sizes.chatboxDims:unpack())
     love.graphics.setColor(0, 0, 0, 1)
     -- TODO: Fade out top of the chat window
     -- TODO: Smooth chat scrolling
     -- TODO: Implement maximum chat message length
 
     -- render chatbox
-    drawMessageList(chatboxMessageHistory, chatMessagesBoundingBox)
+    drawMessageList(chatboxMessageHistory, sizes.chatMessagesBoundingBox)
     local chatboxTextFieldPos = {
-        x = chatMessagesBoundingBox.x + 30,
-        y = chatMessagesBoundingBox.y + 880
+        x = sizes.chatMessagesBoundingBox.x + 30,
+        y = sizes.chatMessagesBoundingBox.y + 880
     }
     local hasCaret = false
     if activeUIElemStack:last() == "chatbox" then
@@ -753,11 +676,11 @@ function game.draw()
 
     -- render send button
     love.graphics.draw(assets.get("resources/images/ui/smallIcons.png"), 1220, 100, 0, 3, 3) -- icons preview
-    tileAtlas.wrap("resources/images/ui/smallIcons.png", 12, 2):drawTile(0, 8, chatboxSendBtnDims.x,
-        chatboxSendBtnDims.y, chatboxSendBtnDims.width, chatboxSendBtnDims.height)
-    drawOutline(chatMessagesBoundingBox.x + 480, chatMessagesBoundingBox.y + 870, 64, 64)
+    tileAtlas.wrap("resources/images/ui/smallIcons.png", 12, 2):drawTile(0, 8, sizes.chatboxSendBtnDims.x,
+        sizes.chatboxSendBtnDims.y, sizes.chatboxSendBtnDims.width, sizes.chatboxSendBtnDims.height)
+    drawOutline(sizes.chatMessagesBoundingBox.x + 480, sizes.chatMessagesBoundingBox.y + 870, 64, 64)
     tileAtlas.wrap("resources/images/ui/smallIcons.png", 12, 2):drawTile(2, 4, 1830, 0, 64, 64)
-    drawOutline(settingsBtnDimensions)
+    drawOutline(sizes.settingsBtnDimensions)
     love.graphics.setColor(1, 1, 1, 1)
 
     -- draw scene
@@ -782,7 +705,7 @@ function game.draw()
         --         drawOutline(itemInScene)
         --     end
         -- end
-        itemsAtlas:drawTile(testMugItemInfo.tileX, testMugItemInfo.tileY, testMugItemDims)
+        itemsAtlas:drawTile(testMugItemInfo.tileX, testMugItemInfo.tileY, sizes.testMugItemDims)
         -- local blurShader = assets.get("resources/shaders/blur.glsl")
         -- love.graphics.withShader(blurShader, function()
         --     blurShader:send("blurSize", 1 / (2560 / 16))
@@ -798,9 +721,10 @@ function game.draw()
     end
     -- end)
     love.graphics.setCanvas()
-    local playfieldScenePlacementQuad = love.graphics.newQuad(0, 0, sceneviewDims.width, sceneviewDims.height,
-        sceneviewDims.width, sceneviewDims.height)
-    drawing.resolutionScaledDraw(sceneviewCanvas, playfieldScenePlacementQuad, sceneviewDims.x, sceneviewDims.y)
+    local playfieldScenePlacementQuad = love.graphics.newQuad(0, 0, sizes.sceneviewDims.width,
+        sizes.sceneviewDims.height, sizes.sceneviewDims.width, sizes.sceneviewDims.height)
+    drawing.resolutionScaledDraw(sceneviewCanvas, playfieldScenePlacementQuad, sizes.sceneviewDims.x,
+        sizes.sceneviewDims.y)
 
     -- render character silhouette
     -- FIXME: Fix rendering when scaling
@@ -849,18 +773,20 @@ function game.draw()
         caret = ""
     end
     if loginboxEnabled then
-        local x, y = loginboxDims.x, loginboxDims.y
+        local x, y = sizes.loginboxDims.x, sizes.loginboxDims.y
         if not devConsoleEnabled then
             tintScreen()
         end
 
-        tiledUIPanel.wrap("uiImage", UITileSize, UIScale):draw(loginboxDims)
-        tiledUIPanel.wrap("uiImage", UITileSize / 2, UIScale, {20, 20, 4, 4}):draw(x * 2 + 10 - 0.5, y * 2 + 4 - 0.1, 6,
-            2)
+        tiledUIPanel.wrap("uiImage", sizes.UITileSize, sizes.UIScale):draw(sizes.loginboxDims)
+        tiledUIPanel.wrap("uiImage", sizes.UITileSize / 2, sizes.UIScale, {20, 20, 4, 4}):draw(x * 2 + 10 - 0.5,
+            y * 2 + 4 - 0.1, 6, 2)
         love.graphics.setColor(0, 0, 0, 1)
-        love.graphics.print("login", (x + 5.8) * UITileSize * UIScale, (y + 2.1) * UITileSize * UIScale)
-        love.graphics.print("username:", x * UITileSize * UIScale + 50, y * UITileSize * UIScale + 60)
-        local usernameTextFieldSizes = loginboxTextFieldsSizes.username
+        love.graphics.print("login", (x + 5.8) * sizes.UITileSize * sizes.UIScale,
+            (y + 2.1) * sizes.UITileSize * sizes.UIScale)
+        love.graphics.print("username:", x * sizes.UITileSize * sizes.UIScale + 50,
+            y * sizes.UITileSize * sizes.UIScale + 60)
+        local usernameTextFieldSizes = sizes.loginboxTextFieldsSizes.username
         tintedTextField(usernameTextFieldSizes.x, usernameTextFieldSizes.y, usernameTextFieldSizes.width,
             usernameTextFieldSizes.margins)
         local usernameCaret = ""
@@ -868,12 +794,13 @@ function game.draw()
             usernameCaret = caret
         end
         love.graphics.setColor(0, 0, 0, 1)
-        love.graphics.print(loginboxUsernameText .. usernameCaret, x * UITileSize * UIScale + 270,
-            y * UITileSize * UIScale + 60)
-        love.graphics.print("password:", x * UITileSize * UIScale + 50, y * UITileSize * UIScale + 110)
+        love.graphics.print(loginboxUsernameText .. usernameCaret, x * sizes.UITileSize * sizes.UIScale + 270,
+            y * sizes.UITileSize * sizes.UIScale + 60)
+        love.graphics.print("password:", x * sizes.UITileSize * sizes.UIScale + 50,
+            y * sizes.UITileSize * sizes.UIScale + 110)
 
         love.graphics.setColor(0, 0, 0, 0.1)
-        local passwordTextFieldSizes = loginboxTextFieldsSizes.password
+        local passwordTextFieldSizes = sizes.loginboxTextFieldsSizes.password
         tintedTextField(passwordTextFieldSizes.x, passwordTextFieldSizes.y, passwordTextFieldSizes.width,
             passwordTextFieldSizes.margins)
         love.graphics.setColor(0, 0, 0, 1)
@@ -881,26 +808,26 @@ function game.draw()
         if activeLoginBoxField == "password" then
             pwdCaret = caret
         end
-        love.graphics.print(string.rep("*", #loginboxPasswordText) .. pwdCaret, x * UITileSize * UIScale + 270,
-            y * UITileSize * UIScale + 110)
+        love.graphics.print(string.rep("*", #loginboxPasswordText) .. pwdCaret,
+            x * sizes.UITileSize * sizes.UIScale + 270, y * sizes.UITileSize * sizes.UIScale + 110)
         love.graphics.setColor(0.8, 0.3, 0.3, 1)
         love.graphics.setFont(assets.get("resources/fonts/JPfallback.ttf", 24))
-        love.graphics.printf(loginboxErrorText, x * UITileSize * UIScale + 32, y * UITileSize * UIScale + 170, 300,
-            "left")
+        love.graphics.printf(loginboxErrorText, x * sizes.UITileSize * sizes.UIScale + 32,
+            y * sizes.UITileSize * sizes.UIScale + 170, 300, "left")
         love.graphics.setColor(1, 1, 1, 1)
         love.graphics.setFont(assets.get("font"))
     end
 
     if settingsEnabled then
         tintScreen()
-        tiledUIPanel.wrap("uiImage", UITileSize, UIScale):draw(settingsBoxDimensionsInTiles)
+        tiledUIPanel.wrap("uiImage", sizes.UITileSize, sizes.UIScale):draw(sizes.settingsBoxDimensionsInTiles)
         love.graphics.setColor(0, 0, 0, 1)
-        love.graphics.print("UI Style", (settingsBoxDimensionsInTiles.x + 0.5) * UITileSize * UIScale,
-            (settingsBoxDimensionsInTiles.y + 0.5) * UITileSize * UIScale)
-        love.graphics.print("Log Out", (settingsBoxDimensionsInTiles.x + 0.5) * UITileSize * UIScale,
-            (settingsBoxDimensionsInTiles.y + 0.5) * UITileSize * UIScale + 50)
-        love.graphics.print("Exit", (settingsBoxDimensionsInTiles.x + 0.5) * UITileSize * UIScale,
-            (settingsBoxDimensionsInTiles.y + 0.5) * UITileSize * UIScale + 100)
+        love.graphics.print("UI Style", (sizes.settingsBoxDimensionsInTiles.x + 0.5) * sizes.UITileSize * sizes.UIScale,
+            (sizes.settingsBoxDimensionsInTiles.y + 0.5) * sizes.UITileSize * sizes.UIScale)
+        love.graphics.print("Log Out", (sizes.settingsBoxDimensionsInTiles.x + 0.5) * sizes.UITileSize * sizes.UIScale,
+            (sizes.settingsBoxDimensionsInTiles.y + 0.5) * sizes.UITileSize * sizes.UIScale + 50)
+        love.graphics.print("Exit", (sizes.settingsBoxDimensionsInTiles.x + 0.5) * sizes.UITileSize * sizes.UIScale,
+            (sizes.settingsBoxDimensionsInTiles.y + 0.5) * sizes.UITileSize * sizes.UIScale + 100)
         love.graphics.setColor(1, 1, 1, 1)
     end
 
@@ -942,12 +869,12 @@ function game.keypressed(key)
 end
 
 function game.mousepressed(x, y, mb, isTouch, presses)
-    if pointIntersectsQuad(x, y, settingsBtnDimensions) and shouldHandleSettingsBtnClick or
+    if pointIntersectsQuad(x, y, sizes.settingsBtnDimensions) and shouldHandleSettingsBtnClick or
         (settingsEnabled and isPosOutOfSettingsPanel(x, y)) then
         toggleSettings()
         return
     end
-    if loginboxEnabled and pointIntersectsQuad(x, y, loginboxBtnDims) and shouldHandleLoginClick then
+    if loginboxEnabled and pointIntersectsQuad(x, y, sizes.loginboxBtnDims) and shouldHandleLoginClick then
         onLoginClicked()
     end
 
@@ -955,13 +882,13 @@ function game.mousepressed(x, y, mb, isTouch, presses)
         return
     end
 
-    if pointIntersectsQuad(x, y, chatboxSendBtnDims) and shouldHandleChatboxSendBtnClick then
+    if pointIntersectsQuad(x, y, sizes.chatboxSendBtnDims) and shouldHandleChatboxSendBtnClick then
         handleChatKp("return")
         return
     end
 
     handleLoginBoxFieldFocusOnMouseClick(x, y, mb, isTouch, presses)
-    if pointIntersectsQuad(x, y, testMugItemDims) then
+    if pointIntersectsQuad(x, y, sizes.testMugItemDims) then
         draggedItem = testMugItemInfo
     end
     -- for _, item in itemsInScene:iter() do
@@ -982,8 +909,8 @@ end
 
 function game.mousereleased(x, y)
     if draggedItem then
-        local m = mainHandInventorySlotDims
-        local mul = UIScale * UITileSize
+        local m = sizes.mainHandInventorySlotDims
+        local mul = sizes.UIScale * sizes.UITileSize
         if pointIntersectsQuad(x, y, m.x * mul, m.y * mul, m.width * mul, m.height * mul) then
             print("Deposited item into mainHand slot")
             equipmentSlotsEquipment.mainHand = draggedItem

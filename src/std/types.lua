@@ -1,13 +1,12 @@
 local types = {}
-local set = require("std.set")
 local lua = require("std.luaOverrides")
 local assert = require("std.assert")
 
 -- luacheck:ignore typeNamesLua
-local typeNamesLua = set.createSet {"string", "nil", "userdata", "number", "function", "table", "boolean", "thread"}
+local typeNamesLua = {"string", "nil", "userdata", "number", "function", "table", "boolean", "thread"}
 
 -- luacheck:ignore typeNamesLove
-local typeNamesLove = set.createSet { -- TODO: Exclude the ones excluded in config.lua
+local typeNamesLove = { -- TODO: Exclude the ones excluded in config.lua
 -- TODO: Move into a json file
 "Object", "Data", "CompressedData", "CompressedImageData", "FileData", "FontData", "GlyphData", "ImageData",
 "SoundData", "BezierCurve", "RandomGenerator", "Body", "Contact", "Fixture", "World", "Shape", "ChainShape",

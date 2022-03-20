@@ -1,4 +1,6 @@
 local set = {}
+
+local types = require("std.types")
 local setInstanceParent = {}
 
 local function hasValue(tbl, val)
@@ -110,4 +112,4 @@ function set.__index()
     error("Indexing a class is not allowed")
 end
 setmetatable(set, set)
-return set
+return types.makeType(set, "set")
