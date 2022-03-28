@@ -18,7 +18,7 @@ local macro = require("macro")
 local client = require("client")
 local messaging = require("messaging")
 local dims = require("dims")
-local sizes = require("sizes_of_things")
+local sizes = nil
 
 -- variables
 -- local scaled = drawing.resolutionScaledPos -- function alias
@@ -390,21 +390,23 @@ local function drawMessageList(messages, boundingBox, startFromBottom)
     local rowIndex = 0
     local maxRowWidth = boundingBox.width
     if startFromBottom then
-        local firstRowYOffset = boundingBox.y + boundingBox.height - 30 - ascent
+        local firstRowYOffset = boundingBox.y + boundingBox.height - 30 * sizes.resolutionConversionRatio - ascent
         for _, messageText in array.wrap(messages):reverse():iter() do
             local _, listOfRows = font:getWrap(messageText, maxRowWidth)
             for _, v in ipairs(listOfRows) do
-                love.graphics.print(v, boundingBox.x + 30, firstRowYOffset - ascent * rowIndex)
+                love.graphics.print(v, boundingBox.x + 30 * sizes.resolutionConversionRatio,
+                    firstRowYOffset * sizes.resolutionConversionRatio - ascent * rowIndex)
                 rowIndex = rowIndex + 1
             end
         end
     else
-        local firstRowYOffset = boundingBox.y + 30 - ascent
+        local firstRowYOffset = boundingBox.y + 30 * sizes.resolutionConversionRatio - ascent
         -- local scrollDistance = math.max(#chatboxMessageHistory * ascent - 1000, 0)
         for _, messageText in ipairs(messages) do
             local _, listOfRows = font:getWrap(messageText, maxRowWidth)
             for _, v in array.wrap(listOfRows):iter() do
-                love.graphics.print(v, boundingBox.x + 30, firstRowYOffset + ascent * rowIndex)
+                love.graphics.print(v, boundingBox.x + 30 * sizes.resolutionConversionRatio,
+                    firstRowYOffset + ascent * rowIndex)
                 rowIndex = rowIndex + 1
             end
         end
@@ -610,6 +612,7 @@ function game.load(args)
             end
         }
     }
+    sizes = require("sizes_of_things")
     activeUIElemStack:append("chatboxMessageHistory")
     loginPromptToggle()
     love.keyboard.setKeyRepeat(true)
@@ -665,21 +668,29 @@ function game.draw()
     -- render chatbox
     drawMessageList(chatboxMessageHistory, sizes.chatMessagesBoundingBox)
     local chatboxTextFieldPos = {
-        x = sizes.chatMessagesBoundingBox.x + 30,
-        y = sizes.chatMessagesBoundingBox.y + 880
+        x = sizes.chatMessagesBoundingBox.x + 30 * sizes.resolutionConversionRatio,
+        y = sizes.chatMessagesBoundingBox.y + 880 * sizes.resolutionConversionRatio
     }
     local hasCaret = false
     if activeUIElemStack:last() == "chatbox" then
         hasCaret = true
     end
-    drawTextInputField(chatboxTextFieldPos.x, chatboxTextFieldPos.y, hasCaret, clientChatBoxMessageRef.val, 450, 2)
+    drawTextInputField(chatboxTextFieldPos.x, chatboxTextFieldPos.y, hasCaret, clientChatBoxMessageRef.val,
+        450 * sizes.resolutionConversionRatio, 2)
 
     -- render send button
-    love.graphics.draw(assets.get("resources/images/ui/smallIcons.png"), 1220, 100, 0, 3, 3) -- icons preview
-    tileAtlas.wrap("resources/images/ui/smallIcons.png", 12, 2):drawTile(0, 8, sizes.chatboxSendBtnDims.x,
-        sizes.chatboxSendBtnDims.y, sizes.chatboxSendBtnDims.width, sizes.chatboxSendBtnDims.height)
-    drawOutline(sizes.chatMessagesBoundingBox.x + 480, sizes.chatMessagesBoundingBox.y + 870, 64, 64)
-    tileAtlas.wrap("resources/images/ui/smallIcons.png", 12, 2):drawTile(2, 4, 1830, 0, 64, 64)
+    love.graphics.draw(assets.get("resources/images/ui/smallIcons.png"), 1220 * sizes.resolutionConversionRatio,
+        100 * sizes.resolutionConversionRatio, 0, 3, 3) -- icons preview
+    tileAtlas.wrap("resources/images/ui/smallIcons.png", (sizes.UITileSize * (3 / 4)) * sizes.resolutionConversionRatio,
+        2):drawTile(0, 8, sizes.chatboxSendBtnDims.x, sizes.chatboxSendBtnDims.y, sizes.chatboxSendBtnDims.width,
+        sizes.chatboxSendBtnDims.height)
+    drawOutline(sizes.chatMessagesBoundingBox.x + 480 * sizes.resolutionConversionRatio,
+        sizes.chatMessagesBoundingBox.y + 870 * sizes.resolutionConversionRatio,
+        (sizes.UITileSize * 4) * sizes.resolutionConversionRatio,
+        (sizes.UITileSize * 4) * sizes.resolutionConversionRatio)
+    tileAtlas.wrap("resources/images/ui/smallIcons.png", 12, 2):drawTile(2, 4, 1830 * sizes.resolutionConversionRatio,
+        0, (sizes.UITileSize * 4) * sizes.resolutionConversionRatio, (sizes.UITileSize * 4) *
+            sizes.resolutionConversionRatio)
     drawOutline(sizes.settingsBtnDimensions)
     love.graphics.setColor(1, 1, 1, 1)
 
@@ -694,7 +705,8 @@ function game.draw()
         love.graphics.rectangle("fill", 0, 0, 720, 720)
     end)
 
-    local playerAreaQuad = love.graphics.newQuad(0, 0, 720, 720, 720, 720)
+    local side = 720 * sizes.resolutionConversionRatio
+    local playerAreaQuad = love.graphics.newQuad(0, 0, side, side, side, side)
     love.graphics.draw(assets.get("resources/images/background2.png"), playerAreaQuad)
 
     -- TODO: Make the item bob in the scene
@@ -755,10 +767,7 @@ function game.draw()
 
     if draggedItem then
         -- TODO: Correct scaling
-        -- itemsAtlas:drawTile(2, 14, (love.mouse.getX() - sceneviewDims.y) - (draggedItem.offsets.x - sceneviewDims.x),
-        --     (love.mouse.getY() - sceneviewDims.y) - (draggedItem.offsets.y - sceneviewDims.y), draggedItem.width,
-        --     draggedItem.height)
-        itemsAtlas:drawTile(2, 14, love.mouse.getX(), love.mouse.getY(), draggedItem.width, draggedItem.height)
+        -- itemsAtlas:drawTile(2, 14, love.mouse.getX(), love.mouse.getY(), draggedItem.x * sizes.UIScale, draggedItem.height * sizes.resolutionConversionRatio)
     end
 
     -- local x, y, width, height = 11.8, 6, 2, 2
@@ -784,8 +793,8 @@ function game.draw()
         love.graphics.setColor(0, 0, 0, 1)
         love.graphics.print("login", (x + 5.8) * sizes.UITileSize * sizes.UIScale,
             (y + 2.1) * sizes.UITileSize * sizes.UIScale)
-        love.graphics.print("username:", x * sizes.UITileSize * sizes.UIScale + 50,
-            y * sizes.UITileSize * sizes.UIScale + 60)
+        love.graphics.print("username:", x * sizes.UITileSize * sizes.UIScale + 50 * sizes.resolutionConversionRatio,
+            y * sizes.UITileSize * sizes.UIScale + 60 * sizes.resolutionConversionRatio)
         local usernameTextFieldSizes = sizes.loginboxTextFieldsSizes.username
         tintedTextField(usernameTextFieldSizes.x, usernameTextFieldSizes.y, usernameTextFieldSizes.width,
             usernameTextFieldSizes.margins)
@@ -794,10 +803,11 @@ function game.draw()
             usernameCaret = caret
         end
         love.graphics.setColor(0, 0, 0, 1)
-        love.graphics.print(loginboxUsernameText .. usernameCaret, x * sizes.UITileSize * sizes.UIScale + 270,
-            y * sizes.UITileSize * sizes.UIScale + 60)
-        love.graphics.print("password:", x * sizes.UITileSize * sizes.UIScale + 50,
-            y * sizes.UITileSize * sizes.UIScale + 110)
+        love.graphics.print(loginboxUsernameText .. usernameCaret,
+            x * sizes.UITileSize * sizes.UIScale + 270 * sizes.resolutionConversionRatio,
+            y * sizes.UITileSize * sizes.UIScale + 60 * sizes.resolutionConversionRatio)
+        love.graphics.print("password:", x * sizes.UITileSize * sizes.UIScale + 50 * sizes.resolutionConversionRatio,
+            y * sizes.UITileSize * sizes.UIScale + 110 * sizes.resolutionConversionRatio)
 
         love.graphics.setColor(0, 0, 0, 0.1)
         local passwordTextFieldSizes = sizes.loginboxTextFieldsSizes.password
@@ -809,11 +819,13 @@ function game.draw()
             pwdCaret = caret
         end
         love.graphics.print(string.rep("*", #loginboxPasswordText) .. pwdCaret,
-            x * sizes.UITileSize * sizes.UIScale + 270, y * sizes.UITileSize * sizes.UIScale + 110)
+            x * sizes.UITileSize * sizes.UIScale + 270 * sizes.resolutionConversionRatio,
+            y * sizes.UITileSize * sizes.UIScale + 110 * sizes.resolutionConversionRatio)
         love.graphics.setColor(0.8, 0.3, 0.3, 1)
         love.graphics.setFont(assets.get("resources/fonts/JPfallback.ttf", 24))
         love.graphics.printf(loginboxErrorText, x * sizes.UITileSize * sizes.UIScale + 32,
-            y * sizes.UITileSize * sizes.UIScale + 170, 300, "left")
+            y * sizes.UITileSize * sizes.UIScale + 170 * sizes.resolutionConversionRatio,
+            300 * sizes.resolutionConversionRatio, "left")
         love.graphics.setColor(1, 1, 1, 1)
         love.graphics.setFont(assets.get("font"))
     end
@@ -825,9 +837,11 @@ function game.draw()
         love.graphics.print("UI Style", (sizes.settingsBoxDimensionsInTiles.x + 0.5) * sizes.UITileSize * sizes.UIScale,
             (sizes.settingsBoxDimensionsInTiles.y + 0.5) * sizes.UITileSize * sizes.UIScale)
         love.graphics.print("Log Out", (sizes.settingsBoxDimensionsInTiles.x + 0.5) * sizes.UITileSize * sizes.UIScale,
-            (sizes.settingsBoxDimensionsInTiles.y + 0.5) * sizes.UITileSize * sizes.UIScale + 50)
+            (sizes.settingsBoxDimensionsInTiles.y + 0.5) * sizes.UITileSize * sizes.UIScale + 50 *
+                sizes.resolutionConversionRatio)
         love.graphics.print("Exit", (sizes.settingsBoxDimensionsInTiles.x + 0.5) * sizes.UITileSize * sizes.UIScale,
-            (sizes.settingsBoxDimensionsInTiles.y + 0.5) * sizes.UITileSize * sizes.UIScale + 100)
+            (sizes.settingsBoxDimensionsInTiles.y + 0.5) * sizes.UITileSize * sizes.UIScale + 100 *
+                sizes.resolutionConversionRatio)
         love.graphics.setColor(1, 1, 1, 1)
     end
 
@@ -888,7 +902,13 @@ function game.mousepressed(x, y, mb, isTouch, presses)
     end
 
     handleLoginBoxFieldFocusOnMouseClick(x, y, mb, isTouch, presses)
-    if pointIntersectsQuad(x, y, sizes.testMugItemDims) then
+    local size = dims.wrap {
+        x = sizes.testMugItemDims.x * sizes.resolutionConversionRatio,
+        y = sizes.testMugItemDims.y * sizes.resolutionConversionRatio,
+        width = sizes.testMugItemDims.width * sizes.resolutionConversionRatio,
+        height = sizes.testMugItemDims.height * sizes.resolutionConversionRatio
+    }
+    if pointIntersectsQuad(x, y, size) then
         draggedItem = testMugItemInfo
     end
     -- for _, item in itemsInScene:iter() do

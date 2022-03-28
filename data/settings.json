@@ -11,6 +11,12 @@
   "maximumChatMessageLength": 32,
   "macroSaveFile": "macros.json",
   "pathToMacros": "macros",
-  "mockResolution": [2560, 1440],
-  "realResolution": [1920, 1080]
+  "mockResolution": [
+    2560,
+    1440
+  ],
+  "realResolution": [
+    2560,
+    1440
+  ]
 }
