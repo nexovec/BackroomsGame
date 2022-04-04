@@ -705,7 +705,7 @@ function game.draw()
         love.graphics.rectangle("fill", 0, 0, 720, 720)
     end)
 
-    local side = 720 * sizes.resolutionConversionRatio
+    local side = 720
     local playerAreaQuad = love.graphics.newQuad(0, 0, side, side, side, side)
     love.graphics.draw(assets.get("resources/images/background2.png"), playerAreaQuad)
 
