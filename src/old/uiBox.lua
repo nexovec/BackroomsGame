@@ -8,7 +8,7 @@ local assert = require("std.assert")
 
 function love.graphics.applyShader(canvas, textureShader, uniformsTable, options)
     -- TODO: Test
-    -- local oldCanvas = love.graphics.getCanvas()
+    local oldCanvas = love.graphics.getCanvas()
     love.graphics.setCanvas(canvas)
     love.graphics.withShader(textureShader, function()
         for i, v in pairs(uniformsTable) do
@@ -26,7 +26,7 @@ function love.graphics.applyShader(canvas, textureShader, uniformsTable, options
     end)
     love.graphics.setCanvas()
     -- FIXME: This breaks the code
-    -- love.graphics.setCanvas(oldCanvas)
+    love.graphics.setCanvas(oldCanvas)
 end
 
 function uiBox:clear()

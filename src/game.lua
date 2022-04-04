@@ -739,7 +739,6 @@ function game.draw()
         sizes.sceneviewDims.y)
 
     -- render character silhouette
-    -- FIXME: Fix rendering when scaling
 
     local quad = love.graphics.newQuad(0, 0, 800, 800, 800, 800)
     drawing.resolutionScaledDraw(tempCanvas, quad, 1040, 80)
@@ -848,8 +847,9 @@ function game.draw()
     -- draw dev devConsole
     if devConsoleEnabled then
         tintScreen()
-        local x, y = 30, 1000
-        drawTextInputField(x, y, true, devConsoleMessageRef.val, 1600, 2, {0.8, 0.8, 0.8, 0.1})
+        local x, y = 30 * sizes.resolutionConversionRatio, 1000 * sizes.resolutionConversionRatio
+        drawTextInputField(x, y, true, devConsoleMessageRef.val, 1600 * sizes.resolutionConversionRatio, 2,
+            {0.8, 0.8, 0.8, 0.1})
         drawMessageList(devConsoleMessageHistory, {
             x = 10,
             y = 0,
